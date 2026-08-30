@@ -1,1 +1,4 @@
 * text eol=lf
+
+# Inkarnate backups are gzip-compressed binaries
+*.ink -text -diff -merge -eol
