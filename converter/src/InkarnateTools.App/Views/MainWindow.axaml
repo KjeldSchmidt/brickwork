@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:InkarnateTools.App.ViewModels"
+        x:Class="InkarnateTools.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Inkarnate Tools"
+        Width="640"
+        Height="320"
+        MinWidth="480"
+        MinHeight="280">
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+
+    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+        <StackPanel Grid.Row="0" Margin="0,0,0,12" Spacing="8">
+            <TextBlock Text="Input (Inkarnate .ink or JSON)" />
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Text="{Binding InputPath}" Watermark="Select an Inkarnate export..." Margin="0,0,8,0" />
+                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseInputCommand}" />
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,12" Spacing="8">
+            <TextBlock Text="Output file" />
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Text="{Binding OutputPath}" Watermark="Select output path..." Margin="0,0,8,0" />
+                <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseOutputCommand}" />
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Margin="0,0,0,12" Spacing="8">
+            <TextBlock Text="Export format" />
+            <ComboBox ItemsSource="{Binding ExportFormats}"
+                      SelectedItem="{Binding SelectedExportFormat}"
+                      HorizontalAlignment="Stretch" />
+        </StackPanel>
+
+        <Button Grid.Row="3"
+                Margin="0,0,0,12"
+                Content="Convert"
+                Command="{Binding ConvertCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center" />
+
+        <TextBlock Grid.Row="5"
+                   Text="{Binding StatusMessage}"
+                   TextWrapping="Wrap"
+                   Opacity="0.85" />
+    </Grid>
+</Window>

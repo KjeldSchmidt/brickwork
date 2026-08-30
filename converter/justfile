@@ -1,0 +1,13 @@
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+
+# Rebuild the converter solution
+recompile:
+    dotnet build InkarnateTools.sln
+
+# Start the Avalonia GUI
+gui:
+    dotnet run --project src/InkarnateTools.App
+
+# Invoke the CLI (passthrough args after --)
+cli *args:
+    dotnet run --project src/InkarnateTools.Cli -- {{args}}

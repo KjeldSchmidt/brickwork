@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>InkarnateTools.Composition</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InkarnateTools.Core\InkarnateTools.Core.csproj" />
+    <ProjectReference Include="..\InkarnateTools.Inkarnate\InkarnateTools.Inkarnate.csproj" />
+    <ProjectReference Include="..\InkarnateTools.Exporters\InkarnateTools.Exporters.csproj" />
+  </ItemGroup>
+
+</Project>
