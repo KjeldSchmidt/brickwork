@@ -4,27 +4,42 @@ namespace InkarnateTools.Cli;
 
 internal static class Program
 {
-    private const string Usage = """
-        Usage: InkarnateTools.Cli convert -i <input> -o <output> -f <format>
+    private const string RootUsage = """
+        Usage:
+          InkarnateTools.Cli convert -i <input> -o <output> -f <format>
+          InkarnateTools.Cli analyze -i <input> [--verbose]
 
-          -i, --input    Path to Inkarnate JSON export
+        convert:
+          -i, --input    Path to Inkarnate export
           -o, --output   Path for converted output file
           -f, --format   Export format: uvtt1, uvtt2, foundry
+
+        analyze:
+          -i, --input    Path to Inkarnate export
+          --verbose      List each transaction
         """;
 
     public static async Task<int> Main(string[] args)
     {
-        if (args.Length == 0 || !string.Equals(args[0], "convert", StringComparison.OrdinalIgnoreCase))
+        if (args.Length == 0)
         {
-            await Console.Error.WriteLineAsync(Usage).ConfigureAwait(false);
+            await Console.Error.WriteLineAsync(RootUsage).ConfigureAwait(false);
             return 1;
         }
 
-        if (!TryParseConvertArgs(args.AsSpan(1), out var inputPath, out var outputPath, out var format, out var error))
+        return args[0].ToLowerInvariant() switch
         {
-            await Console.Error.WriteLineAsync(error).ConfigureAwait(false);
-            await Console.Error.WriteLineAsync().ConfigureAwait(false);
-            await Console.Error.WriteLineAsync(Usage).ConfigureAwait(false);
+            "convert" => await RunConvertAsync(args[1..]).ConfigureAwait(false),
+            "analyze" => await RunAnalyzeAsync(args[1..]).ConfigureAwait(false),
+            _ => await PrintUsageAndFailAsync().ConfigureAwait(false),
+        };
+    }
+
+    private static async Task<int> RunConvertAsync(string[] args)
+    {
+        if (!TryParseConvertArgs(args, out var inputPath, out var outputPath, out var format, out var error))
+        {
+            await WriteConvertUsageAsync(error).ConfigureAwait(false);
             return 1;
         }
 
@@ -46,8 +61,61 @@ internal static class Program
         }
     }
 
+    private static async Task<int> RunAnalyzeAsync(string[] args)
+    {
+        if (!TryParseAnalyzeArgs(args, out var inputPath, out var verbose, out var error))
+        {
+            await WriteAnalyzeUsageAsync(error).ConfigureAwait(false);
+            return 1;
+        }
+
+        try
+        {
+            var analyzer = ServiceFactory.CreateInkFileAnalyzer();
+
+            await using var input = File.OpenRead(inputPath);
+            var report = await analyzer.AnalyzeAsync(input).ConfigureAwait(false);
+
+            var output = verbose
+                ? report.FormatDetailed()
+                : report.FormatSummary();
+
+            await Console.Out.WriteLineAsync(output).ConfigureAwait(false);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            await Console.Error.WriteLineAsync($"Analysis failed: {ex.Message}").ConfigureAwait(false);
+            return 1;
+        }
+    }
+
+    private static async Task<int> PrintUsageAndFailAsync()
+    {
+        await Console.Error.WriteLineAsync(RootUsage).ConfigureAwait(false);
+        return 1;
+    }
+
+    private static async Task WriteConvertUsageAsync(string error)
+    {
+        await Console.Error.WriteLineAsync(error).ConfigureAwait(false);
+        await Console.Error.WriteLineAsync().ConfigureAwait(false);
+        await Console.Error.WriteLineAsync("""
+            Usage: InkarnateTools.Cli convert -i <input> -o <output> -f <format>
+            """).ConfigureAwait(false);
+    }
+
+    private static async Task WriteAnalyzeUsageAsync(string error)
+    {
+        await Console.Error.WriteLineAsync(error).ConfigureAwait(false);
+        await Console.Error.WriteLineAsync().ConfigureAwait(false);
+        await Console.Error.WriteLineAsync("""
+            Usage: InkarnateTools.Cli analyze -i <input> [--verbose]
+            """).ConfigureAwait(false);
+    }
+
     private static bool TryParseConvertArgs(
-        ReadOnlySpan<string> args,
+        string[] args,
         out string inputPath,
         out string outputPath,
         out string format,
@@ -111,9 +179,54 @@ internal static class Program
         return true;
     }
 
+    private static bool TryParseAnalyzeArgs(
+        string[] args,
+        out string inputPath,
+        out bool verbose,
+        out string error)
+    {
+        inputPath = string.Empty;
+        verbose = false;
+        error = string.Empty;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+
+            if (string.Equals(arg, "--verbose", StringComparison.OrdinalIgnoreCase))
+            {
+                verbose = true;
+                continue;
+            }
+
+            if (TryReadOption(arg, args, ref i, "-i", "--input", out var inputValue))
+            {
+                inputPath = inputValue;
+                continue;
+            }
+
+            error = $"Unknown or incomplete argument: {arg}";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(inputPath))
+        {
+            error = "Missing required option: --input";
+            return false;
+        }
+
+        if (!File.Exists(inputPath))
+        {
+            error = $"Input file not found: {inputPath}";
+            return false;
+        }
+
+        return true;
+    }
+
     private static bool TryReadOption(
         string arg,
-        ReadOnlySpan<string> args,
+        string[] args,
         ref int index,
         string shortName,
         string longName,

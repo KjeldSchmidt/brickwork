@@ -100,5 +100,8 @@ public class InkarnateImporterTests
         Assert.Equal(51, map.Grid.PixelsPerCell);
         Assert.Empty(map.Walls);
         Assert.Empty(map.Lights);
+        Assert.NotNull(map.Compatibility);
+        Assert.Equal(6, map.Compatibility!.TotalTransactions);
+        Assert.Equal(1, map.Compatibility.FullyUnderstoodCount);
     }
 }

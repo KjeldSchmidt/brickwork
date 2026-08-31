@@ -5,14 +5,14 @@
         x:DataType="vm:MainWindowViewModel"
         Title="Inkarnate Tools"
         Width="640"
-        Height="320"
+        Height="420"
         MinWidth="480"
-        MinHeight="280">
+        MinHeight="360">
     <Design.DataContext>
         <vm:MainWindowViewModel />
     </Design.DataContext>
 
-    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+    <Grid Margin="16" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
         <StackPanel Grid.Row="0" Margin="0,0,0,12" Spacing="8">
             <TextBlock Text="Input (Inkarnate .ink or JSON)" />
             <Grid ColumnDefinitions="*,Auto">
@@ -22,6 +22,15 @@
         </StackPanel>
 
         <StackPanel Grid.Row="1" Margin="0,0,0,12" Spacing="8">
+            <TextBlock Text="Compatibility" />
+            <TextBlock Text="{Binding CompatibilityMessage}"
+                       TextWrapping="Wrap"
+                       FontFamily="Consolas, Courier New, monospace"
+                       MinHeight="72"
+                       Opacity="0.9" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Margin="0,0,0,12" Spacing="8">
             <TextBlock Text="Output file" />
             <Grid ColumnDefinitions="*,Auto">
                 <TextBox Text="{Binding OutputPath}" Watermark="Select output path..." Margin="0,0,8,0" />
@@ -29,21 +38,21 @@
             </Grid>
         </StackPanel>
 
-        <StackPanel Grid.Row="2" Margin="0,0,0,12" Spacing="8">
+        <StackPanel Grid.Row="3" Margin="0,0,0,12" Spacing="8">
             <TextBlock Text="Export format" />
             <ComboBox ItemsSource="{Binding ExportFormats}"
                       SelectedItem="{Binding SelectedExportFormat}"
                       HorizontalAlignment="Stretch" />
         </StackPanel>
 
-        <Button Grid.Row="3"
+        <Button Grid.Row="4"
                 Margin="0,0,0,12"
                 Content="Convert"
                 Command="{Binding ConvertCommand}"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center" />
 
-        <TextBlock Grid.Row="5"
+        <TextBlock Grid.Row="6"
                    Text="{Binding StatusMessage}"
                    TextWrapping="Wrap"
                    Opacity="0.85" />

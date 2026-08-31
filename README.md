@@ -33,6 +33,7 @@ Minimal Avalonia shell: pick an Inkarnate `.ink` backup or JSON input, choose an
 
 ```bash
 cd converter && just cli convert -i ../resources/empty-backup.ink -o output.uvtt -f uvtt2
+cd converter && just cli analyze -i ../resources/empty-backup.ink --verbose
 ```
 
 Supported export formats: `uvtt1`, `uvtt2`, `foundry`.

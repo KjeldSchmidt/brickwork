@@ -1,3 +1,4 @@
+using InkarnateTools.Core.Models;
 using InkarnateTools.Core.Ports;
 
 namespace InkarnateTools.Core.Services;
@@ -26,6 +27,18 @@ public sealed class ConvertMapService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
+
+        var map = await _importer.ImportAsync(input, cancellationToken).ConfigureAwait(false);
+        await ConvertAsync(map, output, exportFormatId, cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task ConvertAsync(
+        MapDocument map,
+        Stream output,
+        string exportFormatId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(output);
 
         if (string.IsNullOrWhiteSpace(exportFormatId))
@@ -40,7 +53,6 @@ public sealed class ConvertMapService
                 nameof(exportFormatId));
         }
 
-        var map = await _importer.ImportAsync(input, cancellationToken).ConfigureAwait(false);
-        await exporter.ExportAsync(map, output, cancellationToken).ConfigureAwait(false);
+        return exporter.ExportAsync(map, output, cancellationToken);
     }
 }

@@ -7,9 +7,11 @@ namespace InkarnateTools.Composition;
 
 public static class ServiceFactory
 {
+    public static IMapImporter CreateInkarnateImporter() => new InkarnateImporter();
+
     public static ConvertMapService CreateConvertMapService()
     {
-        IMapImporter importer = new InkarnateImporter();
+        IMapImporter importer = CreateInkarnateImporter();
         IMapExporter[] exporters =
         [
             new Uvtt1Exporter(),
@@ -19,4 +21,7 @@ public static class ServiceFactory
 
         return new ConvertMapService(importer, exporters);
     }
+
+    public static IInkFileAnalyzer CreateInkFileAnalyzer() =>
+        new InkarnateCompatibilityAnalyzer(CreateInkarnateImporter());
 }

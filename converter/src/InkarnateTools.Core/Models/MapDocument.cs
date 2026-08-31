@@ -19,6 +19,8 @@ public sealed class MapDocument
     public IList<WallSegment> Walls { get; init; } = [];
 
     public IList<LightSource> Lights { get; init; } = [];
+
+    public CompatibilityReport? Compatibility { get; set; }
 }
 
 public sealed class SceneDimensions

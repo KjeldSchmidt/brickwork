@@ -1,5 +1,13 @@
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
+# Apply dotnet format to the solution
+fmt:
+    dotnet format InkarnateTools.sln
+
+# Verify formatting without writing files (for CI)
+fmt-check:
+    dotnet format InkarnateTools.sln --verify-no-changes
+
 # Rebuild the converter solution
 recompile:
     dotnet build InkarnateTools.sln

@@ -1,0 +1,12 @@
+namespace InkarnateTools.Core.Models;
+
+public sealed class TransactionAnalysis
+{
+    public required int TransactionId { get; init; }
+
+    public required string CommandType { get; init; }
+
+    public required TransactionUnderstanding Understanding { get; init; }
+
+    public string? Detail { get; init; }
+}
