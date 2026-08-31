@@ -58,6 +58,43 @@ public class WallExportRunTests
         Assert.Single(runs, run => run.LineType == WallLineType.Door);
     }
 
+    [Fact]
+    public void BuildExportRuns_ClosedWithOneGap_MergesIntoSingleWallRunAroundSeam()
+    {
+        var wall = new Wall
+        {
+            EntityId = 1,
+            IsClosed = true,
+            Origin = new MapPoint(0, 0),
+            PathOrigin = new MapPoint(0, 0),
+            Scale = 1,
+            LineType = WallLineType.Default,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(100, 0),
+                new MapPoint(100, 100),
+                new MapPoint(0, 100),
+            ],
+            Portals =
+            [
+                new WallPortal
+                {
+                    Anchor = new MapPoint(50, 0),
+                    Width = 20,
+                    LineType = WallLineType.Door,
+                },
+            ],
+        };
+
+        var runs = WallPathSegmentBuilder.BuildExportRuns(wall);
+
+        Assert.Equal(2, runs.Count);
+        Assert.Equal(WallLineType.Default, runs[0].LineType);
+        Assert.Equal(WallLineType.Door, runs[1].LineType);
+        Assert.True(runs[0].Points.Count >= 4);
+    }
+
     private static async Task<MapDocument> LoadBasicWallsAsync()
     {
         var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));

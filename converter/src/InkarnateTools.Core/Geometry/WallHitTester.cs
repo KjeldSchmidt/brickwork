@@ -39,7 +39,7 @@ public static class WallHitTester
 
             foreach (var segment in WallPathSegmentBuilder.BuildSegments(wall))
             {
-                if (TryPickSegment(segment, wall.IsClosed, transform, previewPoint, ref bestDistanceSquared, out _))
+                if (TryPickSegment(segment.Points, segment.IsClosed, transform, previewPoint, ref bestDistanceSquared, out _))
                 {
                     bestTarget = new WallPickTarget(wall, null);
                 }

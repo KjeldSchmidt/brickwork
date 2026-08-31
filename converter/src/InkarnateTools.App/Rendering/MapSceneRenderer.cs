@@ -38,11 +38,11 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
                 DrawWallSegment(
                     canvas,
                     transform,
-                    segment,
+                    segment.Points,
                     wall.LineType,
                     wall.IsActive,
                     wall.SceneThickness,
-                    wall.IsClosed);
+                    segment.IsClosed);
             }
 
             foreach (var portalSegment in WallPathSegmentBuilder.BuildPortalSegments(wall))

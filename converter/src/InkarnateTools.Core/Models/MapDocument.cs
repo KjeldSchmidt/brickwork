@@ -21,6 +21,8 @@ public sealed class MapDocument
 
     public GridInfo Grid { get; set; } = new();
 
+    public IList<MapLayer> Layers { get; init; } = [];
+
     public IList<Wall> Walls { get; init; } = [];
 
     public IList<EntityGroup> Groups { get; init; } = [];

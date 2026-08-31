@@ -130,14 +130,21 @@ public partial class WallsToolViewModel : Tool
 
         var groupsById = _session.Map.Groups.ToDictionary(group => group.GroupId);
         var wallsById = _session.Map.Walls.ToDictionary(wall => wall.EntityId);
+        var layersById = _session.Map.Layers.ToDictionary(
+            layer => layer.Id,
+            StringComparer.OrdinalIgnoreCase);
         var wallsByLayer = _session.Map.Walls
             .GroupBy(wall => wall.LayerId ?? "(no layer)")
-            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
-        foreach (var layerGroup in wallsByLayer)
+        foreach (var layerId in OrderLayerIds(wallsByLayer.Keys, _session.Map.Layers))
         {
-            var layerNode = new WallLayerNodeViewModel(_session, layerGroup.Key);
-            var layerWallIds = layerGroup.Select(wall => wall.EntityId).ToHashSet();
+            var layerWalls = wallsByLayer[layerId];
+            var displayName = layersById.TryGetValue(layerId, out var mapLayer)
+                ? mapLayer.DisplayName
+                : layerId;
+            var layerNode = new WallLayerNodeViewModel(_session, layerId, displayName);
+            var layerWallIds = layerWalls.Select(wall => wall.EntityId).ToHashSet();
 
             var rootGroups = _session.Map.Groups
                 .Where(group => group.ParentGroupId is null)
@@ -153,7 +160,7 @@ public partial class WallsToolViewModel : Tool
                 }
             }
 
-            foreach (var wall in layerGroup.Where(wall => wall.GroupId is null).OrderBy(wall => wall.EntityId))
+            foreach (var wall in layerWalls.Where(wall => wall.GroupId is null).OrderBy(wall => wall.EntityId))
             {
                 layerNode.Children.Add(new WallItemViewModel(_session, wall));
             }
@@ -167,6 +174,25 @@ public partial class WallsToolViewModel : Tool
         OnPropertyChanged(nameof(HasLayers));
         OnPropertyChanged(nameof(ShowEmptyMessage));
         ApplyTreeFocusFromSession();
+    }
+
+    private static IEnumerable<string> OrderLayerIds(
+        IEnumerable<string> wallLayerIds,
+        IList<MapLayer> mapLayers)
+    {
+        var remaining = wallLayerIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var layer in mapLayers.OrderBy(layer => layer.Order))
+        {
+            if (remaining.Remove(layer.Id))
+            {
+                yield return layer.Id;
+            }
+        }
+
+        foreach (var orphanId in remaining.OrderBy(id => id, StringComparer.OrdinalIgnoreCase))
+        {
+            yield return orphanId;
+        }
     }
 
     private WallGroupNodeViewModel? BuildGroupNode(
@@ -227,13 +253,16 @@ public partial class WallLayerNodeViewModel : ObservableObject
 {
     private readonly EditorSession _session;
 
-    public WallLayerNodeViewModel(EditorSession session, string layerId)
+    public WallLayerNodeViewModel(EditorSession session, string layerId, string displayName)
     {
         _session = session;
         LayerId = layerId;
+        DisplayName = displayName;
     }
 
     public string LayerId { get; }
+
+    public string DisplayName { get; }
 
     public ObservableCollection<object> Children { get; } = [];
 
@@ -252,6 +281,7 @@ public partial class WallLayerNodeViewModel : ObservableObject
     public void RefreshFromModel()
     {
         OnPropertyChanged(nameof(IsActive));
+        OnPropertyChanged(nameof(DisplayName));
         foreach (var child in Children)
         {
             switch (child)

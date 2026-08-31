@@ -106,6 +106,6 @@ public class InkarnateImporterTests
         Assert.Empty(map.Lights);
         Assert.NotNull(map.Compatibility);
         Assert.Equal(6, map.Compatibility!.TotalTransactions);
-        Assert.Equal(1, map.Compatibility.FullyUnderstoodCount);
+        Assert.Equal(5, map.Compatibility.FullyUnderstoodCount);
     }
 }

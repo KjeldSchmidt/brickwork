@@ -10,12 +10,16 @@ public class WallPortalSegmentTests
     private static string BasicWallsInkPath =>
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));
 
+    private static string ClosedGapsInkPath =>
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "debug-closed-paths-with-gaps.ink"));
+
     [Fact]
     public void BuildSegments_WithoutPortals_ReturnsFullPolyline()
     {
         var wall = new Wall
         {
             EntityId = 1,
+            IsClosed = true,
             Points =
             [
                 new MapPoint(0, 0),
@@ -26,8 +30,9 @@ public class WallPortalSegmentTests
 
         var segments = WallPathSegmentBuilder.BuildSegments(wall);
 
-        Assert.Single(segments);
-        Assert.Equal(3, segments[0].Count);
+        var segment = Assert.Single(segments);
+        Assert.True(segment.IsClosed);
+        Assert.Equal(3, segment.Points.Count);
     }
 
     [Fact]
@@ -56,12 +61,89 @@ public class WallPortalSegmentTests
         var segments = WallPathSegmentBuilder.BuildSegments(wall);
 
         Assert.Equal(2, segments.Count);
-        Assert.Equal(2, segments[0].Count);
-        Assert.Equal(2, segments[1].Count);
-        Assert.InRange(segments[0][0].X, -1, 1);
-        Assert.InRange(segments[0][^1].X, 399, 401);
-        Assert.InRange(segments[1][0].X, 599, 601);
-        Assert.InRange(segments[1][^1].X, 999, 1001);
+        Assert.All(segments, segment => Assert.False(segment.IsClosed));
+        Assert.Equal(2, segments[0].Points.Count);
+        Assert.Equal(2, segments[1].Points.Count);
+        Assert.InRange(segments[0].Points[0].X, -1, 1);
+        Assert.InRange(segments[0].Points[^1].X, 399, 401);
+        Assert.InRange(segments[1].Points[0].X, 599, 601);
+        Assert.InRange(segments[1].Points[^1].X, 999, 1001);
+    }
+
+    [Fact]
+    public void BuildSegments_ClosedWithOneGap_ReturnsSingleOpenArc()
+    {
+        var wall = new Wall
+        {
+            EntityId = 1,
+            IsClosed = true,
+            Origin = new MapPoint(0, 0),
+            PathOrigin = new MapPoint(0, 0),
+            Scale = 1,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(100, 0),
+                new MapPoint(100, 100),
+                new MapPoint(0, 100),
+            ],
+            Portals =
+            [
+                new WallPortal
+                {
+                    Anchor = new MapPoint(50, 0),
+                    Width = 20,
+                },
+            ],
+        };
+
+        var segments = WallPathSegmentBuilder.BuildSegments(wall);
+
+        var segment = Assert.Single(segments);
+        Assert.False(segment.IsClosed);
+        Assert.True(segment.Points.Count >= 4);
+
+        // Gap opens the loop: endpoints should sit on either side of the portal, not coincide.
+        Assert.False(
+            Math.Abs(segment.Points[0].X - segment.Points[^1].X) <= 1e-3 &&
+            Math.Abs(segment.Points[0].Y - segment.Points[^1].Y) <= 1e-3);
+        Assert.InRange(segment.Points[0].X, 59, 61);
+        Assert.InRange(segment.Points[^1].X, 39, 41);
+    }
+
+    [Fact]
+    public void BuildSegments_ClosedWithTwoGaps_ReturnsTwoOpenArcs()
+    {
+        var wall = new Wall
+        {
+            EntityId = 1,
+            IsClosed = true,
+            Origin = new MapPoint(0, 0),
+            PathOrigin = new MapPoint(0, 0),
+            Scale = 1,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(100, 0),
+                new MapPoint(100, 100),
+                new MapPoint(0, 100),
+            ],
+            Portals =
+            [
+                new WallPortal { Anchor = new MapPoint(50, 0), Width = 20 },
+                new WallPortal { Anchor = new MapPoint(50, 100), Width = 20 },
+            ],
+        };
+
+        var segments = WallPathSegmentBuilder.BuildSegments(wall);
+
+        Assert.Equal(2, segments.Count);
+        Assert.All(segments, segment => Assert.False(segment.IsClosed));
+        Assert.All(
+            segments,
+            segment => Assert.False(
+                Math.Abs(segment.Points[0].X - segment.Points[^1].X) <= 1e-3 &&
+                Math.Abs(segment.Points[0].Y - segment.Points[^1].Y) <= 1e-3));
     }
 
     [Fact]
@@ -76,14 +158,15 @@ public class WallPortalSegmentTests
         var segments = WallPathSegmentBuilder.BuildSegments(gappedWall);
 
         Assert.Equal(2, segments.Count);
+        Assert.All(segments, segment => Assert.False(segment.IsClosed));
 
         var drawnLength = segments.Sum(segment =>
         {
             var length = 0d;
-            for (var i = 1; i < segment.Count; i++)
+            for (var i = 1; i < segment.Points.Count; i++)
             {
-                var dx = segment[i].X - segment[i - 1].X;
-                var dy = segment[i].Y - segment[i - 1].Y;
+                var dx = segment.Points[i].X - segment.Points[i - 1].X;
+                var dy = segment.Points[i].Y - segment.Points[i - 1].Y;
                 length += Math.Sqrt(dx * dx + dy * dy);
             }
 
@@ -100,6 +183,35 @@ public class WallPortalSegmentTests
 
         var portal = gappedWall.Portals[0];
         Assert.InRange(drawnLength, totalLength - portal.Width - 5, totalLength - portal.Width + 5);
+    }
+
+    [Fact]
+    public async Task BuildSegments_ClosedGapsInk_DoesNotCloseRemainingArcs()
+    {
+        Assert.True(File.Exists(ClosedGapsInkPath), $"Missing test resource: {ClosedGapsInkPath}");
+
+        await using var input = File.OpenRead(ClosedGapsInkPath);
+        var map = await new InkarnateImporter().ImportAsync(input);
+
+        Assert.NotEmpty(map.Walls);
+        foreach (var wall in map.Walls.Where(wall => wall.IsClosed && wall.Portals.Count > 0))
+        {
+            var segments = WallPathSegmentBuilder.BuildSegments(wall);
+            Assert.NotEmpty(segments);
+            Assert.All(segments, segment => Assert.False(segment.IsClosed));
+            Assert.All(
+                segments,
+                segment =>
+                {
+                    var first = segment.Points[0];
+                    var last = segment.Points[^1];
+                    var dx = first.X - last.X;
+                    var dy = first.Y - last.Y;
+                    Assert.True(
+                        Math.Sqrt(dx * dx + dy * dy) > 1d,
+                        $"Closed gapped wall {wall.EntityId} produced a looped segment.");
+                });
+        }
     }
 
     [Fact]

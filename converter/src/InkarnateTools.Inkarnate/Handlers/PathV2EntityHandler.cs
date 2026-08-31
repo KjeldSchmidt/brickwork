@@ -94,5 +94,6 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
         WallPointSimplifier.Apply(wall, WallSimplificationSettings.DefaultToleranceSceneUnits);
 
         context.WallsByEntityId[wall.EntityId] = wall;
+        context.ApplyVisibilityToWall(wall, item.LayerId);
     }
 }

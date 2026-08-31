@@ -28,6 +28,12 @@ internal sealed class InkTransactionRegistry
         void Register(IInkTransactionHandler handler) => handlers[handler.CommandType] = handler;
 
         Register(new LayerAddTransactionHandler());
+        Register(new EntityMoveToLayerTransactionHandler());
+        Register(new LayerReorderTransactionHandler());
+        Register(new LayerUpdateNameTransactionHandler());
+        Register(new LayerUpdateVisibilityTransactionHandler());
+        Register(new KnownIgnoredCommandHandler("cmd-layer-update-layer-shadows"));
+        Register(new KnownIgnoredCommandHandler("cmd-metadata"));
         Register(new BrushTransactionHandler());
         Register(new EntityAddTransactionHandler(entityHandlers));
         Register(new EntityUpdateTransactionHandler());

@@ -4,11 +4,13 @@ namespace InkarnateTools.Core.Geometry;
 
 public sealed record WallPortalSegment(WallPortal Portal, IReadOnlyList<MapPoint> Points);
 
+public sealed record WallPathSegment(IReadOnlyList<MapPoint> Points, bool IsClosed);
+
 public static class WallPathSegmentBuilder
 {
     private const double Epsilon = 1e-6;
 
-    public static IReadOnlyList<IReadOnlyList<MapPoint>> BuildSegments(Wall wall)
+    public static IReadOnlyList<WallPathSegment> BuildSegments(Wall wall)
     {
         if (wall.Points.Count < 2)
         {
@@ -17,23 +19,26 @@ public static class WallPathSegmentBuilder
 
         if (wall.Portals.Count == 0)
         {
-            return [CopyPoints(wall.Points)];
+            return [new WallPathSegment(CopyPoints(wall.Points), wall.IsClosed)];
         }
 
         var totalLength = WallPolylineEdges.TotalLength(wall.Points, wall.IsClosed);
         if (totalLength <= Epsilon)
         {
-            return [CopyPoints(wall.Points)];
+            return [new WallPathSegment(CopyPoints(wall.Points), wall.IsClosed)];
         }
 
         var arcLengths = WallPolylineEdges.ComputeArcLengths(wall.Points, wall.IsClosed);
         var gaps = BuildGapIntervals(wall, arcLengths, totalLength);
         if (gaps.Count == 0)
         {
-            return [CopyPoints(wall.Points)];
+            return [new WallPathSegment(CopyPoints(wall.Points), wall.IsClosed)];
         }
 
-        return ClipPolyline(wall.Points, wall.IsClosed, gaps);
+        // Remaining pieces after gaps are open arcs, even when the source path is closed.
+        return ClipPolyline(wall.Points, wall.IsClosed, gaps)
+            .Select(points => new WallPathSegment(points, IsClosed: false))
+            .ToList();
     }
 
     public static IReadOnlyList<WallExportRun> BuildExportRuns(Wall wall)
@@ -88,6 +93,11 @@ public static class WallPathSegmentBuilder
                 runs,
                 ExtractIntervalPolyline(wall.Points, wall.IsClosed, cursor, totalLength),
                 wall.LineType);
+        }
+
+        if (wall.IsClosed)
+        {
+            MergeWrappedWallRuns(runs);
         }
 
         return runs;
@@ -385,7 +395,59 @@ public static class WallPathSegmentBuilder
         }
 
         FlushSegment();
+        MergeWrappedOpenSegments(segments, isClosed);
         return segments;
+    }
+
+    private static void MergeWrappedOpenSegments(List<IReadOnlyList<MapPoint>> segments, bool isClosed)
+    {
+        if (!isClosed || segments.Count < 2)
+        {
+            return;
+        }
+
+        var first = segments[0];
+        var last = segments[^1];
+        if (!PointsEqual(last[^1], first[0]))
+        {
+            return;
+        }
+
+        var merged = new List<MapPoint>(last.Count + first.Count - 1);
+        merged.AddRange(last);
+        for (var i = 1; i < first.Count; i++)
+        {
+            merged.Add(first[i]);
+        }
+
+        segments.RemoveAt(segments.Count - 1);
+        segments[0] = merged;
+    }
+
+    private static void MergeWrappedWallRuns(List<WallExportRun> runs)
+    {
+        if (runs.Count < 2)
+        {
+            return;
+        }
+
+        var first = runs[0];
+        var last = runs[^1];
+        if (first.LineType != last.LineType ||
+            !PointsEqual(last.Points[^1], first.Points[0]))
+        {
+            return;
+        }
+
+        var mergedPoints = new List<MapPoint>(last.Points.Count + first.Points.Count - 1);
+        mergedPoints.AddRange(last.Points);
+        for (var i = 1; i < first.Points.Count; i++)
+        {
+            mergedPoints.Add(first.Points[i]);
+        }
+
+        runs.RemoveAt(runs.Count - 1);
+        runs[0] = new WallExportRun(mergedPoints, first.LineType);
     }
 
     private static List<(double Start, double End)> SubtractGaps(

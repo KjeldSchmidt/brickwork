@@ -61,7 +61,10 @@ public static class FoundryWallSegmentBuilder
         SceneTransform transform,
         List<FoundryWallSegment> segments)
     {
-        if (wall.LineType != WallLineType.Terrain || !wall.IsClosed || wall.SceneThickness <= 0)
+        if (wall.LineType != WallLineType.Terrain ||
+            !wall.IsClosed ||
+            wall.SceneThickness <= 0 ||
+            wall.Portals.Count > 0)
         {
             return false;
         }

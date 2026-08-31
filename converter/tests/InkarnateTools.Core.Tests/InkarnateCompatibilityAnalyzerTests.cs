@@ -23,8 +23,8 @@ public class InkarnateCompatibilityAnalyzerTests
         Assert.Equal("empty", report.MapTitle);
         Assert.Equal(3, report.SourceVersion);
         Assert.Equal(6, report.TotalTransactions);
-        Assert.Equal(1, report.FullyUnderstoodCount);
-        Assert.Equal(5, report.KnownIgnoredCount);
+        Assert.Equal(5, report.FullyUnderstoodCount);
+        Assert.Equal(1, report.KnownIgnoredCount);
         Assert.Equal(0, report.UnknownCount);
     }
 
