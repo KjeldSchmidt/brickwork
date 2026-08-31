@@ -18,7 +18,7 @@ public sealed class MapDocument
 
     public GridInfo Grid { get; set; } = new();
 
-    public IList<WallSegment> Walls { get; init; } = [];
+    public IList<Wall> Walls { get; init; } = [];
 
     public IList<LightSource> Lights { get; init; } = [];
 
@@ -48,11 +48,6 @@ public sealed class GridInfo
     public int Columns { get; set; }
 
     public int Rows { get; set; }
-}
-
-public sealed class WallSegment
-{
-    public IList<MapPoint> Points { get; init; } = [];
 }
 
 public sealed class LightSource

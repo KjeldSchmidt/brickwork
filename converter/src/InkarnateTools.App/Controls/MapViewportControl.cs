@@ -14,11 +14,20 @@ public class MapViewportControl : Control
     public static readonly StyledProperty<MapDocument?> MapProperty =
         AvaloniaProperty.Register<MapViewportControl, MapDocument?>(nameof(Map));
 
+    public static readonly StyledProperty<int> ContentRevisionProperty =
+        AvaloniaProperty.Register<MapViewportControl, int>(nameof(ContentRevision));
+
     private readonly IMapSceneRenderer _renderer = new MapSceneRenderer();
 
     static MapViewportControl()
     {
-        AffectsRender<MapViewportControl>(MapProperty);
+        AffectsRender<MapViewportControl>(MapProperty, ContentRevisionProperty);
+    }
+
+    public int ContentRevision
+    {
+        get => GetValue(ContentRevisionProperty);
+        set => SetValue(ContentRevisionProperty, value);
     }
 
     public MapDocument? Map

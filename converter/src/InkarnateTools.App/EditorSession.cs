@@ -10,4 +10,12 @@ public sealed partial class EditorSession : ObservableObject
 
     [ObservableProperty]
     private string? _sourceFileName;
+
+    [ObservableProperty]
+    private int _contentRevision;
+
+    public void NotifyContentChanged()
+    {
+        ContentRevision++;
+    }
 }

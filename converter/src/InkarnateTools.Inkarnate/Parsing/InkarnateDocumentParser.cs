@@ -39,6 +39,7 @@ internal static class InkarnateDocumentParser
         }
 
         ApplyDerivedGridMetrics(map);
+        context.SyncWalls();
 
         map.Compatibility = new CompatibilityReport
         {

@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:InkarnateTools.App.ViewModels"
+             x:Class="InkarnateTools.App.Views.Panels.WallsToolView"
+             x:DataType="vm:WallsToolViewModel">
+    <Grid Margin="12">
+        <TextBlock Text="Open a source map to list walls."
+                   Opacity="0.6"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding ShowEmptyMessage}" />
+
+        <TreeView ItemsSource="{Binding Layers}"
+                  IsVisible="{Binding HasLayers}">
+            <TreeView.DataTemplates>
+                <TreeDataTemplate DataType="vm:WallLayerNodeViewModel"
+                                  ItemsSource="{Binding Walls}">
+                    <TextBlock Text="{Binding LayerId}" FontWeight="SemiBold" />
+                </TreeDataTemplate>
+                <DataTemplate DataType="vm:WallItemViewModel">
+                    <CheckBox Content="{Binding DisplayName}"
+                              IsChecked="{Binding IsActive}"
+                              Margin="0,2" />
+                </DataTemplate>
+            </TreeView.DataTemplates>
+        </TreeView>
+    </Grid>
+</UserControl>

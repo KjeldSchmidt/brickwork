@@ -5,6 +5,9 @@ namespace InkarnateTools.App.Rendering;
 
 public sealed class MapSceneRenderer : IMapSceneRenderer
 {
+    private static readonly SKColor ActiveWallColor = new(0xFF, 0x44, 0x44, 0xCC);
+    private static readonly SKColor InactiveWallColor = new(0x88, 0x88, 0x88, 0x88);
+
     private readonly Dictionary<MapDocument, SKImage> _imageCache = new(ReferenceEqualityComparer.Instance);
 
     public void Render(SKCanvas canvas, MapDocument map, SKRect destinationBounds)
@@ -23,20 +26,20 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             return;
         }
 
-        using var wallPaint = new SKPaint
-        {
-            Color = new SKColor(0xFF, 0x44, 0x44, 0xCC),
-            IsAntialias = true,
-            Style = SKPaintStyle.Stroke,
-            StrokeWidth = 2,
-        };
-
         foreach (var wall in map.Walls)
         {
-            if (wall.Points.Count < 2)
+            if (!wall.WallEnabled || wall.Points.Count < 2)
             {
                 continue;
             }
+
+            using var wallPaint = new SKPaint
+            {
+                Color = wall.IsActive ? ActiveWallColor : InactiveWallColor,
+                IsAntialias = true,
+                Style = SKPaintStyle.Stroke,
+                StrokeWidth = 2,
+            };
 
             using var path = new SKPath();
             var first = transform.SceneToPreview(wall.Points[0]);

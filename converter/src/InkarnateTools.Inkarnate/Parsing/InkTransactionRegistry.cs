@@ -18,7 +18,7 @@ internal sealed class InkTransactionRegistry
         IInkEntityHandler[] entityHandlers =
         [
             new GridEntityHandler(),
-            new WallEntityHandler(),
+            new PathV2EntityHandler(),
             new LightEntityHandler(),
         ];
 
@@ -27,6 +27,7 @@ internal sealed class InkTransactionRegistry
             new LayerAddTransactionHandler(),
             new BrushTransactionHandler(),
             new EntityAddTransactionHandler(entityHandlers),
+            new EntityUpdateTransactionHandler(),
         ];
 
         return new InkTransactionRegistry(transactionHandlers);

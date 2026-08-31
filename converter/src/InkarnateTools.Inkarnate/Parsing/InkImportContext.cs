@@ -12,4 +12,15 @@ internal sealed class InkImportContext
     public MapDocument Map { get; }
 
     public IList<TransactionAnalysis> Transactions { get; } = [];
+
+    public Dictionary<int, Wall> WallsByEntityId { get; } = [];
+
+    public void SyncWalls()
+    {
+        Map.Walls.Clear();
+        foreach (var wall in WallsByEntityId.Values.OrderBy(w => w.EntityId))
+        {
+            Map.Walls.Add(wall);
+        }
+    }
 }

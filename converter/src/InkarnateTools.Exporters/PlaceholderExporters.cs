@@ -21,7 +21,7 @@ public abstract class PlaceholderExporterBase : IMapExporter
                 scene = map.Scene,
                 preview = map.Preview,
                 grid = map.Grid,
-                wallCount = map.Walls.Count,
+                wallCount = map.ExportableWalls().Count(),
                 lightCount = map.Lights.Count,
             },
             note = "Placeholder export — real serialization not implemented yet.",

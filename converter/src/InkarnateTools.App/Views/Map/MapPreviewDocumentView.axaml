@@ -12,12 +12,18 @@
                    Opacity="0.6"
                    IsVisible="{Binding ShowPlaceholder}" />
 
-        <paz:ZoomBorder IsVisible="{Binding HasMap}"
+        <paz:ZoomBorder x:Name="MapZoom"
+                        IsVisible="{Binding HasMap}"
                         ClipToBounds="True"
-                        Stretch="Uniform"
+                        Stretch="None"
+                        Focusable="True"
+                        PanButton="Left"
                         EnableZoom="True"
-                        EnablePan="True">
+                        EnablePan="True"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch">
             <controls:MapViewportControl Map="{Binding Map}"
+                                         ContentRevision="{Binding ContentRevision}"
                                          Width="{Binding PreviewWidth}"
                                          Height="{Binding PreviewHeight}" />
         </paz:ZoomBorder>

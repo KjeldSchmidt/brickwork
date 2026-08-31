@@ -23,6 +23,9 @@ public partial class MapPreviewDocumentViewModel : Document
     [ObservableProperty]
     private bool _showPlaceholder = true;
 
+    [ObservableProperty]
+    private int _contentRevision;
+
     public MapPreviewDocumentViewModel(EditorSession session)
     {
         _session = session;
@@ -32,8 +35,14 @@ public partial class MapPreviewDocumentViewModel : Document
             {
                 UpdateFromSession();
             }
+
+            if (args.PropertyName is nameof(EditorSession.ContentRevision))
+            {
+                ContentRevision = _session.ContentRevision;
+            }
         };
         UpdateFromSession();
+        ContentRevision = _session.ContentRevision;
     }
 
     private void UpdateFromSession()

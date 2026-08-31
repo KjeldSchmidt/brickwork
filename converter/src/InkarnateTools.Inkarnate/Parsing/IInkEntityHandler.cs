@@ -9,5 +9,5 @@ internal interface IInkEntityHandler
 
     TransactionUnderstanding Understanding { get; }
 
-    void Apply(MapDocument map, JsonElement entity);
+    void Apply(InkImportContext context, InkEntityItem item);
 }

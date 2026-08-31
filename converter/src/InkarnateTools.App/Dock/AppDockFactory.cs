@@ -26,6 +26,14 @@ public sealed class AppDockFactory : Factory
             CanPin = true,
         };
 
+        var wallsTool = new WallsToolViewModel(_session)
+        {
+            Id = "WallsTool",
+            Title = "Walls",
+            CanClose = false,
+            CanPin = true,
+        };
+
         var mapPreview = new MapPreviewDocumentViewModel(_session)
         {
             Id = "MapPreview",
@@ -36,7 +44,7 @@ public sealed class AppDockFactory : Factory
         var toolDock = new ToolDock
         {
             ActiveDockable = importTool,
-            VisibleDockables = CreateList<IDockable>(importTool),
+            VisibleDockables = CreateList<IDockable>(importTool, wallsTool),
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible,
         };
@@ -78,6 +86,7 @@ public sealed class AppDockFactory : Factory
         ContextLocator = new Dictionary<string, Func<object?>>
         {
             ["ImportTool"] = () => _session,
+            ["WallsTool"] = () => _session,
             ["MapPreview"] = () => _session,
             ["Root"] = () => layout,
         };

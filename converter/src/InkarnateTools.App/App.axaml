@@ -10,6 +10,9 @@
         <DataTemplate DataType="vm:ImportToolViewModel">
             <panels:ImportToolView />
         </DataTemplate>
+        <DataTemplate DataType="vm:WallsToolViewModel">
+            <panels:WallsToolView />
+        </DataTemplate>
         <DataTemplate DataType="vm:MapPreviewDocumentViewModel">
             <map:MapPreviewDocumentView />
         </DataTemplate>

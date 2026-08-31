@@ -48,7 +48,8 @@ internal sealed class EntityAddTransactionHandler : IInkTransactionHandler
                 continue;
             }
 
-            handler.Apply(context.Map, entityElement);
+            var layerId = InkJsonReader.ReadString(item, "layerId");
+            handler.Apply(context, new InkEntityItem(layerId, entityElement));
             understanding = Max(understanding, handler.Understanding);
         }
 

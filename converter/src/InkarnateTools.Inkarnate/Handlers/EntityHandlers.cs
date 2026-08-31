@@ -10,8 +10,9 @@ internal sealed class GridEntityHandler : IInkEntityHandler
 
     public TransactionUnderstanding Understanding => TransactionUnderstanding.FullyUnderstood;
 
-    public void Apply(MapDocument map, JsonElement entity)
+    public void Apply(InkImportContext context, InkEntityItem item)
     {
+        var entity = item.Entity;
         if (!entity.TryGetProperty("style", out var styleElement))
         {
             return;
@@ -23,34 +24,7 @@ internal sealed class GridEntityHandler : IInkEntityHandler
             return;
         }
 
-        map.Grid.CellSize = cellSize;
-    }
-}
-
-internal sealed class WallEntityHandler : IInkEntityHandler
-{
-    public string EntityType => "wall";
-
-    public TransactionUnderstanding Understanding => TransactionUnderstanding.FullyUnderstood;
-
-    public void Apply(MapDocument map, JsonElement entity)
-    {
-        if (!entity.TryGetProperty("points", out var pointsElement) ||
-            pointsElement.ValueKind != JsonValueKind.Array)
-        {
-            return;
-        }
-
-        var segment = new WallSegment();
-        foreach (var pointElement in pointsElement.EnumerateArray())
-        {
-            segment.Points.Add(EntityParsing.ReadPoint(pointElement));
-        }
-
-        if (segment.Points.Count > 0)
-        {
-            map.Walls.Add(segment);
-        }
+        context.Map.Grid.CellSize = cellSize;
     }
 }
 
@@ -60,8 +34,9 @@ internal sealed class LightEntityHandler : IInkEntityHandler
 
     public TransactionUnderstanding Understanding => TransactionUnderstanding.FullyUnderstood;
 
-    public void Apply(MapDocument map, JsonElement entity)
+    public void Apply(InkImportContext context, InkEntityItem item)
     {
+        var entity = item.Entity;
         var light = new LightSource
         {
             Range = InkJsonReader.ReadDouble(entity, "range"),
@@ -73,7 +48,7 @@ internal sealed class LightEntityHandler : IInkEntityHandler
             light.Position = EntityParsing.ReadPoint(positionElement);
         }
 
-        map.Lights.Add(light);
+        context.Map.Lights.Add(light);
     }
 }
 

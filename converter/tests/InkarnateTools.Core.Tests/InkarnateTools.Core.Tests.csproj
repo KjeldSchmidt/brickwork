@@ -27,7 +27,7 @@
     <None Include="..\..\..\resources\empty-backup.ink" Link="resources\empty-backup.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="resources\walls-sample.json">
+    <None Include="..\..\..\resources\basic-walls.ink" Link="resources\basic-walls.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
