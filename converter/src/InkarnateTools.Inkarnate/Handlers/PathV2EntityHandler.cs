@@ -43,12 +43,7 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
         var isClosed = entity.TryGetProperty("isClosedPath", out var closedElement) &&
                        closedElement.ValueKind == JsonValueKind.True;
 
-        var rawPoints = InkSvgPathParser.ParseToScenePoints(pathData, originX, originY, scale);
-        if (rawPoints.Count < 2)
-        {
-            return;
-        }
-
+        var origin = new MapPoint(originX, originY);
         var wall = new Wall
         {
             EntityId = entityId.Value,
@@ -57,10 +52,39 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
             WallEnabled = true,
             IsClosed = isClosed,
             PathData = pathData,
-            Origin = new MapPoint(originX, originY),
+            Origin = origin,
+            PathOrigin = origin,
+            RotationPivot = origin,
             Scale = scale,
             WallThickness = InkJsonReader.ReadDouble(entity, "wallThickness"),
         };
+
+        var angle = entity.TryGetProperty("angle", out var angleElement) &&
+                    angleElement.ValueKind == JsonValueKind.Number
+            ? angleElement.GetDouble()
+            : 0d;
+        if (Math.Abs(angle) > 1e-9)
+        {
+            wall.Angle = angle;
+            if (entity.TryGetProperty("oX", out var oxElement) && oxElement.ValueKind == JsonValueKind.Number &&
+                entity.TryGetProperty("oY", out var oyElement) && oyElement.ValueKind == JsonValueKind.Number)
+            {
+                wall.RotationPivot = new MapPoint(oxElement.GetDouble(), oyElement.GetDouble());
+            }
+        }
+
+        var rawPoints = InkSvgPathParser.ParseToScenePoints(
+            pathData,
+            wall.PathOrigin.X,
+            wall.PathOrigin.Y,
+            wall.Scale,
+            wall.Angle,
+            wall.RotationPivot.X,
+            wall.RotationPivot.Y);
+        if (rawPoints.Count < 2)
+        {
+            return;
+        }
 
         foreach (var point in rawPoints)
         {

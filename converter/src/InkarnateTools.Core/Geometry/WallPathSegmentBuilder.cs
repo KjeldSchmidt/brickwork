@@ -136,9 +136,7 @@ public static class WallPathSegmentBuilder
     }
 
     public static MapPoint PortalAnchorToScene(Wall wall, WallPortal portal) =>
-        new(
-            portal.Anchor.X * wall.Scale + wall.Origin.X,
-            portal.Anchor.Y * wall.Scale + wall.Origin.Y);
+        MapPointTransforms.LocalToScene(wall, portal.Anchor);
 
     private static void AddRunIfValid(
         List<WallExportRun> runs,

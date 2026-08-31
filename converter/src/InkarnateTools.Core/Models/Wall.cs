@@ -20,10 +20,21 @@ public sealed class Wall
 
     public MapPoint Origin { get; set; }
 
+    /// <summary>Translation applied to local path points before rotation (<c>x</c>/<c>y</c> at angle 0).</summary>
+    public MapPoint PathOrigin { get; set; }
+
+    /// <summary>Scene-space pivot used with <see cref="Angle"/> (<c>oX</c>/<c>oY</c>).</summary>
+    public MapPoint RotationPivot { get; set; }
+
+    /// <summary>Rotation in degrees from Inkarnate (<c>angle</c>).</summary>
+    public double Angle { get; set; }
+
     public double Scale { get; set; } = 1;
 
     /// <summary>Entity-local wall thickness from Inkarnate (<c>wallThickness</c>).</summary>
     public double WallThickness { get; set; }
+
+    public int? GroupId { get; set; }
 
     public IList<MapPoint> RawPoints { get; init; } = [];
 

@@ -8,9 +8,9 @@ internal sealed class InkTransactionRegistry
 {
     private readonly IReadOnlyDictionary<string, IInkTransactionHandler> _handlers;
 
-    private InkTransactionRegistry(IEnumerable<IInkTransactionHandler> handlers)
+    private InkTransactionRegistry(IReadOnlyDictionary<string, IInkTransactionHandler> handlers)
     {
-        _handlers = handlers.ToDictionary(handler => handler.CommandType, StringComparer.OrdinalIgnoreCase);
+        _handlers = handlers;
     }
 
     public static InkTransactionRegistry CreateDefault()
@@ -22,18 +22,26 @@ internal sealed class InkTransactionRegistry
             new LightEntityHandler(),
         ];
 
-        IInkTransactionHandler[] transactionHandlers =
-        [
-            new LayerAddTransactionHandler(),
-            new BrushTransactionHandler(),
-            new EntityAddTransactionHandler(entityHandlers),
-            new EntityUpdateTransactionHandler(),
-        ];
+        var handlers = new Dictionary<string, IInkTransactionHandler>(StringComparer.OrdinalIgnoreCase);
+        void Register(IInkTransactionHandler handler) => handlers[handler.CommandType] = handler;
 
-        return new InkTransactionRegistry(transactionHandlers);
+        Register(new LayerAddTransactionHandler());
+        Register(new BrushTransactionHandler());
+        Register(new EntityAddTransactionHandler(entityHandlers));
+        Register(new EntityUpdateTransactionHandler());
+        Register(new EntityRemoveTransactionHandler());
+        Register(new CompositeTransactionHandler((context, nested) => Process(handlers, context, nested)));
+
+        return new InkTransactionRegistry(handlers);
     }
 
-    public TransactionAnalysis Process(InkImportContext context, JsonElement transaction)
+    public TransactionAnalysis Process(InkImportContext context, JsonElement transaction) =>
+        Process(_handlers, context, transaction);
+
+    private static TransactionAnalysis Process(
+        IReadOnlyDictionary<string, IInkTransactionHandler> handlers,
+        InkImportContext context,
+        JsonElement transaction)
     {
         var commandType = InkJsonReader.ReadString(transaction, "cmdType");
         if (commandType is null)
@@ -45,7 +53,7 @@ internal sealed class InkTransactionRegistry
                 "missing cmdType");
         }
 
-        if (!_handlers.TryGetValue(commandType, out var handler))
+        if (!handlers.TryGetValue(commandType, out var handler))
         {
             return TransactionAnalysisFactory.Create(
                 transaction,

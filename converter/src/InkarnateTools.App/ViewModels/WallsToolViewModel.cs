@@ -38,9 +38,23 @@ public partial class WallsToolViewModel : Tool
     {
         foreach (var layer in Layers)
         {
-            foreach (var wall in layer.Walls)
+            RefreshChildren(layer.Children);
+        }
+    }
+
+    private static void RefreshChildren(IEnumerable<object> children)
+    {
+        foreach (var child in children)
+        {
+            switch (child)
             {
-                wall.RefreshFromModel();
+                case WallGroupNodeViewModel group:
+                    group.RefreshFromModel();
+                    RefreshChildren(group.Children);
+                    break;
+                case WallItemViewModel wall:
+                    wall.RefreshFromModel();
+                    break;
             }
         }
     }
@@ -56,21 +70,97 @@ public partial class WallsToolViewModel : Tool
             return;
         }
 
-        foreach (var layerGroup in _session.Map.Walls
-                     .GroupBy(wall => wall.LayerId ?? "(no layer)")
-                     .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase))
+        var groupsById = _session.Map.Groups.ToDictionary(group => group.GroupId);
+        var wallsById = _session.Map.Walls.ToDictionary(wall => wall.EntityId);
+        var wallsByLayer = _session.Map.Walls
+            .GroupBy(wall => wall.LayerId ?? "(no layer)")
+            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var layerGroup in wallsByLayer)
         {
             var layerNode = new WallLayerNodeViewModel(layerGroup.Key);
-            foreach (var wall in layerGroup.OrderBy(w => w.EntityId))
+            var layerWallIds = layerGroup.Select(wall => wall.EntityId).ToHashSet();
+
+            var rootGroups = _session.Map.Groups
+                .Where(group => group.ParentGroupId is null)
+                .Where(group => GroupHasDescendantWall(group, groupsById, layerWallIds))
+                .OrderBy(group => group.GroupId);
+
+            foreach (var group in rootGroups)
             {
-                layerNode.Walls.Add(new WallItemViewModel(_session, wall));
+                var groupNode = BuildGroupNode(group, groupsById, wallsById, layerWallIds);
+                if (groupNode is not null)
+                {
+                    layerNode.Children.Add(groupNode);
+                }
             }
 
-            Layers.Add(layerNode);
+            foreach (var wall in layerGroup.Where(wall => wall.GroupId is null).OrderBy(wall => wall.EntityId))
+            {
+                layerNode.Children.Add(new WallItemViewModel(_session, wall));
+            }
+
+            if (layerNode.Children.Count > 0)
+            {
+                Layers.Add(layerNode);
+            }
         }
 
         OnPropertyChanged(nameof(HasLayers));
         OnPropertyChanged(nameof(ShowEmptyMessage));
+    }
+
+    private WallGroupNodeViewModel? BuildGroupNode(
+        EntityGroup group,
+        IReadOnlyDictionary<int, EntityGroup> groupsById,
+        IReadOnlyDictionary<int, Wall> wallsById,
+        HashSet<int> layerWallIds)
+    {
+        if (!GroupHasDescendantWall(group, groupsById, layerWallIds))
+        {
+            return null;
+        }
+
+        var node = new WallGroupNodeViewModel(group);
+        foreach (var memberId in group.MemberIds)
+        {
+            if (groupsById.TryGetValue(memberId, out var childGroup))
+            {
+                var childNode = BuildGroupNode(childGroup, groupsById, wallsById, layerWallIds);
+                if (childNode is not null)
+                {
+                    node.Children.Add(childNode);
+                }
+            }
+            else if (wallsById.TryGetValue(memberId, out var wall) && layerWallIds.Contains(wall.EntityId))
+            {
+                node.Children.Add(new WallItemViewModel(_session, wall));
+            }
+        }
+
+        return node.Children.Count > 0 ? node : null;
+    }
+
+    private static bool GroupHasDescendantWall(
+        EntityGroup group,
+        IReadOnlyDictionary<int, EntityGroup> groupsById,
+        HashSet<int> layerWallIds)
+    {
+        foreach (var memberId in group.MemberIds)
+        {
+            if (layerWallIds.Contains(memberId))
+            {
+                return true;
+            }
+
+            if (groupsById.TryGetValue(memberId, out var childGroup) &&
+                GroupHasDescendantWall(childGroup, groupsById, layerWallIds))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 
@@ -83,7 +173,37 @@ public partial class WallLayerNodeViewModel : ObservableObject
 
     public string LayerId { get; }
 
-    public ObservableCollection<WallItemViewModel> Walls { get; } = [];
+    public ObservableCollection<object> Children { get; } = [];
+}
+
+public partial class WallGroupNodeViewModel : ObservableObject
+{
+    public WallGroupNodeViewModel(EntityGroup group)
+    {
+        Group = group;
+    }
+
+    public EntityGroup Group { get; }
+
+    public ObservableCollection<object> Children { get; } = [];
+
+    public string DisplayName => Group.DisplayName;
+
+    public void RefreshFromModel()
+    {
+        OnPropertyChanged(nameof(DisplayName));
+        foreach (var child in Children)
+        {
+            if (child is WallItemViewModel wall)
+            {
+                wall.RefreshFromModel();
+            }
+            else if (child is WallGroupNodeViewModel group)
+            {
+                group.RefreshFromModel();
+            }
+        }
+    }
 }
 
 public partial class WallItemViewModel : ObservableObject
@@ -146,6 +266,7 @@ public partial class WallItemViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(LineType));
+        OnPropertyChanged(nameof(DisplayName));
 
         foreach (var portal in Portals)
         {

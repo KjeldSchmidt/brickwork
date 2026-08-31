@@ -40,14 +40,27 @@ public partial class WallsToolView : UserControl
 
     private void ScheduleExpandAll()
     {
-        Dispatcher.UIThread.Post(ExpandAllTreeItems, DispatcherPriority.Loaded);
+        // Nested TreeViewItems only exist after parents expand, so run a few passes.
+        Dispatcher.UIThread.Post(() => ExpandAllTreeItems(pass: 0), DispatcherPriority.Loaded);
     }
 
-    private void ExpandAllTreeItems()
+    private void ExpandAllTreeItems(int pass)
     {
+        var expandedAny = false;
         foreach (var item in WallsTree.GetVisualDescendants().OfType<TreeViewItem>())
         {
+            if (item.IsExpanded)
+            {
+                continue;
+            }
+
             item.IsExpanded = true;
+            expandedAny = true;
+        }
+
+        if (expandedAny && pass < 8)
+        {
+            Dispatcher.UIThread.Post(() => ExpandAllTreeItems(pass + 1), DispatcherPriority.Loaded);
         }
     }
 }

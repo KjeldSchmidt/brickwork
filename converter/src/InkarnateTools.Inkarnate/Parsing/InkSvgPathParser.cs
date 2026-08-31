@@ -1,3 +1,4 @@
+using InkarnateTools.Core.Geometry;
 using InkarnateTools.Core.Models;
 using SkiaSharp;
 
@@ -13,7 +14,45 @@ internal static class InkSvgPathParser
         string pathData,
         double originX,
         double originY,
-        double scale)
+        double scale) =>
+        ParseToScenePoints(
+            pathData,
+            originX,
+            originY,
+            scale,
+            angleDegrees: 0,
+            pivotX: originX,
+            pivotY: originY);
+
+    public static IList<MapPoint> ParseToScenePoints(
+        string pathData,
+        double originX,
+        double originY,
+        double scale,
+        double angleDegrees,
+        double pivotX,
+        double pivotY)
+    {
+        var localPoints = ParseToLocalPoints(pathData);
+        if (localPoints.Count == 0)
+        {
+            return [];
+        }
+
+        var transform = new Wall
+        {
+            PathOrigin = new MapPoint(originX, originY),
+            RotationPivot = new MapPoint(pivotX, pivotY),
+            Scale = scale <= 0 ? 1 : scale,
+            Angle = angleDegrees,
+        };
+
+        return localPoints
+            .Select(local => MapPointTransforms.LocalToScene(transform, local))
+            .ToList();
+    }
+
+    public static IList<MapPoint> ParseToLocalPoints(string pathData)
     {
         if (string.IsNullOrWhiteSpace(pathData))
         {
@@ -43,7 +82,7 @@ internal static class InkSvgPathParser
                 case SKPathVerb.Move:
                     current = coords[0];
                     hasCurrent = true;
-                    TryAddPoint(points, current, originX, originY, scale);
+                    TryAddLocalPoint(points, current);
                     break;
                 case SKPathVerb.Line:
                     if (!hasCurrent)
@@ -52,7 +91,7 @@ internal static class InkSvgPathParser
                     }
 
                     current = coords[1];
-                    TryAddPoint(points, current, originX, originY, scale);
+                    TryAddLocalPoint(points, current);
                     break;
                 case SKPathVerb.Quad:
                     if (!hasCurrent)
@@ -60,15 +99,7 @@ internal static class InkSvgPathParser
                         break;
                     }
 
-                    SampleCurve(
-                        points,
-                        coords[0],
-                        coords[1],
-                        coords[2],
-                        originX,
-                        originY,
-                        scale,
-                        quad: true);
+                    SampleCurve(points, coords[0], coords[1], coords[2], quad: true);
                     current = coords[2];
                     break;
                 case SKPathVerb.Conic:
@@ -82,9 +113,6 @@ internal static class InkSvgPathParser
                         coords[0],
                         coords[1],
                         coords[2],
-                        originX,
-                        originY,
-                        scale,
                         conicWeight: iterator.ConicWeight());
                     current = coords[2];
                     break;
@@ -94,15 +122,7 @@ internal static class InkSvgPathParser
                         break;
                     }
 
-                    SampleCubic(
-                        points,
-                        coords[0],
-                        coords[1],
-                        coords[2],
-                        coords[3],
-                        originX,
-                        originY,
-                        scale);
+                    SampleCubic(points, coords[0], coords[1], coords[2], coords[3]);
                     current = coords[3];
                     break;
                 case SKPathVerb.Close:
@@ -124,16 +144,12 @@ internal static class InkSvgPathParser
         SKPoint start,
         SKPoint control1,
         SKPoint control2,
-        SKPoint end,
-        double originX,
-        double originY,
-        double scale)
+        SKPoint end)
     {
         using var segment = new SKPath();
         segment.MoveTo(start);
         segment.CubicTo(control1, control2, end);
-
-        SamplePathSegment(points, segment, end, originX, originY, scale);
+        SamplePathSegment(points, segment, end);
     }
 
     private static void SampleCurve(
@@ -141,9 +157,6 @@ internal static class InkSvgPathParser
         SKPoint start,
         SKPoint control,
         SKPoint end,
-        double originX,
-        double originY,
-        double scale,
         bool quad = false,
         float conicWeight = 0f)
     {
@@ -158,22 +171,16 @@ internal static class InkSvgPathParser
             segment.ConicTo(control, end, conicWeight);
         }
 
-        SamplePathSegment(points, segment, end, originX, originY, scale);
+        SamplePathSegment(points, segment, end);
     }
 
-    private static void SamplePathSegment(
-        List<MapPoint> points,
-        SKPath segment,
-        SKPoint end,
-        double originX,
-        double originY,
-        double scale)
+    private static void SamplePathSegment(List<MapPoint> points, SKPath segment, SKPoint end)
     {
         using var measure = new SKPathMeasure(segment, false);
         var length = measure.Length;
         if (length <= 0)
         {
-            TryAddPoint(points, end, originX, originY, scale);
+            TryAddLocalPoint(points, end);
             return;
         }
 
@@ -187,31 +194,23 @@ internal static class InkSvgPathParser
         {
             if (measure.GetPosition(distance, out var position))
             {
-                TryAddPoint(points, position, originX, originY, scale);
+                TryAddLocalPoint(points, position);
             }
         }
 
-        TryAddPoint(points, end, originX, originY, scale);
+        TryAddLocalPoint(points, end);
     }
 
-    private static void TryAddPoint(
-        List<MapPoint> points,
-        SKPoint local,
-        double originX,
-        double originY,
-        double scale)
+    private static void TryAddLocalPoint(List<MapPoint> points, SKPoint local)
     {
-        var scenePoint = TransformPoint(local, originX, originY, scale);
-        if (points.Count > 0 && NearlyEqual(points[^1], scenePoint))
+        var point = new MapPoint(local.X, local.Y);
+        if (points.Count > 0 && NearlyEqual(points[^1], point))
         {
             return;
         }
 
-        points.Add(scenePoint);
+        points.Add(point);
     }
-
-    private static MapPoint TransformPoint(SKPoint local, double originX, double originY, double scale) =>
-        new(local.X * scale + originX, local.Y * scale + originY);
 
     private static bool NearlyEqual(MapPoint a, MapPoint b) =>
         Math.Abs(a.X - b.X) < PointEpsilon && Math.Abs(a.Y - b.Y) < PointEpsilon;

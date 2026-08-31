@@ -31,6 +31,9 @@
     <None Include="..\..\..\resources\basic-walls.ink" Link="resources\basic-walls.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\resources\walls-with-history.ink" Link="resources\walls-with-history.ink">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

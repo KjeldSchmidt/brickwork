@@ -12,10 +12,23 @@
         <TreeView x:Name="WallsTree"
                   ItemsSource="{Binding Layers}"
                   IsVisible="{Binding HasLayers}">
+            <TreeView.Styles>
+                <!-- Expand every container as it materializes (nested groups aren't in the tree until parents expand). -->
+                <Style Selector="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="True" />
+                </Style>
+            </TreeView.Styles>
             <TreeView.DataTemplates>
                 <TreeDataTemplate DataType="vm:WallLayerNodeViewModel"
-                                  ItemsSource="{Binding Walls}">
+                                  ItemsSource="{Binding Children}">
                     <TextBlock Text="{Binding LayerId}" FontWeight="SemiBold" />
+                </TreeDataTemplate>
+
+                <TreeDataTemplate DataType="vm:WallGroupNodeViewModel"
+                                  ItemsSource="{Binding Children}">
+                    <TextBlock Text="{Binding DisplayName}"
+                               FontWeight="Medium"
+                               Opacity="0.95" />
                 </TreeDataTemplate>
 
                 <TreeDataTemplate DataType="vm:WallItemViewModel"

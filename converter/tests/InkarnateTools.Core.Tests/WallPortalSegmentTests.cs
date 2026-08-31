@@ -108,6 +108,7 @@ public class WallPortalSegmentTests
         var wall = new Wall
         {
             Origin = new MapPoint(100, 200),
+            PathOrigin = new MapPoint(100, 200),
             Scale = 2,
         };
 

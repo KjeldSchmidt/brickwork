@@ -49,19 +49,122 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
             return TransactionUnderstanding.KnownIgnored;
         }
 
-        if (!context.WallsByEntityId.TryGetValue(entityId.Value, out var wall))
-        {
-            return TransactionUnderstanding.KnownIgnored;
-        }
-
         if (!item.TryGetProperty("update", out var updateElement) ||
             updateElement.ValueKind != JsonValueKind.Object)
         {
             return TransactionUnderstanding.KnownIgnored;
         }
 
+        if (context.GroupsById.TryGetValue(entityId.Value, out var group))
+        {
+            return ApplyGroupUpdate(context, group, updateElement);
+        }
+
+        if (!context.WallsByEntityId.TryGetValue(entityId.Value, out var wall))
+        {
+            return TransactionUnderstanding.KnownIgnored;
+        }
+
+        return ApplyWallUpdate(wall, updateElement);
+    }
+
+    private static TransactionUnderstanding ApplyGroupUpdate(
+        InkImportContext context,
+        EntityGroup group,
+        JsonElement updateElement)
+    {
         var understanding = TransactionUnderstanding.FullyUnderstood;
         var appliedKnownField = false;
+        double? x = null;
+        double? y = null;
+        double? angle = null;
+        double? originX = null;
+        double? originY = null;
+        var hasTransform = false;
+
+        foreach (var property in updateElement.EnumerateObject())
+        {
+            switch (property.Name)
+            {
+                case "name":
+                    group.Name = property.Value.GetString();
+                    appliedKnownField = true;
+                    break;
+                case "x":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        x = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "y":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        y = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "angle":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        angle = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "oX":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        originX = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "oY":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        originY = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "z":
+                case "order":
+                    appliedKnownField = true;
+                    break;
+                default:
+                    understanding = TransactionUnderstanding.KnownIgnored;
+                    break;
+            }
+        }
+
+        if (hasTransform)
+        {
+            WallGeometryRebuilder.ApplyGroupTransform(context, group, x, y, angle, originX, originY);
+        }
+
+        return appliedKnownField ? understanding : TransactionUnderstanding.KnownIgnored;
+    }
+
+    private static TransactionUnderstanding ApplyWallUpdate(Wall wall, JsonElement updateElement)
+    {
+        var understanding = TransactionUnderstanding.FullyUnderstood;
+        var appliedKnownField = false;
+        double? x = null;
+        double? y = null;
+        double? angle = null;
+        double? originX = null;
+        double? originY = null;
+        double? scale = null;
+        var hasTransform = false;
+        var pathsChanged = false;
 
         foreach (var property in updateElement.EnumerateObject())
         {
@@ -100,18 +203,86 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
                         : 0;
                     appliedKnownField = true;
                     break;
+                case "paths":
+                    wall.PathData = property.Value.GetString();
+                    pathsChanged = true;
+                    appliedKnownField = true;
+                    break;
+                case "x":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        x = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "y":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        y = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "angle":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        angle = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "oX":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        originX = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "oY":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        originY = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "scale":
+                    if (property.Value.ValueKind == JsonValueKind.Number)
+                    {
+                        scale = property.Value.GetDouble();
+                        hasTransform = true;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "z":
+                case "order":
+                    appliedKnownField = true;
+                    break;
                 default:
                     understanding = TransactionUnderstanding.KnownIgnored;
                     break;
             }
         }
 
-        if (!appliedKnownField)
+        if (hasTransform)
         {
-            return TransactionUnderstanding.KnownIgnored;
+            WallGeometryRebuilder.ApplyEntityTransform(wall, x, y, angle, originX, originY, scale);
         }
 
-        return understanding;
+        if (pathsChanged)
+        {
+            WallGeometryRebuilder.RebuildFromPath(wall);
+        }
+
+        return appliedKnownField ? understanding : TransactionUnderstanding.KnownIgnored;
     }
 
     private static TransactionUnderstanding Max(
