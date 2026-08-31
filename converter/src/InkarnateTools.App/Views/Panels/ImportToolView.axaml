@@ -17,34 +17,10 @@
                        TextWrapping="Wrap"
                        FontFamily="Consolas, Courier New, monospace"
                        Opacity="0.9" />
-            <Expander Header="Details"
-                      IsVisible="{Binding HasCompatibilityDetails}"
-                      IsExpanded="False">
-                <ScrollViewer MaxHeight="360"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="0,8,0,0" Spacing="12">
-                        <StackPanel Spacing="4" IsVisible="{Binding HasUnknownActions}">
-                            <TextBlock Text="Unknown actions"
-                                       FontWeight="SemiBold"
-                                       Opacity="0.9" />
-                            <TextBlock Text="{Binding CompatibilityUnknownActionsMessage}"
-                                       TextWrapping="Wrap"
-                                       FontFamily="Consolas, Courier New, monospace"
-                                       Opacity="0.9" />
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Transactions"
-                                       FontWeight="SemiBold"
-                                       Opacity="0.9" />
-                            <TextBlock Text="{Binding CompatibilityTransactionsMessage}"
-                                       TextWrapping="Wrap"
-                                       FontFamily="Consolas, Courier New, monospace"
-                                       Opacity="0.9" />
-                        </StackPanel>
-                    </StackPanel>
-                </ScrollViewer>
-            </Expander>
+            <TextBlock Text="See the Debug panel for transaction details and source JSON export."
+                       TextWrapping="Wrap"
+                       Opacity="0.6"
+                       FontSize="11" />
         </StackPanel>
 
         <Button Grid.Row="2"

@@ -66,8 +66,23 @@ internal sealed class EntityAddTransactionHandler : IInkTransactionHandler
         return TransactionAnalysisFactory.Create(transaction, CommandType, understanding, detail);
     }
 
+        // Prefer understood over ignored when a batch mixes both; unknown still wins.
     private static TransactionUnderstanding Max(
         TransactionUnderstanding current,
-        TransactionUnderstanding candidate) =>
-        (TransactionUnderstanding)Math.Max((int)current, (int)candidate);
+        TransactionUnderstanding candidate)
+    {
+        if (current == TransactionUnderstanding.Unknown ||
+            candidate == TransactionUnderstanding.Unknown)
+        {
+            return TransactionUnderstanding.Unknown;
+        }
+
+        if (current == TransactionUnderstanding.FullyUnderstood ||
+            candidate == TransactionUnderstanding.FullyUnderstood)
+        {
+            return TransactionUnderstanding.FullyUnderstood;
+        }
+
+        return TransactionUnderstanding.KnownIgnored;
+    }
 }

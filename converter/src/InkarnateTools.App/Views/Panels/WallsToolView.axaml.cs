@@ -13,6 +13,7 @@ public partial class WallsToolView : UserControl
         InitializeComponent();
         Loaded += (_, _) => ScheduleExpandAll();
         DataContextChanged += OnDataContextChanged;
+        WallsTree.PropertyChanged += OnWallsTreePropertyChanged;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -36,31 +37,94 @@ public partial class WallsToolView : UserControl
         {
             ScheduleExpandAll();
         }
-    }
 
-    private void ScheduleExpandAll()
-    {
-        // Nested TreeViewItems only exist after parents expand, so run a few passes.
-        Dispatcher.UIThread.Post(() => ExpandAllTreeItems(pass: 0), DispatcherPriority.Loaded);
-    }
-
-    private void ExpandAllTreeItems(int pass)
-    {
-        var expandedAny = false;
-        foreach (var item in WallsTree.GetVisualDescendants().OfType<TreeViewItem>())
+        if (e.PropertyName is nameof(WallsToolViewModel.SelectedTreeItem))
         {
-            if (item.IsExpanded)
+            ScheduleBringSelectionIntoView();
+        }
+    }
+
+    private void OnWallsTreePropertyChanged(object? sender, Avalonia.AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == TreeView.SelectedItemProperty)
+        {
+            ScheduleBringSelectionIntoView();
+        }
+    }
+
+    private void ScheduleExpandAll() =>
+        Dispatcher.UIThread.Post(ExpandAllTreeItems, DispatcherPriority.Loaded);
+
+    private void ScheduleBringSelectionIntoView() =>
+        Dispatcher.UIThread.Post(BringSelectionIntoView, DispatcherPriority.Background);
+
+    /// <summary>
+    /// Avalonia has no TreeView.ExpandAll. Nested containers are only created after a parent
+    /// expands, so we expand depth-first and UpdateLayout so children exist before descending.
+    /// </summary>
+    private void ExpandAllTreeItems() => ExpandItemsControl(WallsTree);
+
+    private void BringSelectionIntoView()
+    {
+        if (WallsTree.SelectedItem is null)
+        {
+            return;
+        }
+
+        ExpandAllTreeItems();
+        var container = FindTreeViewItem(WallsTree, WallsTree.SelectedItem);
+        container?.BringIntoView();
+    }
+
+    private static void ExpandItemsControl(ItemsControl itemsControl)
+    {
+        itemsControl.UpdateLayout();
+
+        for (var index = 0; index < itemsControl.ItemCount; index++)
+        {
+            if (itemsControl.ContainerFromIndex(index) is not TreeViewItem item)
             {
                 continue;
             }
 
             item.IsExpanded = true;
-            expandedAny = true;
+            item.UpdateLayout();
+            ExpandItemsControl(item);
+        }
+    }
+
+    private static TreeViewItem? FindTreeViewItem(ItemsControl parent, object dataItem)
+    {
+        parent.UpdateLayout();
+
+        for (var index = 0; index < parent.ItemCount; index++)
+        {
+            if (parent.ContainerFromIndex(index) is not TreeViewItem item)
+            {
+                continue;
+            }
+
+            if (ReferenceEquals(item.DataContext, dataItem) || Equals(item.DataContext, dataItem))
+            {
+                return item;
+            }
+
+            var nested = FindTreeViewItem(item, dataItem);
+            if (nested is not null)
+            {
+                return nested;
+            }
         }
 
-        if (expandedAny && pass < 8)
+        // Data templates wrap content; fall back to visual-tree DataContext search.
+        foreach (var descendant in parent.GetVisualDescendants().OfType<TreeViewItem>())
         {
-            Dispatcher.UIThread.Post(() => ExpandAllTreeItems(pass + 1), DispatcherPriority.Loaded);
+            if (ReferenceEquals(descendant.DataContext, dataItem) || Equals(descendant.DataContext, dataItem))
+            {
+                return descendant;
+            }
         }
+
+        return null;
     }
 }

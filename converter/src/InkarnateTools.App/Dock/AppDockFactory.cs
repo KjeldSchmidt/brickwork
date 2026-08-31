@@ -26,6 +26,14 @@ public sealed class AppDockFactory : Factory
             CanPin = true,
         };
 
+        var debugTool = new DebugToolViewModel(_session)
+        {
+            Id = "DebugTool",
+            Title = "Debug",
+            CanClose = false,
+            CanPin = true,
+        };
+
         var wallsTool = new WallsToolViewModel(_session)
         {
             Id = "WallsTool",
@@ -52,7 +60,7 @@ public sealed class AppDockFactory : Factory
         var importDock = new ToolDock
         {
             ActiveDockable = importTool,
-            VisibleDockables = CreateList<IDockable>(importTool),
+            VisibleDockables = CreateList<IDockable>(importTool, debugTool),
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible,
             Proportion = 0.35,
@@ -113,6 +121,7 @@ public sealed class AppDockFactory : Factory
         ContextLocator = new Dictionary<string, Func<object?>>
         {
             ["ImportTool"] = () => _session,
+            ["DebugTool"] = () => _session,
             ["WallsTool"] = () => _session,
             ["SettingsTool"] = () => _session,
             ["MapPreview"] = () => _session,

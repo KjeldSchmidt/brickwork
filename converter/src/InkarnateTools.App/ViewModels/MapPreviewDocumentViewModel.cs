@@ -78,6 +78,7 @@ public partial class MapPreviewDocumentViewModel : Document
             WallLineEditing.ToggleActive(hit.Wall, hit.Portal);
         }
 
+        _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
         _session.NotifyContentChanged();
     }
 }

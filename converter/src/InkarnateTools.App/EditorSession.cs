@@ -13,7 +13,19 @@ public sealed partial class EditorSession : ObservableObject
     private string? _sourceFileName;
 
     [ObservableProperty]
+    private string? _sourceFilePath;
+
+    [ObservableProperty]
     private int _contentRevision;
+
+    [ObservableProperty]
+    private int _treeFocusGeneration;
+
+    [ObservableProperty]
+    private int? _focusedWallEntityId;
+
+    [ObservableProperty]
+    private WallPortal? _focusedPortal;
 
     [ObservableProperty]
     private double _wallSimplificationTolerance = WallSimplificationSettings.DefaultToleranceSceneUnits;
@@ -21,6 +33,13 @@ public sealed partial class EditorSession : ObservableObject
     public void NotifyContentChanged()
     {
         ContentRevision++;
+    }
+
+    public void RequestWallTreeFocus(Wall wall, WallPortal? portal = null)
+    {
+        FocusedWallEntityId = wall.EntityId;
+        FocusedPortal = portal;
+        TreeFocusGeneration++;
     }
 
     partial void OnWallSimplificationToleranceChanged(double value)

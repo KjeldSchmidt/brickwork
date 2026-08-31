@@ -11,6 +11,7 @@
 
         <TreeView x:Name="WallsTree"
                   ItemsSource="{Binding Layers}"
+                  SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}"
                   IsVisible="{Binding HasLayers}">
             <TreeView.Styles>
                 <!-- Expand every container as it materializes (nested groups aren't in the tree until parents expand). -->
@@ -21,14 +22,27 @@
             <TreeView.DataTemplates>
                 <TreeDataTemplate DataType="vm:WallLayerNodeViewModel"
                                   ItemsSource="{Binding Children}">
-                    <TextBlock Text="{Binding LayerId}" FontWeight="SemiBold" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <CheckBox IsChecked="{Binding IsActive}"
+                                  IsThreeState="True"
+                                  VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding LayerId}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
                 </TreeDataTemplate>
 
                 <TreeDataTemplate DataType="vm:WallGroupNodeViewModel"
                                   ItemsSource="{Binding Children}">
-                    <TextBlock Text="{Binding DisplayName}"
-                               FontWeight="Medium"
-                               Opacity="0.95" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <CheckBox IsChecked="{Binding IsActive}"
+                                  IsThreeState="True"
+                                  VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding DisplayName}"
+                                   FontWeight="Medium"
+                                   Opacity="0.95"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
                 </TreeDataTemplate>
 
                 <TreeDataTemplate DataType="vm:WallItemViewModel"

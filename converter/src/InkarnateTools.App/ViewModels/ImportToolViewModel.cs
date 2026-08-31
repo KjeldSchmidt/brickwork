@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Mvvm.Controls;
 using InkarnateTools.Composition;
 using InkarnateTools.Core.Geometry;
-using InkarnateTools.Core.Models;
 using InkarnateTools.Core.Ports;
 using InkarnateTools.Core.Services;
 
@@ -16,25 +15,12 @@ public partial class ImportToolViewModel : Tool
     private readonly ConvertMapService _convertMapService = ServiceFactory.CreateConvertMapService();
     private readonly IMapImporter _importer = ServiceFactory.CreateInkarnateImporter();
     private readonly IReadOnlyList<ExportFormatChoice> _exportFormatChoices;
-    private string? _loadedInputPath;
 
     [ObservableProperty]
     private string _statusMessage = "Ready.";
 
     [ObservableProperty]
     private string _compatibilityMessage = string.Empty;
-
-    [ObservableProperty]
-    private string _compatibilityUnknownActionsMessage = string.Empty;
-
-    [ObservableProperty]
-    private string _compatibilityTransactionsMessage = string.Empty;
-
-    [ObservableProperty]
-    private bool _hasCompatibilityDetails;
-
-    [ObservableProperty]
-    private bool _hasUnknownActions;
 
     public ImportToolViewModel(EditorSession session)
     {
@@ -45,6 +31,7 @@ public partial class ImportToolViewModel : Tool
             if (args.PropertyName is nameof(EditorSession.Map))
             {
                 ConvertCommand.NotifyCanExecuteChanged();
+                CompatibilityMessage = _session.Map?.Compatibility?.FormatSummary().TrimEnd() ?? string.Empty;
             }
         };
     }
@@ -58,25 +45,24 @@ public partial class ImportToolViewModel : Tool
             return;
         }
 
-        _loadedInputPath = path;
-
         try
         {
             await using var input = File.OpenRead(path);
             var map = await _importer.ImportAsync(input).ConfigureAwait(true);
             WallPointSimplifier.ApplyAll(map.Walls, _session.WallSimplificationTolerance);
             map.SourceFileName = Path.GetFileName(path);
+            _session.SourceFilePath = path;
             _session.Map = map;
             _session.SourceFileName = Path.GetFileName(path);
-            UpdateCompatibilityDisplay(map.Compatibility);
+            CompatibilityMessage = map.Compatibility?.FormatSummary().TrimEnd() ?? string.Empty;
             StatusMessage = $"Loaded {_session.SourceFileName}.";
         }
         catch (Exception ex)
         {
             _session.Map = null;
             _session.SourceFileName = null;
-            _loadedInputPath = null;
-            ClearCompatibilityDisplay();
+            _session.SourceFilePath = null;
+            CompatibilityMessage = string.Empty;
             StatusMessage = $"Failed to load input: {ex.Message}";
         }
     }
@@ -122,31 +108,6 @@ public partial class ImportToolViewModel : Tool
     }
 
     private bool CanConvert() => _session.Map is not null;
-
-    private void ClearCompatibilityDisplay()
-    {
-        CompatibilityMessage = string.Empty;
-        CompatibilityUnknownActionsMessage = string.Empty;
-        CompatibilityTransactionsMessage = string.Empty;
-        HasCompatibilityDetails = false;
-        HasUnknownActions = false;
-    }
-
-    private void UpdateCompatibilityDisplay(CompatibilityReport? report)
-    {
-        if (report is null)
-        {
-            ClearCompatibilityDisplay();
-            return;
-        }
-
-        CompatibilityMessage = report.FormatSummary().TrimEnd();
-        CompatibilityUnknownActionsMessage = report.FormatUnknownActions().TrimEnd();
-        CompatibilityTransactionsMessage = report.FormatTransactionLines().TrimEnd();
-        HasCompatibilityDetails = report.TotalTransactions > 0;
-        HasUnknownActions = report.UnknownCount > 0;
-        ConvertCommand.NotifyCanExecuteChanged();
-    }
 
     private async Task<string?> PickSourceMapAsync()
     {

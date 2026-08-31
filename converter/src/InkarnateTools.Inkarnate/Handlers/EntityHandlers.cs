@@ -52,6 +52,22 @@ internal sealed class LightEntityHandler : IInkEntityHandler
     }
 }
 
+internal sealed class KnownIgnoredEntityHandler : IInkEntityHandler
+{
+    public KnownIgnoredEntityHandler(string entityType)
+    {
+        EntityType = entityType;
+    }
+
+    public string EntityType { get; }
+
+    public TransactionUnderstanding Understanding => TransactionUnderstanding.KnownIgnored;
+
+    public void Apply(InkImportContext context, InkEntityItem item)
+    {
+    }
+}
+
 internal static class EntityParsing
 {
     public static MapPoint ReadPoint(JsonElement pointElement) =>

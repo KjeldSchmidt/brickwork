@@ -91,4 +91,57 @@ public class InkarnateCompatibilityAnalyzerTests
         Assert.Equal(1, map.Compatibility.KnownIgnoredCount);
         Assert.Equal(100, map.Grid.CellSize);
     }
+
+    [Fact]
+    public void EntityAdd_TreatsStampAndGroupAsKnownIgnored()
+    {
+        const string json = """
+            {
+              "title": "mixed add",
+              "version": 3,
+              "history": [
+                {
+                  "transactionId": 1,
+                  "cmdType": "cmd-entity-add",
+                  "items": [
+                    {
+                      "layerId": "layer-object-1",
+                      "entity": { "entityType": "group", "entityId": 10 }
+                    },
+                    {
+                      "layerId": "layer-object-1",
+                      "entity": { "entityType": "stamp", "entityId": 11 }
+                    },
+                    {
+                      "layerId": "layer-object-1",
+                      "entity": {
+                        "entityType": "path-v2",
+                        "entityId": 12,
+                        "wallEnabled": true,
+                        "wallThickness": 10,
+                        "x": 0,
+                        "y": 0,
+                        "scale": 1,
+                        "paths": "M0,0 L10,0"
+                      }
+                    },
+                    {
+                      "layerId": "layer-object-1",
+                      "entity": { "entityType": "stamp", "entityId": 13 }
+                    }
+                  ]
+                }
+              ]
+            }
+            """;
+
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var map = InkarnateDocumentParser.Parse(document.RootElement);
+
+        Assert.NotNull(map.Compatibility);
+        var transaction = Assert.Single(map.Compatibility!.Transactions);
+        Assert.Equal(TransactionUnderstanding.FullyUnderstood, transaction.Understanding);
+        Assert.Equal(0, map.Compatibility.UnknownCount);
+        Assert.Equal(12, Assert.Single(map.Walls).EntityId);
+    }
 }
