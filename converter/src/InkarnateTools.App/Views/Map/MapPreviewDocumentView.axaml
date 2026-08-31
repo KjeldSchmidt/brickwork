@@ -17,12 +17,13 @@
                         ClipToBounds="True"
                         Stretch="None"
                         Focusable="True"
-                        PanButton="Left"
+                        PanButton="Right"
                         EnableZoom="True"
                         EnablePan="True"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch">
-            <controls:MapViewportControl Map="{Binding Map}"
+            <controls:MapViewportControl x:Name="MapViewport"
+                                         Map="{Binding Map}"
                                          ContentRevision="{Binding ContentRevision}"
                                          Width="{Binding PreviewWidth}"
                                          Height="{Binding PreviewHeight}" />

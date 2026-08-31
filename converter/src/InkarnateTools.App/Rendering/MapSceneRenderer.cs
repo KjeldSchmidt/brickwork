@@ -6,9 +6,6 @@ namespace InkarnateTools.App.Rendering;
 
 public sealed class MapSceneRenderer : IMapSceneRenderer
 {
-    private static readonly SKColor ActiveWallColor = new(0xFF, 0x44, 0x44, 0xCC);
-    private static readonly SKColor InactiveWallColor = new(0x88, 0x88, 0x88, 0x88);
-
     private readonly Dictionary<MapDocument, SKImage> _imageCache = new(ReferenceEqualityComparer.Instance);
 
     public void Render(SKCanvas canvas, MapDocument map, SKRect destinationBounds)
@@ -34,32 +31,22 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
                 continue;
             }
 
-            using var wallPaint = new SKPaint
-            {
-                Color = wall.IsActive ? ActiveWallColor : InactiveWallColor,
-                IsAntialias = true,
-                Style = SKPaintStyle.Stroke,
-                StrokeWidth = 2,
-            };
-
             foreach (var segment in WallPathSegmentBuilder.BuildSegments(wall))
             {
-                if (segment.Count < 2)
-                {
-                    continue;
-                }
+                DrawPolyline(
+                    canvas,
+                    transform,
+                    segment,
+                    WallLineColors.ForLine(wall.LineType, wall.IsActive));
+            }
 
-                using var path = new SKPath();
-                var first = transform.SceneToPreview(segment[0]);
-                path.MoveTo((float)first.X, (float)first.Y);
-
-                for (var i = 1; i < segment.Count; i++)
-                {
-                    var point = transform.SceneToPreview(segment[i]);
-                    path.LineTo((float)point.X, (float)point.Y);
-                }
-
-                canvas.DrawPath(path, wallPaint);
+            foreach (var portalSegment in WallPathSegmentBuilder.BuildPortalSegments(wall))
+            {
+                DrawPolyline(
+                    canvas,
+                    transform,
+                    portalSegment.Points,
+                    WallLineColors.ForLine(portalSegment.Portal.LineType, portalSegment.Portal.IsActive));
             }
         }
     }
@@ -85,6 +72,38 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         }
 
         _imageCache.Clear();
+    }
+
+    private static void DrawPolyline(
+        SKCanvas canvas,
+        SceneTransform transform,
+        IReadOnlyList<MapPoint> scenePoints,
+        SKColor color)
+    {
+        if (scenePoints.Count < 2)
+        {
+            return;
+        }
+
+        using var paint = new SKPaint
+        {
+            Color = color,
+            IsAntialias = true,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 2,
+        };
+
+        using var path = new SKPath();
+        var first = transform.SceneToPreview(scenePoints[0]);
+        path.MoveTo((float)first.X, (float)first.Y);
+
+        for (var i = 1; i < scenePoints.Count; i++)
+        {
+            var point = transform.SceneToPreview(scenePoints[i]);
+            path.LineTo((float)point.X, (float)point.Y);
+        }
+
+        canvas.DrawPath(path, paint);
     }
 
     private SKImage? GetOrCreateImage(MapDocument map)

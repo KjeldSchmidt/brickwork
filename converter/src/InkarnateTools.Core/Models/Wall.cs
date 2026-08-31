@@ -10,6 +10,8 @@ public sealed class Wall
 
     public bool IsActive { get; set; } = true;
 
+    public WallLineType LineType { get; set; } = WallLineType.Default;
+
     public bool WallEnabled { get; set; } = true;
 
     public bool IsClosed { get; set; }
@@ -34,4 +36,8 @@ public sealed class WallPortal
     public MapPoint Anchor { get; set; }
 
     public double Width { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
+    public WallLineType LineType { get; set; } = WallLineType.Door;
 }

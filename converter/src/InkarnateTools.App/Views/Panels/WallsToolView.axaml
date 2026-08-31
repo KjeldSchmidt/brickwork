@@ -9,17 +9,47 @@
                    TextWrapping="Wrap"
                    IsVisible="{Binding ShowEmptyMessage}" />
 
-        <TreeView ItemsSource="{Binding Layers}"
+        <TreeView x:Name="WallsTree"
+                  ItemsSource="{Binding Layers}"
                   IsVisible="{Binding HasLayers}">
             <TreeView.DataTemplates>
                 <TreeDataTemplate DataType="vm:WallLayerNodeViewModel"
                                   ItemsSource="{Binding Walls}">
                     <TextBlock Text="{Binding LayerId}" FontWeight="SemiBold" />
                 </TreeDataTemplate>
-                <DataTemplate DataType="vm:WallItemViewModel">
-                    <CheckBox Content="{Binding DisplayName}"
-                              IsChecked="{Binding IsActive}"
-                              Margin="0,2" />
+
+                <TreeDataTemplate DataType="vm:WallItemViewModel"
+                                  ItemsSource="{Binding Portals}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
+                        <CheckBox Grid.Column="0"
+                                  IsChecked="{Binding IsActive}"
+                                  VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding DisplayName}"
+                                   VerticalAlignment="Center"
+                                   Margin="6,0" />
+                        <ComboBox Grid.Column="2"
+                                  Width="90"
+                                  ItemsSource="{Binding LineTypeOptions}"
+                                  SelectedItem="{Binding LineType}" />
+                    </Grid>
+                </TreeDataTemplate>
+
+                <DataTemplate DataType="vm:WallPortalItemViewModel">
+                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,2,0,2">
+                        <CheckBox Grid.Column="0"
+                                  IsChecked="{Binding IsActive}"
+                                  VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding DisplayName}"
+                                   VerticalAlignment="Center"
+                                   Margin="6,0"
+                                   Opacity="0.85" />
+                        <ComboBox Grid.Column="2"
+                                  Width="90"
+                                  ItemsSource="{Binding LineTypeOptions}"
+                                  SelectedItem="{Binding LineType}" />
+                    </Grid>
                 </DataTemplate>
             </TreeView.DataTemplates>
         </TreeView>

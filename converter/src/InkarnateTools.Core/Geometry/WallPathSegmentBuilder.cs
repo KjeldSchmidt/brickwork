@@ -2,6 +2,8 @@ using InkarnateTools.Core.Models;
 
 namespace InkarnateTools.Core.Geometry;
 
+public sealed record WallPortalSegment(WallPortal Portal, IReadOnlyList<MapPoint> Points);
+
 public static class WallPathSegmentBuilder
 {
     private const double Epsilon = 1e-6;
@@ -32,6 +34,48 @@ public static class WallPathSegmentBuilder
         }
 
         return ClipPolyline(wall.Points, arcLengths, gaps);
+    }
+
+    public static IReadOnlyList<WallPortalSegment> BuildPortalSegments(Wall wall)
+    {
+        if (wall.Points.Count < 2 || wall.Portals.Count == 0)
+        {
+            return [];
+        }
+
+        var arcLengths = ComputeArcLengths(wall.Points);
+        var totalLength = arcLengths[^1];
+        if (totalLength <= Epsilon)
+        {
+            return [];
+        }
+
+        var segments = new List<WallPortalSegment>();
+        foreach (var portal in wall.Portals)
+        {
+            if (portal.Width <= Epsilon)
+            {
+                continue;
+            }
+
+            var anchorScene = PortalAnchorToScene(wall, portal);
+            var center = FindArcLengthAtClosestPoint(wall.Points, arcLengths, anchorScene);
+            var halfWidth = portal.Width / 2d;
+            var start = Math.Max(0d, center - halfWidth);
+            var end = Math.Min(totalLength, center + halfWidth);
+            if (end - start <= Epsilon)
+            {
+                continue;
+            }
+
+            var points = ExtractIntervalPolyline(wall.Points, arcLengths, start, end);
+            if (points.Count >= 2)
+            {
+                segments.Add(new WallPortalSegment(portal, points));
+            }
+        }
+
+        return segments;
     }
 
     public static MapPoint PortalAnchorToScene(Wall wall, WallPortal portal) =>
@@ -300,6 +344,32 @@ public static class WallPathSegmentBuilder
     private static bool PointsEqual(MapPoint left, MapPoint right) =>
         Math.Abs(left.X - right.X) <= Epsilon &&
         Math.Abs(left.Y - right.Y) <= Epsilon;
+
+    private static List<MapPoint> ExtractIntervalPolyline(
+        IList<MapPoint> points,
+        double[] arcLengths,
+        double intervalStart,
+        double intervalEnd)
+    {
+        var polyline = new List<MapPoint> { InterpolateAtLength(points, arcLengths, intervalStart) };
+
+        for (var i = 1; i < points.Count - 1; i++)
+        {
+            var vertexLength = arcLengths[i];
+            if (vertexLength > intervalStart + Epsilon && vertexLength < intervalEnd - Epsilon)
+            {
+                polyline.Add(points[i]);
+            }
+        }
+
+        var endPoint = InterpolateAtLength(points, arcLengths, intervalEnd);
+        if (!PointsEqual(polyline[^1], endPoint))
+        {
+            polyline.Add(endPoint);
+        }
+
+        return polyline;
+    }
 
     private static List<MapPoint> CopyPoints(IList<MapPoint> points) => points.ToList();
 }

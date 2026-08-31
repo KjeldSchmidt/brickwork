@@ -25,8 +25,24 @@ public partial class WallsToolViewModel : Tool
             {
                 RebuildLayers();
             }
+
+            if (args.PropertyName is nameof(EditorSession.ContentRevision))
+            {
+                RefreshBoundValues();
+            }
         };
         RebuildLayers();
+    }
+
+    private void RefreshBoundValues()
+    {
+        foreach (var layer in Layers)
+        {
+            foreach (var wall in layer.Walls)
+            {
+                wall.RefreshFromModel();
+            }
+        }
     }
 
     private void RebuildLayers()
@@ -78,9 +94,19 @@ public partial class WallItemViewModel : ObservableObject
     {
         _session = session;
         Wall = wall;
+
+        foreach (var portal in wall.Portals)
+        {
+            Portals.Add(new WallPortalItemViewModel(session, portal));
+        }
     }
 
     public Wall Wall { get; }
+
+    public ObservableCollection<WallPortalItemViewModel> Portals { get; } = [];
+
+    public IReadOnlyList<WallLineType> LineTypeOptions { get; } =
+        Enum.GetValues<WallLineType>();
 
     public string DisplayName => Wall.DisplayName;
 
@@ -98,5 +124,89 @@ public partial class WallItemViewModel : ObservableObject
             OnPropertyChanged();
             _session.NotifyContentChanged();
         }
+    }
+
+    public WallLineType LineType
+    {
+        get => Wall.LineType;
+        set
+        {
+            if (Wall.LineType == value)
+            {
+                return;
+            }
+
+            Wall.LineType = value;
+            OnPropertyChanged();
+            _session.NotifyContentChanged();
+        }
+    }
+
+    public void RefreshFromModel()
+    {
+        OnPropertyChanged(nameof(IsActive));
+        OnPropertyChanged(nameof(LineType));
+
+        foreach (var portal in Portals)
+        {
+            portal.RefreshFromModel();
+        }
+    }
+}
+
+public partial class WallPortalItemViewModel : ObservableObject
+{
+    private readonly EditorSession _session;
+
+    public WallPortalItemViewModel(EditorSession session, WallPortal portal)
+    {
+        _session = session;
+        Portal = portal;
+    }
+
+    public WallPortal Portal { get; }
+
+    public IReadOnlyList<WallLineType> LineTypeOptions { get; } =
+        Enum.GetValues<WallLineType>();
+
+    public string DisplayName =>
+        string.IsNullOrWhiteSpace(Portal.Id) ? "Gap" : Portal.Id;
+
+    public bool IsActive
+    {
+        get => Portal.IsActive;
+        set
+        {
+            if (Portal.IsActive == value)
+            {
+                return;
+            }
+
+            Portal.IsActive = value;
+            OnPropertyChanged();
+            _session.NotifyContentChanged();
+        }
+    }
+
+    public WallLineType LineType
+    {
+        get => Portal.LineType;
+        set
+        {
+            if (Portal.LineType == value)
+            {
+                return;
+            }
+
+            Portal.LineType = value;
+            OnPropertyChanged();
+            _session.NotifyContentChanged();
+        }
+    }
+
+    public void RefreshFromModel()
+    {
+        OnPropertyChanged(nameof(IsActive));
+        OnPropertyChanged(nameof(LineType));
     }
 }

@@ -41,12 +41,31 @@ public sealed class AppDockFactory : Factory
             CanClose = false,
         };
 
-        var toolDock = new ToolDock
+        var importDock = new ToolDock
         {
             ActiveDockable = importTool,
-            VisibleDockables = CreateList<IDockable>(importTool, wallsTool),
+            VisibleDockables = CreateList<IDockable>(importTool),
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible,
+            Proportion = 0.35,
+        };
+
+        var wallsDock = new ToolDock
+        {
+            ActiveDockable = wallsTool,
+            VisibleDockables = CreateList<IDockable>(wallsTool),
+            Alignment = Alignment.Left,
+            GripMode = GripMode.Visible,
+            Proportion = 0.65,
+        };
+
+        var leftSidebar = new ProportionalDock
+        {
+            Orientation = Orientation.Vertical,
+            VisibleDockables = CreateList<IDockable>(
+                importDock,
+                new ProportionalDockSplitter { CanResize = true, ResizePreview = true },
+                wallsDock),
         };
 
         var documentDock = new DocumentDock
@@ -65,7 +84,7 @@ public sealed class AppDockFactory : Factory
                 {
                     Proportion = 0.28,
                     Orientation = Orientation.Vertical,
-                    VisibleDockables = CreateList<IDockable>(toolDock),
+                    VisibleDockables = CreateList<IDockable>(leftSidebar),
                 },
                 new ProportionalDockSplitter { CanResize = true, ResizePreview = true },
                 documentDock),

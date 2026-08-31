@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Mvvm.Controls;
+using InkarnateTools.Core.Geometry;
 using InkarnateTools.Core.Models;
 
 namespace InkarnateTools.App.ViewModels;
@@ -52,5 +53,31 @@ public partial class MapPreviewDocumentViewModel : Document
         ShowPlaceholder = !HasMap;
         PreviewWidth = Map?.Preview?.Width ?? 2048;
         PreviewHeight = Map?.Preview?.Height ?? 1536;
+    }
+
+    public void EditWallAt(MapPoint previewPoint, bool cycleType, bool toggleActive)
+    {
+        if (Map is null)
+        {
+            return;
+        }
+
+        var hit = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (hit is null)
+        {
+            return;
+        }
+
+        if (cycleType)
+        {
+            WallLineEditing.CycleType(hit.Wall, hit.Portal);
+        }
+
+        if (toggleActive)
+        {
+            WallLineEditing.ToggleActive(hit.Wall, hit.Portal);
+        }
+
+        _session.NotifyContentChanged();
     }
 }
