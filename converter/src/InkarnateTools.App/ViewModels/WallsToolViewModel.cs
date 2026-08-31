@@ -84,32 +84,32 @@ public partial class WallsToolViewModel : Tool
             switch (child)
             {
                 case WallGroupNodeViewModel group:
-                {
-                    var nested = FindTreeItem(group.Children, wallEntityId, portal);
-                    if (nested is not null)
                     {
-                        return nested;
-                    }
+                        var nested = FindTreeItem(group.Children, wallEntityId, portal);
+                        if (nested is not null)
+                        {
+                            return nested;
+                        }
 
-                    break;
-                }
+                        break;
+                    }
                 case WallItemViewModel wall when wall.Wall.EntityId == wallEntityId:
-                {
-                    if (portal is null)
                     {
+                        if (portal is null)
+                        {
+                            return wall;
+                        }
+
+                        foreach (var portalItem in wall.Portals)
+                        {
+                            if (ReferenceEquals(portalItem.Portal, portal))
+                            {
+                                return portalItem;
+                            }
+                        }
+
                         return wall;
                     }
-
-                    foreach (var portalItem in wall.Portals)
-                    {
-                        if (ReferenceEquals(portalItem.Portal, portal))
-                        {
-                            return portalItem;
-                        }
-                    }
-
-                    return wall;
-                }
             }
         }
 

@@ -66,7 +66,7 @@ internal sealed class EntityAddTransactionHandler : IInkTransactionHandler
         return TransactionAnalysisFactory.Create(transaction, CommandType, understanding, detail);
     }
 
-        // Prefer understood over ignored when a batch mixes both; unknown still wins.
+    // Prefer understood over ignored when a batch mixes both; unknown still wins.
     private static TransactionUnderstanding Max(
         TransactionUnderstanding current,
         TransactionUnderstanding candidate)
