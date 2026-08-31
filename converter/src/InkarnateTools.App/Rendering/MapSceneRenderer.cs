@@ -100,20 +100,86 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
 
         if (lineType == WallLineType.Terrain && sceneThickness > 0)
         {
-            var outline = WallThicknessPolygonBuilder.BuildOutline(scenePoints, sceneThickness, isClosed);
-            if (outline.Count >= 3)
+            if (isClosed)
             {
-                DrawPolygon(
-                    canvas,
-                    transform,
-                    outline,
-                    WallLineColors.FillForLine(lineType, isActive),
-                    WallLineColors.ForLine(lineType, isActive));
-                return;
+                var ring = WallThicknessPolygonBuilder.BuildClosedRing(scenePoints, sceneThickness);
+                if (ring is not null && ring.Outer.Count >= 3 && ring.Inner.Count >= 3)
+                {
+                    DrawTerrainRing(
+                        canvas,
+                        transform,
+                        ring,
+                        WallLineColors.FillForLine(lineType, isActive),
+                        WallLineColors.ForLine(lineType, isActive));
+                    return;
+                }
+            }
+            else
+            {
+                var outline = WallThicknessPolygonBuilder.BuildOutline(scenePoints, sceneThickness);
+                if (outline.Count >= 3)
+                {
+                    DrawPolygon(
+                        canvas,
+                        transform,
+                        outline,
+                        WallLineColors.FillForLine(lineType, isActive),
+                        WallLineColors.ForLine(lineType, isActive));
+                    return;
+                }
             }
         }
 
-        DrawPolyline(canvas, transform, scenePoints, WallLineColors.ForLine(lineType, isActive));
+        DrawPolyline(canvas, transform, scenePoints, WallLineColors.ForLine(lineType, isActive), isClosed);
+    }
+
+    private static void DrawTerrainRing(
+        SKCanvas canvas,
+        SceneTransform transform,
+        WallTerrainRing ring,
+        SKColor fillColor,
+        SKColor strokeColor)
+    {
+        using var path = new SKPath { FillType = SKPathFillType.EvenOdd };
+        AddClosedLoop(path, transform, ring.Outer);
+        AddClosedLoop(path, transform, ring.Inner);
+
+        using var fillPaint = new SKPaint
+        {
+            Color = fillColor,
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill,
+        };
+        canvas.DrawPath(path, fillPaint);
+
+        using var strokePaint = new SKPaint
+        {
+            Color = strokeColor,
+            IsAntialias = true,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = LineStrokeWidth,
+            StrokeJoin = SKStrokeJoin.Round,
+        };
+        canvas.DrawPath(path, strokePaint);
+    }
+
+    private static void AddClosedLoop(SKPath path, SceneTransform transform, IReadOnlyList<MapPoint> loop)
+    {
+        if (loop.Count < 3)
+        {
+            return;
+        }
+
+        var first = transform.SceneToPreview(loop[0]);
+        path.MoveTo((float)first.X, (float)first.Y);
+
+        for (var i = 1; i < loop.Count; i++)
+        {
+            var point = transform.SceneToPreview(loop[i]);
+            path.LineTo((float)point.X, (float)point.Y);
+        }
+
+        path.Close();
     }
 
     private static void DrawPolygon(
@@ -149,8 +215,15 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         SKCanvas canvas,
         SceneTransform transform,
         IReadOnlyList<MapPoint> scenePoints,
-        SKColor color)
+        SKColor color,
+        bool isClosed)
     {
+        using var path = BuildPath(transform, scenePoints);
+        if (isClosed)
+        {
+            path.Close();
+        }
+
         using var paint = new SKPaint
         {
             Color = color,
@@ -161,7 +234,7 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             StrokeCap = SKStrokeCap.Round,
         };
 
-        canvas.DrawPath(BuildPath(transform, scenePoints), paint);
+        canvas.DrawPath(path, paint);
     }
 
     private static void DrawCenterlineNodes(

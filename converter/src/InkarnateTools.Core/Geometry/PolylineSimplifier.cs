@@ -4,13 +4,35 @@ namespace InkarnateTools.Core.Geometry;
 
 public static class PolylineSimplifier
 {
-    public static List<MapPoint> DouglasPeucker(IList<MapPoint> points, double tolerance)
+    private const double PointEpsilon = 0.01;
+
+    public static List<MapPoint> DouglasPeucker(IList<MapPoint> points, double tolerance, bool isClosed = false)
     {
         if (points.Count <= 2 || tolerance <= 0)
         {
             return points.ToList();
         }
 
+        if (!isClosed)
+        {
+            return DouglasPeuckerOpen(points, tolerance);
+        }
+
+        var extended = new List<MapPoint>(points.Count + 1);
+        extended.AddRange(points);
+        extended.Add(points[0]);
+
+        var simplified = DouglasPeuckerOpen(extended, tolerance);
+        if (simplified.Count > 1 && NearlyEqual(simplified[0], simplified[^1]))
+        {
+            simplified.RemoveAt(simplified.Count - 1);
+        }
+
+        return simplified;
+    }
+
+    private static List<MapPoint> DouglasPeuckerOpen(IList<MapPoint> points, double tolerance)
+    {
         var keep = new bool[points.Count];
         keep[0] = true;
         keep[^1] = true;
@@ -87,4 +109,7 @@ public static class PolylineSimplifier
         var distY = point.Y - projY;
         return Math.Sqrt(distX * distX + distY * distY);
     }
+
+    private static bool NearlyEqual(MapPoint a, MapPoint b) =>
+        Math.Abs(a.X - b.X) < PointEpsilon && Math.Abs(a.Y - b.Y) < PointEpsilon;
 }

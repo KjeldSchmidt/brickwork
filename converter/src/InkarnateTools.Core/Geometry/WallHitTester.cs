@@ -31,7 +31,7 @@ public static class WallHitTester
 
             foreach (var segment in WallPathSegmentBuilder.BuildPortalSegments(wall))
             {
-                if (TryPickSegment(segment.Points, transform, previewPoint, ref bestDistanceSquared, out _))
+                if (TryPickSegment(segment.Points, isClosed: false, transform, previewPoint, ref bestDistanceSquared, out _))
                 {
                     bestTarget = new WallPickTarget(wall, segment.Portal);
                 }
@@ -39,7 +39,7 @@ public static class WallHitTester
 
             foreach (var segment in WallPathSegmentBuilder.BuildSegments(wall))
             {
-                if (TryPickSegment(segment, transform, previewPoint, ref bestDistanceSquared, out _))
+                if (TryPickSegment(segment, wall.IsClosed, transform, previewPoint, ref bestDistanceSquared, out _))
                 {
                     bestTarget = new WallPickTarget(wall, null);
                 }
@@ -51,18 +51,22 @@ public static class WallHitTester
 
     private static bool TryPickSegment(
         IReadOnlyList<MapPoint> scenePoints,
+        bool isClosed,
         SceneTransform transform,
         MapPoint previewPoint,
         ref double bestDistanceSquared,
         out double distanceSquared)
     {
         distanceSquared = double.MaxValue;
+        var edgeCount = WallPolylineEdges.EdgeCount(scenePoints.Count, isClosed);
 
-        for (var i = 0; i < scenePoints.Count - 1; i++)
+        for (var i = 0; i < edgeCount; i++)
         {
-            var start = transform.SceneToPreview(scenePoints[i]);
-            var end = transform.SceneToPreview(scenePoints[i + 1]);
-            var closest = ProjectOntoSegment(previewPoint, start, end, out _);
+            var start = scenePoints[i];
+            var end = scenePoints[(i + 1) % scenePoints.Count];
+            var previewStart = transform.SceneToPreview(start);
+            var previewEnd = transform.SceneToPreview(end);
+            var closest = ProjectOntoSegment(previewPoint, previewStart, previewEnd, out _);
             var dx = previewPoint.X - closest.X;
             var dy = previewPoint.Y - closest.Y;
             var segmentDistanceSquared = dx * dx + dy * dy;

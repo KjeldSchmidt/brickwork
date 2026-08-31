@@ -11,7 +11,7 @@ public static class WallPointSimplifier
             return;
         }
 
-        var simplified = PolylineSimplifier.DouglasPeucker(wall.RawPoints, tolerance);
+        var simplified = PolylineSimplifier.DouglasPeucker(wall.RawPoints, tolerance, wall.IsClosed);
         wall.Points.Clear();
         foreach (var point in simplified)
         {

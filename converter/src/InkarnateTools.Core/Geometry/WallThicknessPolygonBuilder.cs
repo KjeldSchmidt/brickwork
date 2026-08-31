@@ -8,11 +8,17 @@ public static class WallThicknessPolygonBuilder
     private const double MiterLimit = 4d;
 
     public static IReadOnlyList<MapPoint> BuildOutline(
-        IReadOnlyList<MapPoint> centerline,
+        IEnumerable<MapPoint> centerline,
         double thickness,
         bool isClosed = false)
     {
-        if (centerline.Count < 2 || thickness <= Epsilon)
+        if (isClosed)
+        {
+            return [];
+        }
+
+        var points = centerline as IReadOnlyList<MapPoint> ?? centerline.ToList();
+        if (points.Count < 2 || thickness <= Epsilon)
         {
             return [];
         }
@@ -20,32 +26,20 @@ public static class WallThicknessPolygonBuilder
         var half = thickness / 2d;
         var leftSide = new List<MapPoint>();
         var rightSide = new List<MapPoint>();
-        var count = centerline.Count;
+        var count = points.Count;
 
-        if (isClosed)
+        var startNormal = LeftNormal(points[0], points[1]);
+        leftSide.Add(Offset(points[0], startNormal, half));
+        rightSide.Add(Offset(points[0], startNormal, -half));
+
+        for (var i = 1; i < count - 1; i++)
         {
-            for (var i = 0; i < count; i++)
-            {
-                var previous = (i - 1 + count) % count;
-                var next = (i + 1) % count;
-                ComputeJoin(centerline, previous, i, next, half, leftSide, rightSide);
-            }
+            ComputeJoin(points, i - 1, i, i + 1, half, leftSide, rightSide);
         }
-        else
-        {
-            var startNormal = LeftNormal(centerline[0], centerline[1]);
-            leftSide.Add(Offset(centerline[0], startNormal, half));
-            rightSide.Add(Offset(centerline[0], startNormal, -half));
 
-            for (var i = 1; i < count - 1; i++)
-            {
-                ComputeJoin(centerline, i - 1, i, i + 1, half, leftSide, rightSide);
-            }
-
-            var endNormal = LeftNormal(centerline[^2], centerline[^1]);
-            leftSide.Add(Offset(centerline[^1], endNormal, half));
-            rightSide.Add(Offset(centerline[^1], endNormal, -half));
-        }
+        var endNormal = LeftNormal(points[^2], points[^1]);
+        leftSide.Add(Offset(points[^1], endNormal, half));
+        rightSide.Add(Offset(points[^1], endNormal, -half));
 
         var polygon = new List<MapPoint>(leftSide);
         for (var i = rightSide.Count - 1; i >= 0; i--)
@@ -54,6 +48,47 @@ public static class WallThicknessPolygonBuilder
         }
 
         return polygon;
+    }
+
+    public static WallTerrainRing? BuildClosedRing(IEnumerable<MapPoint> centerline, double thickness)
+    {
+        var points = centerline as IReadOnlyList<MapPoint> ?? centerline.ToList();
+        if (points.Count < 3 || thickness <= Epsilon)
+        {
+            return null;
+        }
+
+        var half = thickness / 2d;
+        var outer = new List<MapPoint>();
+        var inner = new List<MapPoint>();
+        var count = points.Count;
+
+        for (var i = 0; i < count; i++)
+        {
+            var previous = (i - 1 + count) % count;
+            var next = (i + 1) % count;
+            ComputeJoin(points, previous, i, next, half, outer, inner);
+        }
+
+        if (Math.Abs(PolygonArea(outer)) < Math.Abs(PolygonArea(inner)))
+        {
+            (outer, inner) = (inner, outer);
+        }
+
+        return new WallTerrainRing(outer, inner);
+    }
+
+    private static double PolygonArea(IReadOnlyList<MapPoint> points)
+    {
+        double area = 0;
+        for (var i = 0; i < points.Count; i++)
+        {
+            var j = (i + 1) % points.Count;
+            area += points[i].X * points[j].Y;
+            area -= points[j].X * points[i].Y;
+        }
+
+        return area / 2d;
     }
 
     private static void ComputeJoin(
