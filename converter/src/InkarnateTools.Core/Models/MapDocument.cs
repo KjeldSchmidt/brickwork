@@ -16,6 +16,9 @@ public sealed class MapDocument
 
     public string? ImagePath { get; set; }
 
+    /// <summary>Original input file name (e.g. <c>basic-walls.ink</c>), used by exporters for asset paths.</summary>
+    public string? SourceFileName { get; set; }
+
     public GridInfo Grid { get; set; } = new();
 
     public IList<Wall> Walls { get; init; } = [];

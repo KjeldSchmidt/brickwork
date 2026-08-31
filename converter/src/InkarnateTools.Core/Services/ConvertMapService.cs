@@ -24,11 +24,17 @@ public sealed class ConvertMapService
         Stream input,
         Stream output,
         string exportFormatId,
+        string? sourceFileName = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
 
         var map = await _importer.ImportAsync(input, cancellationToken).ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(sourceFileName))
+        {
+            map.SourceFileName = sourceFileName;
+        }
+
         await ConvertAsync(map, output, exportFormatId, cancellationToken).ConfigureAwait(false);
     }
 

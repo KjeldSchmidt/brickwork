@@ -44,8 +44,3 @@ public sealed class Uvtt2Exporter : PlaceholderExporterBase
 {
     public override string FormatId => "uvtt2";
 }
-
-public sealed class FoundryExporter : PlaceholderExporterBase
-{
-    public override string FormatId => "foundry";
-}

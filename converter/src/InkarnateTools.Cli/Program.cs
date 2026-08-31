@@ -49,7 +49,8 @@ internal static class Program
 
             await using var input = File.OpenRead(inputPath);
             await using var output = File.Create(outputPath);
-            await service.ConvertAsync(input, output, format).ConfigureAwait(false);
+            await service.ConvertAsync(input, output, format, Path.GetFileName(inputPath))
+                .ConfigureAwait(false);
 
             await Console.Out.WriteLineAsync($"Converted '{inputPath}' to '{outputPath}' ({format}).").ConfigureAwait(false);
             return 0;

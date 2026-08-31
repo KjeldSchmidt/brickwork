@@ -36,6 +36,63 @@ public static class WallPathSegmentBuilder
         return ClipPolyline(wall.Points, wall.IsClosed, gaps);
     }
 
+    public static IReadOnlyList<WallExportRun> BuildExportRuns(Wall wall)
+    {
+        if (wall.Points.Count < 2)
+        {
+            return [];
+        }
+
+        if (wall.Portals.Count == 0)
+        {
+            return [new WallExportRun(CopyPoints(wall.Points), wall.LineType)];
+        }
+
+        var totalLength = WallPolylineEdges.TotalLength(wall.Points, wall.IsClosed);
+        if (totalLength <= Epsilon)
+        {
+            return [new WallExportRun(CopyPoints(wall.Points), wall.LineType)];
+        }
+
+        var arcLengths = WallPolylineEdges.ComputeArcLengths(wall.Points, wall.IsClosed);
+        var portalIntervals = BuildPortalIntervals(wall, arcLengths, totalLength);
+        if (portalIntervals.Count == 0)
+        {
+            return [new WallExportRun(CopyPoints(wall.Points), wall.LineType)];
+        }
+
+        var runs = new List<WallExportRun>();
+        var cursor = 0d;
+
+        foreach (var (gapStart, gapEnd, lineType) in portalIntervals)
+        {
+            if (gapStart > cursor + Epsilon)
+            {
+                AddRunIfValid(
+                    runs,
+                    ExtractIntervalPolyline(wall.Points, wall.IsClosed, cursor, gapStart),
+                    wall.LineType);
+            }
+
+            AddRunIfValid(
+                runs,
+                ExtractIntervalPolyline(wall.Points, wall.IsClosed, gapStart, gapEnd),
+                lineType);
+
+            cursor = gapEnd;
+        }
+
+        if (cursor < totalLength - Epsilon)
+        {
+            AddRunIfValid(
+                runs,
+                ExtractIntervalPolyline(wall.Points, wall.IsClosed, cursor, totalLength),
+                wall.LineType);
+        }
+
+        return runs;
+    }
+
     public static IReadOnlyList<WallPortalSegment> BuildPortalSegments(Wall wall)
     {
         if (wall.Points.Count < 2 || wall.Portals.Count == 0)
@@ -82,6 +139,79 @@ public static class WallPathSegmentBuilder
         new(
             portal.Anchor.X * wall.Scale + wall.Origin.X,
             portal.Anchor.Y * wall.Scale + wall.Origin.Y);
+
+    private static void AddRunIfValid(
+        List<WallExportRun> runs,
+        IReadOnlyList<MapPoint> points,
+        WallLineType lineType)
+    {
+        if (points.Count >= 2)
+        {
+            runs.Add(new WallExportRun(points, lineType));
+        }
+    }
+
+    private sealed record PortalInterval(double Start, double End, WallLineType LineType);
+
+    private static List<PortalInterval> BuildPortalIntervals(
+        Wall wall,
+        double[] arcLengths,
+        double totalLength)
+    {
+        var intervals = new List<PortalInterval>();
+
+        foreach (var portal in wall.Portals)
+        {
+            if (portal.Width <= Epsilon)
+            {
+                continue;
+            }
+
+            var anchorScene = PortalAnchorToScene(wall, portal);
+            var center = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, anchorScene);
+            var halfWidth = portal.Width / 2d;
+            var start = Math.Max(0d, center - halfWidth);
+            var end = Math.Min(totalLength, center + halfWidth);
+
+            if (end - start > Epsilon)
+            {
+                intervals.Add(new PortalInterval(start, end, portal.LineType));
+            }
+        }
+
+        return MergePortalIntervals(intervals);
+    }
+
+    private static List<PortalInterval> MergePortalIntervals(List<PortalInterval> intervals)
+    {
+        if (intervals.Count <= 1)
+        {
+            return intervals;
+        }
+
+        intervals.Sort((left, right) => left.Start.CompareTo(right.Start));
+
+        var merged = new List<PortalInterval> { intervals[0] };
+        for (var i = 1; i < intervals.Count; i++)
+        {
+            var current = intervals[i];
+            var last = merged[^1];
+
+            if (current.Start <= last.End + Epsilon)
+            {
+                merged[^1] = new PortalInterval(
+                    last.Start,
+                    Math.Max(last.End, current.End),
+                    last.LineType);
+            }
+            else
+            {
+                merged.Add(current);
+            }
+        }
+
+        return merged;
+    }
 
     private static List<(double Start, double End)> BuildGapIntervals(
         Wall wall,

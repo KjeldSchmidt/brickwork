@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Foundry\FoundrySceneTemplate.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\InkarnateTools.Core\InkarnateTools.Core.csproj" />
   </ItemGroup>
 

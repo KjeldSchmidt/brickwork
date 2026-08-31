@@ -65,6 +65,7 @@ public partial class ImportToolViewModel : Tool
             await using var input = File.OpenRead(path);
             var map = await _importer.ImportAsync(input).ConfigureAwait(true);
             WallPointSimplifier.ApplyAll(map.Walls, _session.WallSimplificationTolerance);
+            map.SourceFileName = Path.GetFileName(path);
             _session.Map = map;
             _session.SourceFileName = Path.GetFileName(path);
             UpdateCompatibilityDisplay(map.Compatibility);
@@ -105,6 +106,8 @@ public partial class ImportToolViewModel : Tool
 
         try
         {
+            _session.Map!.SourceFileName ??= _session.SourceFileName;
+
             await using var output = File.Create(outputPath);
             await _convertMapService
                 .ConvertAsync(_session.Map, output, formatId)
