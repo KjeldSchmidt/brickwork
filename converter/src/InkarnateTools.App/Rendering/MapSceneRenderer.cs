@@ -6,6 +6,8 @@ namespace InkarnateTools.App.Rendering;
 
 public sealed class MapSceneRenderer : IMapSceneRenderer
 {
+    private const float LineStrokeWidth = 2f;
+
     private readonly Dictionary<MapDocument, SKImage> _imageCache = new(ReferenceEqualityComparer.Instance);
 
     public void Render(SKCanvas canvas, MapDocument map, SKRect destinationBounds)
@@ -33,21 +35,29 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
 
             foreach (var segment in WallPathSegmentBuilder.BuildSegments(wall))
             {
-                DrawPolyline(
+                DrawWallSegment(
                     canvas,
                     transform,
                     segment,
-                    WallLineColors.ForLine(wall.LineType, wall.IsActive));
+                    wall.LineType,
+                    wall.IsActive,
+                    wall.SceneThickness,
+                    wall.IsClosed);
             }
 
             foreach (var portalSegment in WallPathSegmentBuilder.BuildPortalSegments(wall))
             {
-                DrawPolyline(
+                DrawWallSegment(
                     canvas,
                     transform,
                     portalSegment.Points,
-                    WallLineColors.ForLine(portalSegment.Portal.LineType, portalSegment.Portal.IsActive));
+                    portalSegment.Portal.LineType,
+                    portalSegment.Portal.IsActive,
+                    wall.SceneThickness,
+                    isClosed: false);
             }
+
+            DrawCenterlineNodes(canvas, transform, wall.Points, wall.IsActive);
         }
     }
 
@@ -74,26 +84,129 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         _imageCache.Clear();
     }
 
-    private static void DrawPolyline(
+    private static void DrawWallSegment(
         SKCanvas canvas,
         SceneTransform transform,
         IReadOnlyList<MapPoint> scenePoints,
-        SKColor color)
+        WallLineType lineType,
+        bool isActive,
+        double sceneThickness,
+        bool isClosed)
     {
         if (scenePoints.Count < 2)
         {
             return;
         }
 
+        if (lineType == WallLineType.Terrain && sceneThickness > 0)
+        {
+            var outline = WallThicknessPolygonBuilder.BuildOutline(scenePoints, sceneThickness, isClosed);
+            if (outline.Count >= 3)
+            {
+                DrawPolygon(
+                    canvas,
+                    transform,
+                    outline,
+                    WallLineColors.FillForLine(lineType, isActive),
+                    WallLineColors.ForLine(lineType, isActive));
+                return;
+            }
+        }
+
+        DrawPolyline(canvas, transform, scenePoints, WallLineColors.ForLine(lineType, isActive));
+    }
+
+    private static void DrawPolygon(
+        SKCanvas canvas,
+        SceneTransform transform,
+        IReadOnlyList<MapPoint> scenePoints,
+        SKColor fillColor,
+        SKColor strokeColor)
+    {
+        using var path = BuildPath(transform, scenePoints);
+        path.Close();
+
+        using var fillPaint = new SKPaint
+        {
+            Color = fillColor,
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill,
+        };
+        canvas.DrawPath(path, fillPaint);
+
+        using var strokePaint = new SKPaint
+        {
+            Color = strokeColor,
+            IsAntialias = true,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = LineStrokeWidth,
+            StrokeJoin = SKStrokeJoin.Round,
+        };
+        canvas.DrawPath(path, strokePaint);
+    }
+
+    private static void DrawPolyline(
+        SKCanvas canvas,
+        SceneTransform transform,
+        IReadOnlyList<MapPoint> scenePoints,
+        SKColor color)
+    {
         using var paint = new SKPaint
         {
             Color = color,
             IsAntialias = true,
             Style = SKPaintStyle.Stroke,
-            StrokeWidth = 2,
+            StrokeWidth = LineStrokeWidth,
+            StrokeJoin = SKStrokeJoin.Round,
+            StrokeCap = SKStrokeCap.Round,
         };
 
-        using var path = new SKPath();
+        canvas.DrawPath(BuildPath(transform, scenePoints), paint);
+    }
+
+    private static void DrawCenterlineNodes(
+        SKCanvas canvas,
+        SceneTransform transform,
+        IList<MapPoint> scenePoints,
+        bool isActive)
+    {
+        // Tessellation produces ~1 point per scene unit (thousands per wall).
+        // Large outlined circles overlap into a solid black band — use tiny dots instead.
+        for (var i = 0; i < scenePoints.Count; i++)
+        {
+            var preview = transform.SceneToPreview(scenePoints[i]);
+            var x = (float)preview.X;
+            var y = (float)preview.Y;
+
+            if (i == 0)
+            {
+                using var startPaint = new SKPaint
+                {
+                    Color = SKColors.Lime,
+                    IsAntialias = true,
+                    Style = SKPaintStyle.Fill,
+                };
+                canvas.DrawCircle(x, y, 4f, startPaint);
+                continue;
+            }
+
+            var fillColor = isActive
+                ? new SKColor(0xFF, 0xFF, 0xFF, 0xCC)
+                : new SKColor(0xAA, 0xAA, 0xAA, 0xCC);
+
+            using var fillPaint = new SKPaint
+            {
+                Color = fillColor,
+                IsAntialias = true,
+                Style = SKPaintStyle.Fill,
+            };
+            canvas.DrawCircle(x, y, 1f, fillPaint);
+        }
+    }
+
+    private static SKPath BuildPath(SceneTransform transform, IReadOnlyList<MapPoint> scenePoints)
+    {
+        var path = new SKPath();
         var first = transform.SceneToPreview(scenePoints[0]);
         path.MoveTo((float)first.X, (float)first.Y);
 
@@ -103,7 +216,7 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             path.LineTo((float)point.X, (float)point.Y);
         }
 
-        canvas.DrawPath(path, paint);
+        return path;
     }
 
     private SKImage? GetOrCreateImage(MapDocument map)

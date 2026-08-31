@@ -94,6 +94,12 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
 
                     appliedKnownField = true;
                     break;
+                case "wallThickness":
+                    wall.WallThickness = property.Value.ValueKind == JsonValueKind.Number
+                        ? property.Value.GetDouble()
+                        : 0;
+                    appliedKnownField = true;
+                    break;
                 default:
                     understanding = TransactionUnderstanding.KnownIgnored;
                     break;

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Mvvm.Controls;
 using InkarnateTools.Composition;
+using InkarnateTools.Core.Geometry;
 using InkarnateTools.Core.Models;
 using InkarnateTools.Core.Ports;
 using InkarnateTools.Core.Services;
@@ -63,6 +64,7 @@ public partial class ImportToolViewModel : Tool
         {
             await using var input = File.OpenRead(path);
             var map = await _importer.ImportAsync(input).ConfigureAwait(true);
+            WallPointSimplifier.ApplyAll(map.Walls, _session.WallSimplificationTolerance);
             _session.Map = map;
             _session.SourceFileName = Path.GetFileName(path);
             UpdateCompatibilityDisplay(map.Compatibility);

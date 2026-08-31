@@ -22,11 +22,18 @@ public sealed class Wall
 
     public double Scale { get; set; } = 1;
 
+    /// <summary>Entity-local wall thickness from Inkarnate (<c>wallThickness</c>).</summary>
+    public double WallThickness { get; set; }
+
+    public IList<MapPoint> RawPoints { get; init; } = [];
+
     public IList<MapPoint> Points { get; init; } = [];
 
     public IList<WallPortal> Portals { get; init; } = [];
 
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? $"Wall {EntityId}" : Name;
+
+    public double SceneThickness => WallThickness * Scale;
 }
 
 public sealed class WallPortal

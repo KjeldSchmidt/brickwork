@@ -34,6 +34,14 @@ public sealed class AppDockFactory : Factory
             CanPin = true,
         };
 
+        var settingsTool = new SettingsToolViewModel(_session)
+        {
+            Id = "SettingsTool",
+            Title = "Settings",
+            CanClose = false,
+            CanPin = true,
+        };
+
         var mapPreview = new MapPreviewDocumentViewModel(_session)
         {
             Id = "MapPreview",
@@ -53,7 +61,7 @@ public sealed class AppDockFactory : Factory
         var wallsDock = new ToolDock
         {
             ActiveDockable = wallsTool,
-            VisibleDockables = CreateList<IDockable>(wallsTool),
+            VisibleDockables = CreateList<IDockable>(wallsTool, settingsTool),
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible,
             Proportion = 0.65,
@@ -106,6 +114,7 @@ public sealed class AppDockFactory : Factory
         {
             ["ImportTool"] = () => _session,
             ["WallsTool"] = () => _session,
+            ["SettingsTool"] = () => _session,
             ["MapPreview"] = () => _session,
             ["Root"] = () => layout,
         };

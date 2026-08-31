@@ -20,4 +20,10 @@ public static class WallLineColors
                 WallLineType.Terrain => TerrainActiveColor,
                 _ => DefaultActiveColor,
             };
+
+    public static SKColor FillForLine(WallLineType lineType, bool isActive)
+    {
+        var stroke = ForLine(lineType, isActive);
+        return new SKColor(stroke.Red, stroke.Green, stroke.Blue, (byte)(stroke.Alpha / 3));
+    }
 }

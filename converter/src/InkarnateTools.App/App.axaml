@@ -13,6 +13,9 @@
         <DataTemplate DataType="vm:WallsToolViewModel">
             <panels:WallsToolView />
         </DataTemplate>
+        <DataTemplate DataType="vm:SettingsToolViewModel">
+            <panels:SettingsToolView />
+        </DataTemplate>
         <DataTemplate DataType="vm:MapPreviewDocumentViewModel">
             <map:MapPreviewDocumentView />
         </DataTemplate>

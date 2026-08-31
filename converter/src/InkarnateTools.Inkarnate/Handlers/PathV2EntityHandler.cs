@@ -1,4 +1,5 @@
 using System.Text.Json;
+using InkarnateTools.Core.Geometry;
 using InkarnateTools.Core.Models;
 using InkarnateTools.Inkarnate.Parsing;
 
@@ -39,8 +40,11 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
             scale = 1;
         }
 
-        var points = InkSvgPathParser.ParseToScenePoints(pathData, originX, originY, scale);
-        if (points.Count < 2)
+        var isClosed = entity.TryGetProperty("isClosedPath", out var closedElement) &&
+                       closedElement.ValueKind == JsonValueKind.True;
+
+        var rawPoints = InkSvgPathParser.ParseToScenePoints(pathData, originX, originY, scale);
+        if (rawPoints.Count < 2)
         {
             return;
         }
@@ -51,17 +55,19 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
             Name = InkJsonReader.ReadString(entity, "defaultName"),
             LayerId = item.LayerId,
             WallEnabled = true,
-            IsClosed = entity.TryGetProperty("isClosedPath", out var closedElement) &&
-                       closedElement.ValueKind == JsonValueKind.True,
+            IsClosed = isClosed,
             PathData = pathData,
             Origin = new MapPoint(originX, originY),
             Scale = scale,
+            WallThickness = InkJsonReader.ReadDouble(entity, "wallThickness"),
         };
 
-        foreach (var point in points)
+        foreach (var point in rawPoints)
         {
-            wall.Points.Add(point);
+            wall.RawPoints.Add(point);
         }
+
+        WallPointSimplifier.Apply(wall, WallSimplificationSettings.DefaultToleranceSceneUnits);
 
         context.WallsByEntityId[wall.EntityId] = wall;
     }

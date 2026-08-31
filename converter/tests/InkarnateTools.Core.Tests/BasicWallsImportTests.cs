@@ -35,11 +35,20 @@ public class BasicWallsImportTests
             Assert.True(wall.WallEnabled);
             Assert.True(wall.IsActive);
             Assert.False(string.IsNullOrWhiteSpace(wall.PathData));
+            Assert.Equal(100, wall.WallThickness, precision: 1);
         }
 
+        var straightWall = map.Walls.Single(wall => wall.EntityId == 3);
+        Assert.Equal(2, straightWall.Points.Count);
+
         var gappedWall = map.Walls.Single(wall => wall.EntityId == 5);
+        Assert.Equal(2, gappedWall.Points.Count);
         Assert.Single(gappedWall.Portals);
         Assert.Equal(1012.49, gappedWall.Portals[0].Width, precision: 1);
+
+        var closedWall = map.Walls.Single(wall => wall.EntityId == 6);
+        Assert.Equal(4, closedWall.Points.Count);
+        Assert.True(closedWall.IsClosed);
 
         var transform = SceneTransform.FromMap(map);
         Assert.NotNull(transform);
@@ -47,6 +56,19 @@ public class BasicWallsImportTests
         var previewPoint = transform!.SceneToPreview(map.Walls[0].Points[0]);
         Assert.InRange(previewPoint.X, 0, map.Preview!.Width);
         Assert.InRange(previewPoint.Y, 0, map.Preview.Height);
+    }
+
+    [Fact]
+    public async Task ImportAsync_BezierWall_HasFewerThanFifteenNodes_AtDefaultTolerance()
+    {
+        await using var input = File.OpenRead(BasicWallsInkPath);
+        var map = await new InkarnateImporter().ImportAsync(input);
+
+        var bezierWall = map.Walls.Single(wall => wall.EntityId == 4);
+
+        Assert.True(
+            bezierWall.Points.Count < 15,
+            $"Expected bezier-wall to stay under 15 nodes at default tolerance, got {bezierWall.Points.Count}.");
     }
 }
 
@@ -61,7 +83,7 @@ public class PathV2ParsingTests
             originY: 0,
             scale: 1);
 
-        Assert.True(points.Count >= 2);
+        Assert.Equal(2, points.Count);
         Assert.Equal(100, points[0].X, precision: 1);
         Assert.Equal(100, points[0].Y, precision: 1);
         Assert.Equal(300, points[^1].X, precision: 1);
@@ -69,7 +91,19 @@ public class PathV2ParsingTests
     }
 
     [Fact]
-    public void ParseToScenePoints_TessellatesBezier()
+    public void ParseToScenePoints_ReadsClosedRectangle()
+    {
+        var points = InkSvgPathParser.ParseToScenePoints(
+            "M-410.52,331.96v-663.92h821.04v663.92z",
+            originX: 759,
+            originY: 5421,
+            scale: 1);
+
+        Assert.Equal(4, points.Count);
+    }
+
+    [Fact]
+    public void ParseToScenePoints_SamplesBezierCurves()
     {
         var points = InkSvgPathParser.ParseToScenePoints(
             "M0,0c50,50 100,0 150,50",
@@ -78,6 +112,7 @@ public class PathV2ParsingTests
             scale: 1);
 
         Assert.True(points.Count > 2);
+        Assert.True(points.Count < 32);
     }
 
     [Fact]
@@ -89,6 +124,7 @@ public class PathV2ParsingTests
             originY: 200,
             scale: 2);
 
+        Assert.Equal(2, points.Count);
         Assert.Equal(120, points[0].X, precision: 1);
         Assert.Equal(220, points[0].Y, precision: 1);
         Assert.Equal(140, points[^1].X, precision: 1);

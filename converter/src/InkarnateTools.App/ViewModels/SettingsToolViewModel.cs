@@ -1,0 +1,27 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using Dock.Model.Mvvm.Controls;
+
+namespace InkarnateTools.App.ViewModels;
+
+public partial class SettingsToolViewModel : Tool
+{
+    private readonly EditorSession _session;
+
+    public SettingsToolViewModel(EditorSession session)
+    {
+        _session = session;
+        _session.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(EditorSession.WallSimplificationTolerance))
+            {
+                OnPropertyChanged(nameof(WallSimplificationTolerance));
+            }
+        };
+    }
+
+    public double WallSimplificationTolerance
+    {
+        get => _session.WallSimplificationTolerance;
+        set => _session.WallSimplificationTolerance = value;
+    }
+}
