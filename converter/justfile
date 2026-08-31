@@ -16,6 +16,10 @@ recompile:
 gui:
     dotnet run --project src/InkarnateTools.App
 
+# Rebuild and restart the GUI on file changes (incremental compile + auto-restart)
+watch:
+    dotnet watch run --project src/InkarnateTools.App
+
 # Invoke the CLI (passthrough args after --)
 cli *args:
     dotnet run --project src/InkarnateTools.Cli -- {{args}}

@@ -1,3 +1,4 @@
+using InkarnateTools.Core.Geometry;
 using InkarnateTools.Core.Models;
 using SkiaSharp;
 
@@ -41,17 +42,25 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
                 StrokeWidth = 2,
             };
 
-            using var path = new SKPath();
-            var first = transform.SceneToPreview(wall.Points[0]);
-            path.MoveTo((float)first.X, (float)first.Y);
-
-            for (var i = 1; i < wall.Points.Count; i++)
+            foreach (var segment in WallPathSegmentBuilder.BuildSegments(wall))
             {
-                var point = transform.SceneToPreview(wall.Points[i]);
-                path.LineTo((float)point.X, (float)point.Y);
-            }
+                if (segment.Count < 2)
+                {
+                    continue;
+                }
 
-            canvas.DrawPath(path, wallPaint);
+                using var path = new SKPath();
+                var first = transform.SceneToPreview(segment[0]);
+                path.MoveTo((float)first.X, (float)first.Y);
+
+                for (var i = 1; i < segment.Count; i++)
+                {
+                    var point = transform.SceneToPreview(segment[i]);
+                    path.LineTo((float)point.X, (float)point.Y);
+                }
+
+                canvas.DrawPath(path, wallPaint);
+            }
         }
     }
 
