@@ -28,34 +28,93 @@ public sealed class CompatibilityReport
     public double UnknownPercent =>
         TotalTransactions == 0 ? 0d : UnknownCount * 100d / TotalTransactions;
 
+    public IReadOnlyList<UnknownActionGroup> UnknownActionGroups =>
+        Transactions
+            .Where(transaction => transaction.Understanding == TransactionUnderstanding.Unknown)
+            .GroupBy(DescribeUnknownAction)
+            .Select(group => new UnknownActionGroup(group.Key, group.Count()))
+            .OrderBy(group => group.Description)
+            .ToList();
+
     public string FormatSummary()
     {
         var title = string.IsNullOrWhiteSpace(MapTitle) ? "Untitled Map" : MapTitle;
         var version = SourceVersion?.ToString() ?? "?";
 
-        return $"""
-            {title} (v{version})
-            Transactions: {TotalTransactions}
-              Fully understood: {FullyUnderstoodCount} ({FullyUnderstoodPercent:F0}%)
-              Known, ignored:   {KnownIgnoredCount} ({KnownIgnoredPercent:F0}%)
-              Unknown:          {UnknownCount} ({UnknownPercent:F0}%)
-            """;
+        return string.Join(
+            Environment.NewLine,
+            $"{title} (v{version})",
+            $"Transactions: {TotalTransactions}",
+            $"  Fully understood: {FullyUnderstoodCount} ({FullyUnderstoodPercent:F0}%)",
+            $"  Known, ignored:   {KnownIgnoredCount} ({KnownIgnoredPercent:F0}%)",
+            $"  Unknown:          {UnknownCount} ({UnknownPercent:F0}%)");
     }
 
-    public string FormatDetailed()
+    public string FormatUnknownActions()
     {
-        var lines = new List<string> { FormatSummary().TrimEnd(), string.Empty, "Transactions:" };
-
-        foreach (var transaction in Transactions)
+        if (UnknownActionGroups.Count == 0)
         {
-            var label = FormatUnderstanding(transaction.Understanding);
-            var detail = string.IsNullOrWhiteSpace(transaction.Detail)
-                ? string.Empty
-                : $" — {transaction.Detail}";
-            lines.Add($"  #{transaction.TransactionId} {transaction.CommandType} [{label}]{detail}");
+            return string.Empty;
         }
 
+        return string.Join(
+            Environment.NewLine,
+            UnknownActionGroups.Select(group => $"  {group.Description} (×{group.Count})"));
+    }
+
+    public string FormatTransactions()
+    {
+        var transactionLines = FormatTransactionLines();
+        if (string.IsNullOrEmpty(transactionLines))
+        {
+            return "Transactions:";
+        }
+
+        return $"Transactions:{Environment.NewLine}{transactionLines}";
+    }
+
+    public string FormatTransactionLines()
+    {
+        return string.Join(
+            Environment.NewLine,
+            Transactions.Select(transaction =>
+            {
+                var label = FormatUnderstanding(transaction.Understanding);
+                var detail = string.IsNullOrWhiteSpace(transaction.Detail)
+                    ? string.Empty
+                    : $" — {transaction.Detail}";
+                return $"  #{transaction.TransactionId} {transaction.CommandType} [{label}]{detail}";
+            }));
+    }
+
+    public string FormatDetails()
+    {
+        var lines = new List<string>();
+
+        var unknownActions = FormatUnknownActions();
+        if (!string.IsNullOrEmpty(unknownActions))
+        {
+            lines.Add("Unknown actions:");
+            lines.Add(unknownActions);
+            lines.Add(string.Empty);
+        }
+
+        lines.Add(FormatTransactions());
+
         return string.Join(Environment.NewLine, lines);
+    }
+
+    public string FormatDetailed() =>
+        string.Join(Environment.NewLine, FormatSummary(), string.Empty, FormatDetails());
+
+    private static string DescribeUnknownAction(TransactionAnalysis transaction)
+    {
+        if (!string.IsNullOrWhiteSpace(transaction.Detail))
+        {
+            return $"{transaction.CommandType}: {transaction.Detail}";
+        }
+
+        return transaction.CommandType;
     }
 
     private static string FormatUnderstanding(TransactionUnderstanding understanding) =>

@@ -1,3 +1,4 @@
+using InkarnateTools.Core.Models;
 using InkarnateTools.Inkarnate;
 using InkarnateTools.Inkarnate.Parsing;
 using Xunit;
@@ -51,6 +52,8 @@ public class InkarnateCompatibilityAnalyzerTests
         Assert.Equal(1, report.KnownIgnoredCount);
         Assert.Equal(1, report.UnknownCount);
         Assert.Equal("cmd-mystery", report.Transactions[1].CommandType);
+        Assert.Equal([new UnknownActionGroup("cmd-mystery", 1)], report.UnknownActionGroups);
+        Assert.Contains("cmd-mystery", report.FormatDetailed(), StringComparison.Ordinal);
     }
 
     [Fact]

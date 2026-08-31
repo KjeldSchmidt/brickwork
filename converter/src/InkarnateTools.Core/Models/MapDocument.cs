@@ -12,6 +12,8 @@ public sealed class MapDocument
 
     public PreviewDimensions? Preview { get; set; }
 
+    public byte[]? PreviewImagePng { get; set; }
+
     public string? ImagePath { get; set; }
 
     public GridInfo Grid { get; set; } = new();

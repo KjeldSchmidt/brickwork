@@ -25,6 +25,8 @@ internal static class InkarnateDocumentParser
             map.Preview = ReadPreviewDimensions(previewElement);
         }
 
+        map.PreviewImagePng = InkPreviewImageReader.ReadPreviewImagePng(root);
+
         var context = new InkImportContext(map);
 
         if (root.TryGetProperty("history", out var historyElement) &&

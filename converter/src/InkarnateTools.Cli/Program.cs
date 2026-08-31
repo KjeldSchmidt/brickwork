@@ -7,7 +7,7 @@ internal static class Program
     private const string RootUsage = """
         Usage:
           InkarnateTools.Cli convert -i <input> -o <output> -f <format>
-          InkarnateTools.Cli analyze -i <input> [--verbose]
+          InkarnateTools.Cli analyze -i <input> [--summary]
 
         convert:
           -i, --input    Path to Inkarnate export
@@ -16,7 +16,7 @@ internal static class Program
 
         analyze:
           -i, --input    Path to Inkarnate export
-          --verbose      List each transaction
+          --summary      Show summary only (default is full detail)
         """;
 
     public static async Task<int> Main(string[] args)
@@ -63,7 +63,7 @@ internal static class Program
 
     private static async Task<int> RunAnalyzeAsync(string[] args)
     {
-        if (!TryParseAnalyzeArgs(args, out var inputPath, out var verbose, out var error))
+        if (!TryParseAnalyzeArgs(args, out var inputPath, out var summaryOnly, out var error))
         {
             await WriteAnalyzeUsageAsync(error).ConfigureAwait(false);
             return 1;
@@ -76,9 +76,9 @@ internal static class Program
             await using var input = File.OpenRead(inputPath);
             var report = await analyzer.AnalyzeAsync(input).ConfigureAwait(false);
 
-            var output = verbose
-                ? report.FormatDetailed()
-                : report.FormatSummary();
+            var output = summaryOnly
+                ? report.FormatSummary()
+                : report.FormatDetailed();
 
             await Console.Out.WriteLineAsync(output).ConfigureAwait(false);
             return 0;
@@ -110,7 +110,7 @@ internal static class Program
         await Console.Error.WriteLineAsync(error).ConfigureAwait(false);
         await Console.Error.WriteLineAsync().ConfigureAwait(false);
         await Console.Error.WriteLineAsync("""
-            Usage: InkarnateTools.Cli analyze -i <input> [--verbose]
+            Usage: InkarnateTools.Cli analyze -i <input> [--summary]
             """).ConfigureAwait(false);
     }
 
@@ -182,20 +182,20 @@ internal static class Program
     private static bool TryParseAnalyzeArgs(
         string[] args,
         out string inputPath,
-        out bool verbose,
+        out bool summaryOnly,
         out string error)
     {
         inputPath = string.Empty;
-        verbose = false;
+        summaryOnly = false;
         error = string.Empty;
 
         for (var i = 0; i < args.Length; i++)
         {
             var arg = args[i];
 
-            if (string.Equals(arg, "--verbose", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(arg, "--summary", StringComparison.OrdinalIgnoreCase))
             {
-                verbose = true;
+                summaryOnly = true;
                 continue;
             }
 

@@ -27,13 +27,14 @@ dotnet test converter/InkarnateTools.sln
 cd converter && just gui
 ```
 
-Minimal Avalonia shell: pick an Inkarnate `.ink` backup or JSON input, choose an export format, and convert.
+Minimal Avalonia editor: open an Inkarnate `.ink` backup or JSON input, preview the map with wall overlays, and export via the Convert dialog.
 
 ## Run (CLI)
 
 ```bash
 cd converter && just cli convert -i ../resources/empty-backup.ink -o output.uvtt -f uvtt2
-cd converter && just cli analyze -i ../resources/empty-backup.ink --verbose
+cd converter && just cli analyze -i ../resources/empty-backup.ink
+cd converter && just cli analyze -i ../resources/empty-backup.ink --summary
 ```
 
 Supported export formats: `uvtt1`, `uvtt2`, `foundry`.

@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:InkarnateTools.App.ViewModels"
+             x:Class="InkarnateTools.App.Views.Panels.ImportToolView"
+             x:DataType="vm:ImportToolViewModel">
+    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,*,Auto">
+        <Button Grid.Row="0"
+                Margin="0,0,0,12"
+                Content="Open source map"
+                Command="{Binding OpenSourceMapCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center" />
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,12" Spacing="8">
+            <TextBlock Text="Compatibility" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding CompatibilityMessage}"
+                       TextWrapping="Wrap"
+                       FontFamily="Consolas, Courier New, monospace"
+                       Opacity="0.9" />
+            <Expander Header="Details"
+                      IsVisible="{Binding HasCompatibilityDetails}"
+                      IsExpanded="False">
+                <ScrollViewer MaxHeight="360"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,8,0,0" Spacing="12">
+                        <StackPanel Spacing="4" IsVisible="{Binding HasUnknownActions}">
+                            <TextBlock Text="Unknown actions"
+                                       FontWeight="SemiBold"
+                                       Opacity="0.9" />
+                            <TextBlock Text="{Binding CompatibilityUnknownActionsMessage}"
+                                       TextWrapping="Wrap"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Opacity="0.9" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Transactions"
+                                       FontWeight="SemiBold"
+                                       Opacity="0.9" />
+                            <TextBlock Text="{Binding CompatibilityTransactionsMessage}"
+                                       TextWrapping="Wrap"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Opacity="0.9" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Expander>
+        </StackPanel>
+
+        <Button Grid.Row="2"
+                Margin="0,0,0,12"
+                Content="Convert"
+                Command="{Binding ConvertCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center" />
+
+        <TextBlock Grid.Row="4"
+                   Text="{Binding StatusMessage}"
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Bottom"
+                   Opacity="0.85" />
+    </Grid>
+</UserControl>

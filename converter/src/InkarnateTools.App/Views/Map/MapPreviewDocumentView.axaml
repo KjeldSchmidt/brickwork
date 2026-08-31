@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:InkarnateTools.App.Controls"
+             xmlns:paz="using:Avalonia.Controls.PanAndZoom"
+             xmlns:vm="using:InkarnateTools.App.ViewModels"
+             x:Class="InkarnateTools.App.Views.Map.MapPreviewDocumentView"
+             x:DataType="vm:MapPreviewDocumentViewModel">
+    <Grid Background="#FF1E1E1E">
+        <TextBlock Text="Open a source map to preview it."
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Opacity="0.6"
+                   IsVisible="{Binding ShowPlaceholder}" />
+
+        <paz:ZoomBorder IsVisible="{Binding HasMap}"
+                        ClipToBounds="True"
+                        Stretch="Uniform"
+                        EnableZoom="True"
+                        EnablePan="True">
+            <controls:MapViewportControl Map="{Binding Map}"
+                                         Width="{Binding PreviewWidth}"
+                                         Height="{Binding PreviewHeight}" />
+        </paz:ZoomBorder>
+    </Grid>
+</UserControl>

@@ -98,6 +98,10 @@ public class InkarnateImporterTests
         Assert.Equal(40, map.Grid.Columns);
         Assert.Equal(30, map.Grid.Rows);
         Assert.Equal(51, map.Grid.PixelsPerCell);
+        Assert.NotNull(map.PreviewImagePng);
+        Assert.True(map.PreviewImagePng!.Length > 0);
+        Assert.Equal(0x89, map.PreviewImagePng[0]);
+        Assert.Equal(0x50, map.PreviewImagePng[1]);
         Assert.Empty(map.Walls);
         Assert.Empty(map.Lights);
         Assert.NotNull(map.Compatibility);
