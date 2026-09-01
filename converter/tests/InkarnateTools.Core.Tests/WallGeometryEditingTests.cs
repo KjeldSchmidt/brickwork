@@ -99,4 +99,59 @@ public class WallGeometryEditingTests
         var anchorScene = WallPathSegmentBuilder.PortalAnchorToScene(wall, wall.Portals[0]);
         Assert.Equal(50, anchorScene.X, precision: 1);
     }
+
+    [Fact]
+    public void SetPortalEndpointFromScene_ClosedPathNearSeam_ExpandsWidthAcrossSeam()
+    {
+        var wall = new Wall
+        {
+            EntityId = 1,
+            IsClosed = true,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(100, 0),
+                new MapPoint(100, 100),
+                new MapPoint(0, 100),
+            ],
+            Portals = [new WallPortal { Anchor = new MapPoint(0, 0), Width = 20 }],
+        };
+
+        WallGeometryEditing.SetPortalEndpointFromScene(
+            wall,
+            wall.Portals[0],
+            PortalWidthEndpoint.Start,
+            new MapPoint(0, 15));
+
+        Assert.Equal(30, wall.Portals[0].Width, precision: 1);
+        var anchorScene = WallPathSegmentBuilder.PortalAnchorToScene(wall, wall.Portals[0]);
+        Assert.Equal(0, anchorScene.X, precision: 1);
+        Assert.Equal(0, anchorScene.Y, precision: 1);
+    }
+
+    [Fact]
+    public void SetPortalEndpointFromScene_ClosedPathNearVertex_DoesNotSnapToMinimumWidth()
+    {
+        var wall = new Wall
+        {
+            EntityId = 1,
+            IsClosed = true,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(100, 0),
+                new MapPoint(100, 100),
+                new MapPoint(0, 100),
+            ],
+            Portals = [new WallPortal { Anchor = new MapPoint(5, 0), Width = 20 }],
+        };
+
+        WallGeometryEditing.SetPortalEndpointFromScene(
+            wall,
+            wall.Portals[0],
+            PortalWidthEndpoint.End,
+            new MapPoint(30, 0));
+
+        Assert.Equal(50, wall.Portals[0].Width, precision: 1);
+    }
 }

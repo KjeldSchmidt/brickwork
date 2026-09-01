@@ -215,6 +215,81 @@ public class WallPortalSegmentTests
     }
 
     [Fact]
+    public void BuildSegments_ClosedWithGapCrossingSeam_ReturnsSingleOpenArc()
+    {
+        var wall = new Wall
+        {
+            EntityId = 1,
+            IsClosed = true,
+            Origin = new MapPoint(0, 0),
+            PathOrigin = new MapPoint(0, 0),
+            Scale = 1,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(100, 0),
+                new MapPoint(100, 100),
+                new MapPoint(0, 100),
+            ],
+            Portals =
+            [
+                new WallPortal
+                {
+                    Anchor = new MapPoint(0, 0),
+                    Width = 30,
+                },
+            ],
+        };
+
+        var segments = WallPathSegmentBuilder.BuildSegments(wall);
+        var segment = Assert.Single(segments);
+        Assert.False(segment.IsClosed);
+
+        var drawnLength = 0d;
+        for (var i = 1; i < segment.Points.Count; i++)
+        {
+            var dx = segment.Points[i].X - segment.Points[i - 1].X;
+            var dy = segment.Points[i].Y - segment.Points[i - 1].Y;
+            drawnLength += Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        Assert.InRange(drawnLength, 370 - 1, 370 + 1);
+    }
+
+    [Fact]
+    public void BuildPortalSegments_ClosedWithGapCrossingSeam_ReturnsContinuousPolyline()
+    {
+        var wall = new Wall
+        {
+            EntityId = 1,
+            IsClosed = true,
+            Origin = new MapPoint(0, 0),
+            PathOrigin = new MapPoint(0, 0),
+            Scale = 1,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(100, 0),
+                new MapPoint(100, 100),
+                new MapPoint(0, 100),
+            ],
+            Portals =
+            [
+                new WallPortal
+                {
+                    Anchor = new MapPoint(0, 0),
+                    Width = 30,
+                },
+            ],
+        };
+
+        var portalSegment = Assert.Single(WallPathSegmentBuilder.BuildPortalSegments(wall));
+        Assert.True(portalSegment.Points.Count >= 3);
+        Assert.InRange(portalSegment.Points[0].X, 0, 16);
+        Assert.InRange(portalSegment.Points[^1].X, 0, 16);
+    }
+
+    [Fact]
     public void PortalAnchorToScene_AppliesWallTransform()
     {
         var wall = new Wall

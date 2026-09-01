@@ -128,14 +128,18 @@ public static class WallPathSegmentBuilder
             var anchorScene = PortalAnchorToScene(wall, portal);
             var center = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, anchorScene);
             var halfWidth = portal.Width / 2d;
-            var start = Math.Max(0d, center - halfWidth);
-            var end = Math.Min(totalLength, center + halfWidth);
-            if (end - start <= Epsilon)
+            var (start, end) = WallCircularIntervals.GetUnclampedPortalInterval(
+                center,
+                halfWidth,
+                totalLength,
+                wall.IsClosed);
+
+            if (end - start <= Epsilon && !WallCircularIntervals.IntervalWraps(start, end, totalLength, wall.IsClosed))
             {
                 continue;
             }
 
-            var points = ExtractIntervalPolyline(wall.Points, wall.IsClosed, start, end);
+            var points = ExtractPortalPolyline(wall.Points, wall.IsClosed, start, end, totalLength);
             if (points.Count >= 2)
             {
                 segments.Add(new WallPortalSegment(portal, points));
@@ -172,14 +176,26 @@ public static class WallPathSegmentBuilder
         var anchorScene = PortalAnchorToScene(wall, portal);
         var center = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, anchorScene);
         var halfWidth = portal.Width / 2d;
-        start = Math.Max(0d, center - halfWidth);
-        end = Math.Min(totalLength, center + halfWidth);
+        (start, end) = WallCircularIntervals.GetUnclampedPortalInterval(
+            center,
+            halfWidth,
+            totalLength,
+            wall.IsClosed);
 
-        return end - start > Epsilon;
+        return end - start > Epsilon ||
+               WallCircularIntervals.IntervalWraps(start, end, totalLength, wall.IsClosed);
     }
 
-    public static MapPoint GetScenePointAtArcLength(Wall wall, double arcLength) =>
-        InterpolateAtLength(wall.Points, wall.IsClosed, arcLength);
+    public static MapPoint GetScenePointAtArcLength(Wall wall, double arcLength)
+    {
+        var totalLength = WallPolylineEdges.TotalLength(wall.Points, wall.IsClosed);
+        if (wall.IsClosed)
+        {
+            arcLength = WallCircularIntervals.NormalizeArcLength(arcLength, totalLength);
+        }
+
+        return InterpolateAtLength(wall.Points, wall.IsClosed, arcLength);
+    }
 
     public static MapPoint GetTangentAtArcLength(Wall wall, double arcLength)
     {
@@ -190,15 +206,21 @@ public static class WallPathSegmentBuilder
             return new MapPoint(1, 0);
         }
 
-        var before = Math.Max(0d, arcLength - delta);
-        var after = Math.Min(totalLength, arcLength + delta);
+        var before = arcLength - delta;
+        var after = arcLength + delta;
+        if (!wall.IsClosed)
+        {
+            before = Math.Max(0d, before);
+            after = Math.Min(totalLength, after);
+        }
+
         if (after - before <= Epsilon)
         {
             return new MapPoint(1, 0);
         }
 
-        var start = InterpolateAtLength(wall.Points, wall.IsClosed, before);
-        var end = InterpolateAtLength(wall.Points, wall.IsClosed, after);
+        var start = GetScenePointAtArcLength(wall, before);
+        var end = GetScenePointAtArcLength(wall, after);
         var dx = end.X - start.X;
         var dy = end.Y - start.Y;
         var length = Math.Sqrt(dx * dx + dy * dy);
@@ -240,10 +262,11 @@ public static class WallPathSegmentBuilder
             var anchorScene = PortalAnchorToScene(wall, portal);
             var center = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, anchorScene);
             var halfWidth = portal.Width / 2d;
-            var start = Math.Max(0d, center - halfWidth);
-            var end = Math.Min(totalLength, center + halfWidth);
-
-            if (end - start > Epsilon)
+            foreach (var (start, end) in WallCircularIntervals.ExpandPortalGap(
+                         center,
+                         halfWidth,
+                         totalLength,
+                         wall.IsClosed))
             {
                 intervals.Add(new PortalInterval(start, end, portal.LineType));
             }
@@ -300,13 +323,11 @@ public static class WallPathSegmentBuilder
             var anchorScene = PortalAnchorToScene(wall, portal);
             var center = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, anchorScene);
             var halfWidth = portal.Width / 2d;
-            var start = Math.Max(0d, center - halfWidth);
-            var end = Math.Min(totalLength, center + halfWidth);
-
-            if (end - start > Epsilon)
-            {
-                gaps.Add((start, end));
-            }
+            gaps.AddRange(WallCircularIntervals.ExpandPortalGap(
+                center,
+                halfWidth,
+                totalLength,
+                wall.IsClosed));
         }
 
         return MergeIntervals(gaps);
@@ -594,6 +615,47 @@ public static class WallPathSegmentBuilder
     private static bool PointsEqual(MapPoint left, MapPoint right) =>
         Math.Abs(left.X - right.X) <= Epsilon &&
         Math.Abs(left.Y - right.Y) <= Epsilon;
+
+    private static List<MapPoint> ExtractPortalPolyline(
+        IList<MapPoint> points,
+        bool isClosed,
+        double intervalStart,
+        double intervalEnd,
+        double totalLength)
+    {
+        if (!isClosed ||
+            !WallCircularIntervals.IntervalWraps(intervalStart, intervalEnd, totalLength, isClosed))
+        {
+            return ExtractIntervalPolyline(points, isClosed, intervalStart, intervalEnd);
+        }
+
+        var polyline = new List<MapPoint>();
+        if (intervalStart < -Epsilon)
+        {
+            AppendPolyline(polyline, ExtractIntervalPolyline(points, isClosed, totalLength + intervalStart, totalLength));
+            AppendPolyline(polyline, ExtractIntervalPolyline(points, isClosed, 0, intervalEnd));
+        }
+        else
+        {
+            AppendPolyline(polyline, ExtractIntervalPolyline(points, isClosed, intervalStart, totalLength));
+            AppendPolyline(polyline, ExtractIntervalPolyline(points, isClosed, 0, intervalEnd - totalLength));
+        }
+
+        return polyline;
+    }
+
+    private static void AppendPolyline(List<MapPoint> target, IReadOnlyList<MapPoint> source)
+    {
+        foreach (var point in source)
+        {
+            if (target.Count > 0 && PointsEqual(target[^1], point))
+            {
+                continue;
+            }
+
+            target.Add(point);
+        }
+    }
 
     private static List<MapPoint> ExtractIntervalPolyline(
         IList<MapPoint> points,

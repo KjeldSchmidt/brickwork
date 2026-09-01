@@ -36,17 +36,83 @@ public static class WallGeometryEditing
         var totalLength = WallPolylineEdges.TotalLength(wall.Points, wall.IsClosed);
         var arcLengths = WallPolylineEdges.ComputeArcLengths(wall.Points, wall.IsClosed);
         var snappedScene = SnapToCenterline(wall, scenePoint);
-        var draggedArc = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, snappedScene);
+        var anchorScene = WallPathSegmentBuilder.PortalAnchorToScene(wall, portal);
+        var center = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, anchorScene);
+        var endpointHint = endpoint == PortalWidthEndpoint.Start ? currentStart : currentEnd;
+        var draggedArc = FindDraggedArcLength(
+            wall,
+            arcLengths,
+            snappedScene,
+            center,
+            endpointHint,
+            endpoint,
+            totalLength);
 
-        var center = (currentStart + currentEnd) / 2d;
-        var halfWidth = Math.Abs(draggedArc - center);
+        var halfWidth = endpoint switch
+        {
+            PortalWidthEndpoint.End when wall.IsClosed =>
+                WallCircularIntervals.ForwardArcDistance(center, draggedArc, totalLength),
+            PortalWidthEndpoint.Start when wall.IsClosed =>
+                WallCircularIntervals.ForwardArcDistance(draggedArc, center, totalLength),
+            PortalWidthEndpoint.End => Math.Max(0d, draggedArc - center),
+            PortalWidthEndpoint.Start => Math.Max(0d, center - draggedArc),
+            _ => 0d,
+        };
 
         const double minWidth = 2d;
         halfWidth = Math.Max(halfWidth, minWidth / 2d);
-        halfWidth = Math.Min(halfWidth, center);
-        halfWidth = Math.Min(halfWidth, totalLength - center);
+        halfWidth = Math.Min(
+            halfWidth,
+            WallCircularIntervals.MaxPortalHalfWidth(center, totalLength, wall.IsClosed));
 
         portal.Width = halfWidth * 2d;
+    }
+
+    private static double FindDraggedArcLength(
+        Wall wall,
+        double[] arcLengths,
+        MapPoint snappedScene,
+        double center,
+        double endpointHint,
+        PortalWidthEndpoint endpoint,
+        double totalLength)
+    {
+        var baseArc = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, snappedScene);
+        if (!wall.IsClosed)
+        {
+            return baseArc;
+        }
+
+        var maxHalfWidth = totalLength / 2d;
+        var bestArc = endpointHint;
+        var bestScore = double.MaxValue;
+
+        for (var branch = -1; branch <= 1; branch++)
+        {
+            var candidate = baseArc + branch * totalLength;
+            var halfWidth = endpoint switch
+            {
+                PortalWidthEndpoint.End =>
+                    WallCircularIntervals.ForwardArcDistance(center, candidate, totalLength),
+                PortalWidthEndpoint.Start =>
+                    WallCircularIntervals.ForwardArcDistance(candidate, center, totalLength),
+                _ => 0d,
+            };
+
+            if (halfWidth > maxHalfWidth + Epsilon)
+            {
+                continue;
+            }
+
+            var score = Math.Abs(candidate - endpointHint);
+            if (score + Epsilon < bestScore)
+            {
+                bestScore = score;
+                bestArc = candidate;
+            }
+        }
+
+        return bestArc;
     }
 
     public static MapPoint SnapToCenterline(Wall wall, MapPoint scenePoint)
