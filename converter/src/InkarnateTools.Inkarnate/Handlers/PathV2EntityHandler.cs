@@ -40,8 +40,7 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
             scale = 1;
         }
 
-        var isClosed = entity.TryGetProperty("isClosedPath", out var closedElement) &&
-                       closedElement.ValueKind == JsonValueKind.True;
+        var isClosed = InkSvgPathParser.ResolveIsClosedPath(entity, pathData);
 
         var origin = new MapPoint(originX, originY);
         var wall = new Wall

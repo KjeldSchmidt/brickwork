@@ -37,6 +37,9 @@
     <None Include="..\..\..\resources\debug-closed-paths-with-gaps.ink" Link="resources\debug-closed-paths-with-gaps.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\resources\old-map.ink" Link="resources\old-map.ink">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

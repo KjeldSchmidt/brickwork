@@ -1,3 +1,4 @@
+using System.Text.Json;
 using InkarnateTools.Core.Geometry;
 using InkarnateTools.Core.Models;
 using SkiaSharp;
@@ -9,6 +10,46 @@ internal static class InkSvgPathParser
     private const float CubicSampleStep = 25f;
     private const int CubicMaxSamples = 8;
     private const double PointEpsilon = 0.01;
+
+    public static bool IsClosedPath(string pathData)
+    {
+        if (string.IsNullOrWhiteSpace(pathData))
+        {
+            return false;
+        }
+
+        using var path = SKPath.ParseSvgPathData(pathData);
+        if (path is null || path.IsEmpty)
+        {
+            return false;
+        }
+
+        using var iterator = path.CreateIterator(false);
+        var coords = new SKPoint[4];
+        while (true)
+        {
+            var verb = iterator.Next(coords);
+            if (verb == SKPathVerb.Done)
+            {
+                return false;
+            }
+
+            if (verb == SKPathVerb.Close)
+            {
+                return true;
+            }
+        }
+    }
+
+    public static bool ResolveIsClosedPath(JsonElement entity, string pathData)
+    {
+        if (entity.TryGetProperty("isClosedPath", out var closedElement))
+        {
+            return closedElement.ValueKind == JsonValueKind.True;
+        }
+
+        return IsClosedPath(pathData);
+    }
 
     public static IList<MapPoint> ParseToScenePoints(
         string pathData,

@@ -208,6 +208,10 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
                     pathsChanged = true;
                     appliedKnownField = true;
                     break;
+                case "isClosedPath":
+                    wall.IsClosed = property.Value.ValueKind == JsonValueKind.True;
+                    appliedKnownField = true;
+                    break;
                 case "x":
                     if (property.Value.ValueKind == JsonValueKind.Number)
                     {
@@ -279,6 +283,12 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
 
         if (pathsChanged)
         {
+            if (!updateElement.TryGetProperty("isClosedPath", out _) &&
+                !string.IsNullOrWhiteSpace(wall.PathData))
+            {
+                wall.IsClosed = InkSvgPathParser.IsClosedPath(wall.PathData);
+            }
+
             WallGeometryRebuilder.RebuildFromPath(wall);
         }
 
