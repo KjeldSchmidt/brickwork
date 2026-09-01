@@ -95,6 +95,62 @@ public class WallExportRunTests
         Assert.True(runs[0].Points.Count >= 4);
     }
 
+    [Fact]
+    public void BuildExportRuns_ClosedRectangle_ProducesFourWallSegments()
+    {
+        var wall = new Wall
+        {
+            EntityId = 1,
+            IsClosed = true,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(100, 0),
+                new MapPoint(100, 100),
+                new MapPoint(0, 100),
+            ],
+        };
+
+        var runs = WallPathSegmentBuilder.BuildExportRuns(wall);
+
+        var run = Assert.Single(runs);
+        Assert.Equal(5, run.Points.Count);
+        Assert.Equal(4, run.Points.Count - 1);
+    }
+
+    [Fact]
+    public async Task BuildExportRuns_PrisonBars_ProducesFourFoundrySegments()
+    {
+        var map = await LoadMassEditsMapAsync();
+        var transform = SceneTransform.FromMap(map)!;
+        var prisonBar = map.Walls.First(wall =>
+            wall.EntityId == 11653 &&
+            (wall.Name ?? string.Empty).Contains("Prison Bars", StringComparison.OrdinalIgnoreCase));
+
+        var segments = FoundryWallSegmentBuilder.BuildFromWall(prisonBar, transform);
+
+        Assert.Equal(4, segments.Count);
+    }
+
+    [Fact]
+    public async Task BuildExportRuns_Entity1646_IncludesClosingSegment()
+    {
+        var map = await LoadMassEditsMapAsync();
+        var transform = SceneTransform.FromMap(map)!;
+        var wall = map.Walls.Single(candidate => candidate.EntityId == 1646);
+
+        var segments = FoundryWallSegmentBuilder.BuildFromWall(wall, transform);
+
+        Assert.Equal(wall.Points.Count, segments.Count);
+    }
+
+    private static async Task<MapDocument> LoadMassEditsMapAsync()
+    {
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "map-with-mass-edits.ink"));
+        await using var input = File.OpenRead(path);
+        return await new InkarnateImporter().ImportAsync(input);
+    }
+
     private static async Task<MapDocument> LoadBasicWallsAsync()
     {
         var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));

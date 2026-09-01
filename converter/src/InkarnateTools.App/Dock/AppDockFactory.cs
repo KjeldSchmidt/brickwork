@@ -21,7 +21,7 @@ public sealed class AppDockFactory : Factory
         var importTool = new ImportToolViewModel(_session)
         {
             Id = "ImportTool",
-            Title = "Import",
+            Title = "File",
             CanClose = false,
             CanPin = true,
         };

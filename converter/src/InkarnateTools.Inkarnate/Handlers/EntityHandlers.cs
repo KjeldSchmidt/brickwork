@@ -118,6 +118,39 @@ internal static class EntityParsing
     public static MapPoint ReadPoint(JsonElement pointElement) =>
         new(InkJsonReader.ReadDouble(pointElement, "x"), InkJsonReader.ReadDouble(pointElement, "y"));
 
+    public static void ApplyPortals(Wall wall, JsonElement portalsElement)
+    {
+        wall.Portals.Clear();
+        if (portalsElement.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var portalElement in portalsElement.EnumerateArray())
+        {
+            var portal = new WallPortal
+            {
+                Id = InkJsonReader.ReadString(portalElement, "id") ?? string.Empty,
+                Width = InkJsonReader.ReadDouble(portalElement, "width"),
+            };
+
+            if (portalElement.TryGetProperty("anchor", out var anchorElement))
+            {
+                portal.Anchor = ReadPoint(anchorElement);
+            }
+
+            wall.Portals.Add(portal);
+        }
+    }
+
+    public static void ApplyPortalsIfPresent(Wall wall, JsonElement entityElement)
+    {
+        if (entityElement.TryGetProperty("portals", out var portalsElement))
+        {
+            ApplyPortals(wall, portalsElement);
+        }
+    }
+
     public static string ReadColor(JsonElement entityElement)
     {
         if (!entityElement.TryGetProperty("color", out var colorElement))

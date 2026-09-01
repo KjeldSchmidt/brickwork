@@ -19,9 +19,6 @@ public partial class ImportToolViewModel : Tool
     [ObservableProperty]
     private string _statusMessage = "Ready.";
 
-    [ObservableProperty]
-    private string _compatibilityMessage = string.Empty;
-
     public ImportToolViewModel(EditorSession session)
     {
         _session = session;
@@ -31,7 +28,6 @@ public partial class ImportToolViewModel : Tool
             if (args.PropertyName is nameof(EditorSession.Map))
             {
                 ConvertCommand.NotifyCanExecuteChanged();
-                CompatibilityMessage = _session.Map?.Compatibility?.FormatSummary().TrimEnd() ?? string.Empty;
             }
         };
     }
@@ -54,7 +50,6 @@ public partial class ImportToolViewModel : Tool
             _session.SourceFilePath = path;
             _session.Map = map;
             _session.SourceFileName = Path.GetFileName(path);
-            CompatibilityMessage = map.Compatibility?.FormatSummary().TrimEnd() ?? string.Empty;
             StatusMessage = $"Loaded {_session.SourceFileName}.";
         }
         catch (Exception ex)
@@ -62,7 +57,6 @@ public partial class ImportToolViewModel : Tool
             _session.Map = null;
             _session.SourceFileName = null;
             _session.SourceFilePath = null;
-            CompatibilityMessage = string.Empty;
             StatusMessage = $"Failed to load input: {ex.Message}";
         }
     }

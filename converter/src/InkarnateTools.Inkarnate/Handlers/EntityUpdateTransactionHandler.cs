@@ -175,26 +175,7 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
                     appliedKnownField = true;
                     break;
                 case "portals":
-                    wall.Portals.Clear();
-                    if (property.Value.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (var portalElement in property.Value.EnumerateArray())
-                        {
-                            var portal = new WallPortal
-                            {
-                                Id = InkJsonReader.ReadString(portalElement, "id") ?? string.Empty,
-                                Width = InkJsonReader.ReadDouble(portalElement, "width"),
-                            };
-
-                            if (portalElement.TryGetProperty("anchor", out var anchorElement))
-                            {
-                                portal.Anchor = EntityParsing.ReadPoint(anchorElement);
-                            }
-
-                            wall.Portals.Add(portal);
-                        }
-                    }
-
+                    EntityParsing.ApplyPortals(wall, property.Value);
                     appliedKnownField = true;
                     break;
                 case "wallThickness":

@@ -50,20 +50,20 @@ public static class WallPathSegmentBuilder
 
         if (wall.Portals.Count == 0)
         {
-            return [new WallExportRun(CopyPoints(wall.Points), wall.LineType)];
+            return [new WallExportRun(CopyPointsForExport(wall.Points, wall.IsClosed), wall.LineType)];
         }
 
         var totalLength = WallPolylineEdges.TotalLength(wall.Points, wall.IsClosed);
         if (totalLength <= Epsilon)
         {
-            return [new WallExportRun(CopyPoints(wall.Points), wall.LineType)];
+            return [new WallExportRun(CopyPointsForExport(wall.Points, wall.IsClosed), wall.LineType)];
         }
 
         var arcLengths = WallPolylineEdges.ComputeArcLengths(wall.Points, wall.IsClosed);
         var portalIntervals = BuildPortalIntervals(wall, arcLengths, totalLength);
         if (portalIntervals.Count == 0)
         {
-            return [new WallExportRun(CopyPoints(wall.Points), wall.LineType)];
+            return [new WallExportRun(CopyPointsForExport(wall.Points, wall.IsClosed), wall.LineType)];
         }
 
         var runs = new List<WallExportRun>();
@@ -698,4 +698,15 @@ public static class WallPathSegmentBuilder
     }
 
     private static List<MapPoint> CopyPoints(IList<MapPoint> points) => points.ToList();
+
+    private static List<MapPoint> CopyPointsForExport(IList<MapPoint> points, bool isClosed)
+    {
+        var copy = CopyPoints(points);
+        if (isClosed && copy.Count >= 3 && !PointsEqual(copy[0], copy[^1]))
+        {
+            copy.Add(copy[0]);
+        }
+
+        return copy;
+    }
 }
