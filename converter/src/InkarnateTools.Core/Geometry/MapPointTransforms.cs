@@ -34,6 +34,17 @@ public static class MapPointTransforms
         return new MapPoint(rotated.X + wall.PathOrigin.X, rotated.Y + wall.PathOrigin.Y);
     }
 
+    public static MapPoint SceneToLocal(Wall wall, MapPoint scene)
+    {
+        var translated = new MapPoint(scene.X - wall.PathOrigin.X, scene.Y - wall.PathOrigin.Y);
+        var unrotated = Math.Abs(wall.Angle) <= Epsilon
+            ? translated
+            : RotateAround(translated, new MapPoint(0, 0), -wall.Angle);
+
+        var scale = wall.Scale <= Epsilon ? 1d : wall.Scale;
+        return new MapPoint(unrotated.X / scale, unrotated.Y / scale);
+    }
+
     public static void Translate(IList<MapPoint> points, double dx, double dy)
     {
         if (Math.Abs(dx) <= Epsilon && Math.Abs(dy) <= Epsilon)

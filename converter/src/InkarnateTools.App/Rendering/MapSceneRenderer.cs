@@ -7,6 +7,10 @@ namespace InkarnateTools.App.Rendering;
 public sealed class MapSceneRenderer : IMapSceneRenderer
 {
     private const float LineStrokeWidth = 2f;
+    private const float NodeRadius = 4f;
+    private const float NodeBorderWidth = 1.5f;
+    private const float TickHalfLength = 4f;
+    private const float TickHalfThickness = 2f;
 
     private readonly Dictionary<MapDocument, SKImage> _imageCache = new(ReferenceEqualityComparer.Instance);
 
@@ -57,7 +61,7 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
                     isClosed: false);
             }
 
-            DrawCenterlineNodes(canvas, transform, wall.Points, wall.IsActive);
+            DrawWallNodes(canvas, transform, wall);
         }
     }
 
@@ -237,44 +241,102 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         canvas.DrawPath(path, paint);
     }
 
-    private static void DrawCenterlineNodes(
-        SKCanvas canvas,
-        SceneTransform transform,
-        IList<MapPoint> scenePoints,
-        bool isActive)
+    private static void DrawWallNodes(SKCanvas canvas, SceneTransform transform, Wall wall)
     {
-        // Tessellation produces ~1 point per scene unit (thousands per wall).
-        // Large outlined circles overlap into a solid black band — use tiny dots instead.
-        for (var i = 0; i < scenePoints.Count; i++)
+        for (var i = 0; i < wall.Points.Count; i++)
         {
-            var preview = transform.SceneToPreview(scenePoints[i]);
-            var x = (float)preview.X;
-            var y = (float)preview.Y;
+            DrawWallNode(canvas, transform, wall.Points[i], wall.LineType, wall.IsActive);
+        }
 
-            if (i == 0)
+        foreach (var portal in wall.Portals)
+        {
+            if (WallPathSegmentBuilder.TryGetPortalArcInterval(wall, portal, out var start, out var end))
             {
-                using var startPaint = new SKPaint
-                {
-                    Color = SKColors.Lime,
-                    IsAntialias = true,
-                    Style = SKPaintStyle.Fill,
-                };
-                canvas.DrawCircle(x, y, 4f, startPaint);
-                continue;
+                DrawPortalWidthTick(canvas, transform, wall, start, portal.LineType, portal.IsActive);
+                DrawPortalWidthTick(canvas, transform, wall, end, portal.LineType, portal.IsActive);
             }
 
-            var fillColor = isActive
-                ? new SKColor(0xFF, 0xFF, 0xFF, 0xCC)
-                : new SKColor(0xAA, 0xAA, 0xAA, 0xCC);
-
-            using var fillPaint = new SKPaint
-            {
-                Color = fillColor,
-                IsAntialias = true,
-                Style = SKPaintStyle.Fill,
-            };
-            canvas.DrawCircle(x, y, 1f, fillPaint);
+            var anchorScene = WallPathSegmentBuilder.PortalAnchorToScene(wall, portal);
+            DrawWallNode(canvas, transform, anchorScene, portal.LineType, portal.IsActive);
         }
+    }
+
+    private static void DrawPortalWidthTick(
+        SKCanvas canvas,
+        SceneTransform transform,
+        Wall wall,
+        double arcLength,
+        WallLineType lineType,
+        bool isActive)
+    {
+        var (center, angleRadians) = PortalWidthHandleGeometry.GetPreviewTickPose(wall, arcLength, transform);
+        var degrees = (float)(angleRadians * 180d / Math.PI);
+
+        canvas.Save();
+        canvas.Translate((float)center.X, (float)center.Y);
+        canvas.RotateDegrees(degrees);
+
+        var rect = new SKRect(
+            -TickHalfLength,
+            -TickHalfThickness,
+            TickHalfLength,
+            TickHalfThickness);
+
+        var fillColor = isActive
+            ? new SKColor(0xFF, 0xFF, 0xFF, 0xCC)
+            : new SKColor(0xAA, 0xAA, 0xAA, 0xCC);
+
+        using var fillPaint = new SKPaint
+        {
+            Color = fillColor,
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill,
+        };
+        canvas.DrawRect(rect, fillPaint);
+
+        using var borderPaint = new SKPaint
+        {
+            Color = WallLineColors.ForLine(lineType, isActive),
+            IsAntialias = true,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = NodeBorderWidth,
+        };
+        canvas.DrawRect(rect, borderPaint);
+
+        canvas.Restore();
+    }
+
+    private static void DrawWallNode(
+        SKCanvas canvas,
+        SceneTransform transform,
+        MapPoint scenePoint,
+        WallLineType lineType,
+        bool isActive)
+    {
+        var preview = transform.SceneToPreview(scenePoint);
+        var x = (float)preview.X;
+        var y = (float)preview.Y;
+
+        var fillColor = isActive
+            ? new SKColor(0xFF, 0xFF, 0xFF, 0xCC)
+            : new SKColor(0xAA, 0xAA, 0xAA, 0xCC);
+
+        using var fillPaint = new SKPaint
+        {
+            Color = fillColor,
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill,
+        };
+        canvas.DrawCircle(x, y, NodeRadius, fillPaint);
+
+        using var borderPaint = new SKPaint
+        {
+            Color = WallLineColors.ForLine(lineType, isActive),
+            IsAntialias = true,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = NodeBorderWidth,
+        };
+        canvas.DrawCircle(x, y, NodeRadius, borderPaint);
     }
 
     private static SKPath BuildPath(SceneTransform transform, IReadOnlyList<MapPoint> scenePoints)

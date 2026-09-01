@@ -148,6 +148,68 @@ public static class WallPathSegmentBuilder
     public static MapPoint PortalAnchorToScene(Wall wall, WallPortal portal) =>
         MapPointTransforms.LocalToScene(wall, portal.Anchor);
 
+    public static bool TryGetPortalArcInterval(
+        Wall wall,
+        WallPortal portal,
+        out double start,
+        out double end)
+    {
+        start = 0d;
+        end = 0d;
+
+        if (wall.Points.Count < 2 || portal.Width <= Epsilon)
+        {
+            return false;
+        }
+
+        var totalLength = WallPolylineEdges.TotalLength(wall.Points, wall.IsClosed);
+        if (totalLength <= Epsilon)
+        {
+            return false;
+        }
+
+        var arcLengths = WallPolylineEdges.ComputeArcLengths(wall.Points, wall.IsClosed);
+        var anchorScene = PortalAnchorToScene(wall, portal);
+        var center = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, anchorScene);
+        var halfWidth = portal.Width / 2d;
+        start = Math.Max(0d, center - halfWidth);
+        end = Math.Min(totalLength, center + halfWidth);
+
+        return end - start > Epsilon;
+    }
+
+    public static MapPoint GetScenePointAtArcLength(Wall wall, double arcLength) =>
+        InterpolateAtLength(wall.Points, wall.IsClosed, arcLength);
+
+    public static MapPoint GetTangentAtArcLength(Wall wall, double arcLength)
+    {
+        const double delta = 0.5d;
+        var totalLength = WallPolylineEdges.TotalLength(wall.Points, wall.IsClosed);
+        if (totalLength <= Epsilon)
+        {
+            return new MapPoint(1, 0);
+        }
+
+        var before = Math.Max(0d, arcLength - delta);
+        var after = Math.Min(totalLength, arcLength + delta);
+        if (after - before <= Epsilon)
+        {
+            return new MapPoint(1, 0);
+        }
+
+        var start = InterpolateAtLength(wall.Points, wall.IsClosed, before);
+        var end = InterpolateAtLength(wall.Points, wall.IsClosed, after);
+        var dx = end.X - start.X;
+        var dy = end.Y - start.Y;
+        var length = Math.Sqrt(dx * dx + dy * dy);
+        if (length <= Epsilon)
+        {
+            return new MapPoint(1, 0);
+        }
+
+        return new MapPoint(dx / length, dy / length);
+    }
+
     private static void AddRunIfValid(
         List<WallExportRun> runs,
         IReadOnlyList<MapPoint> points,

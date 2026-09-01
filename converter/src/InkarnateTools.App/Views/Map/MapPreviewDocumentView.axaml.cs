@@ -14,6 +14,7 @@ public partial class MapPreviewDocumentView : UserControl
 
     private MapDocument? _lastFittedMap;
     private Point? _leftPressPosition;
+    private bool _vertexDragActive;
 
     public MapPreviewDocumentView()
     {
@@ -21,6 +22,7 @@ public partial class MapPreviewDocumentView : UserControl
         DataContextChanged += OnDataContextChanged;
         MapZoom.LayoutUpdated += OnMapZoomLayoutUpdated;
         MapViewport.AddHandler(InputElement.PointerPressedEvent, OnMapViewportPointerPressed, handledEventsToo: true);
+        MapViewport.AddHandler(InputElement.PointerMovedEvent, OnMapViewportPointerMoved, handledEventsToo: true);
         MapViewport.AddHandler(InputElement.PointerReleasedEvent, OnMapViewportPointerReleased, handledEventsToo: true);
     }
 
@@ -67,7 +69,15 @@ public partial class MapPreviewDocumentView : UserControl
         var properties = e.GetCurrentPoint(MapViewport).Properties;
         if (properties.IsLeftButtonPressed)
         {
-            _leftPressPosition = e.GetPosition(MapViewport);
+            var pressPosition = e.GetPosition(MapViewport);
+            _leftPressPosition = pressPosition;
+            _vertexDragActive = viewModel.TryBeginVertexDrag(ToPreviewPoint(pressPosition));
+            if (_vertexDragActive)
+            {
+                e.Pointer.Capture(MapViewport);
+                e.Handled = true;
+            }
+
             return;
         }
 
@@ -79,6 +89,22 @@ public partial class MapPreviewDocumentView : UserControl
         }
     }
 
+    private void OnMapViewportPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (DataContext is not MapPreviewDocumentViewModel { HasMap: true } viewModel || !_vertexDragActive)
+        {
+            return;
+        }
+
+        if (!e.GetCurrentPoint(MapViewport).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        viewModel.DragVertexTo(ToPreviewPoint(e.GetPosition(MapViewport)));
+        e.Handled = true;
+    }
+
     private void OnMapViewportPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (DataContext is not MapPreviewDocumentViewModel { HasMap: true } viewModel)
@@ -88,6 +114,20 @@ public partial class MapPreviewDocumentView : UserControl
 
         if (e.InitialPressMouseButton != MouseButton.Left)
         {
+            return;
+        }
+
+        if (_vertexDragActive)
+        {
+            viewModel.EndVertexDrag();
+            _vertexDragActive = false;
+            _leftPressPosition = null;
+            if (e.Pointer.Captured == MapViewport)
+            {
+                e.Pointer.Capture(null);
+            }
+
+            e.Handled = true;
             return;
         }
 
