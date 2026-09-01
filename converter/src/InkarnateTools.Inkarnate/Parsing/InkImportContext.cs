@@ -266,6 +266,11 @@ internal sealed class InkImportContext
             return false;
         }
 
+        if (GroupsById.ContainsKey(entityId))
+        {
+            return RemoveGroupSubtree(entityId, visiting);
+        }
+
         var removed = false;
 
         if (WallsByEntityId.Remove(entityId))
@@ -277,24 +282,74 @@ internal sealed class InkImportContext
             }
         }
 
-        if (GroupsById.Remove(entityId, out var removedGroup))
+        var groupedWallIds = WallsByEntityId.Values
+            .Where(wall => wall.GroupId == entityId)
+            .Select(wall => wall.EntityId)
+            .ToList();
+        foreach (var wallId in groupedWallIds)
         {
+            removed |= RemoveEntity(wallId, visiting);
+        }
+
+        return removed;
+    }
+
+    private bool RemoveGroupSubtree(int rootGroupId, HashSet<int> visiting)
+    {
+        var subtree = CollectGroupSubtree(rootGroupId);
+        var removed = false;
+
+        foreach (var wall in WallsByEntityId.Values
+                     .Where(wall => wall.GroupId is int groupId && subtree.Contains(groupId))
+                     .Select(wall => wall.EntityId)
+                     .ToList())
+        {
+            removed |= RemoveEntity(wall, visiting);
+        }
+
+        foreach (var groupId in subtree.OrderByDescending(id => id))
+        {
+            if (!GroupsById.Remove(groupId, out var removedGroup))
+            {
+                continue;
+            }
+
             removed = true;
 
             if (removedGroup.ParentGroupId is int parentId &&
                 GroupsById.TryGetValue(parentId, out var parentGroup))
             {
-                parentGroup.MemberIds.Remove(entityId);
+                parentGroup.MemberIds.Remove(groupId);
             }
 
-            // Deleting a group deletes its members (Inkarnate semantics).
             foreach (var memberId in removedGroup.MemberIds.ToList())
             {
-                RemoveEntity(memberId, visiting);
+                removed |= RemoveEntity(memberId, visiting);
             }
         }
 
         return removed;
+    }
+
+    private HashSet<int> CollectGroupSubtree(int rootGroupId)
+    {
+        var subtree = new HashSet<int> { rootGroupId };
+        var expanded = true;
+        while (expanded)
+        {
+            expanded = false;
+            foreach (var group in GroupsById.Values)
+            {
+                if (group.ParentGroupId is int parentId &&
+                    subtree.Contains(parentId) &&
+                    subtree.Add(group.GroupId))
+                {
+                    expanded = true;
+                }
+            }
+        }
+
+        return subtree;
     }
 
     public IEnumerable<Wall> EnumerateDescendantWalls(EntityGroup group)

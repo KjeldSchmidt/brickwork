@@ -15,6 +15,9 @@ public partial class WallsToolViewModel : Tool
     [ObservableProperty]
     private object? _selectedTreeItem;
 
+    [ObservableProperty]
+    private int _treeRevision;
+
     public bool HasLayers => Layers.Count > 0;
 
     public bool ShowEmptyMessage => !HasLayers;
@@ -147,8 +150,8 @@ public partial class WallsToolViewModel : Tool
             var layerWallIds = layerWalls.Select(wall => wall.EntityId).ToHashSet();
 
             var rootGroups = _session.Map.Groups
-                .Where(group => group.ParentGroupId is null)
-                .Where(group => GroupHasDescendantWall(group, groupsById, layerWallIds))
+                .Where(group => IsRootGroup(group, groupsById))
+                .Where(group => GroupHasDescendantWall(group, groupsById, wallsById, layerWallIds))
                 .OrderBy(group => group.GroupId);
 
             foreach (var group in rootGroups)
@@ -173,6 +176,7 @@ public partial class WallsToolViewModel : Tool
 
         OnPropertyChanged(nameof(HasLayers));
         OnPropertyChanged(nameof(ShowEmptyMessage));
+        TreeRevision++;
         ApplyTreeFocusFromSession();
     }
 
@@ -201,45 +205,98 @@ public partial class WallsToolViewModel : Tool
         IReadOnlyDictionary<int, Wall> wallsById,
         HashSet<int> layerWallIds)
     {
-        if (!GroupHasDescendantWall(group, groupsById, layerWallIds))
+        if (!GroupHasDescendantWall(group, groupsById, wallsById, layerWallIds))
         {
             return null;
         }
 
         var node = new WallGroupNodeViewModel(_session, group);
-        foreach (var memberId in group.MemberIds)
+
+        foreach (var childGroupId in GetChildGroupIds(group, groupsById).OrderBy(id => id))
         {
-            if (groupsById.TryGetValue(memberId, out var childGroup))
+            var childGroup = groupsById[childGroupId];
+            var childNode = BuildGroupNode(childGroup, groupsById, wallsById, layerWallIds);
+            if (childNode is not null)
             {
-                var childNode = BuildGroupNode(childGroup, groupsById, wallsById, layerWallIds);
-                if (childNode is not null)
-                {
-                    node.Children.Add(childNode);
-                }
+                node.Children.Add(childNode);
             }
-            else if (wallsById.TryGetValue(memberId, out var wall) && layerWallIds.Contains(wall.EntityId))
-            {
-                node.Children.Add(new WallItemViewModel(_session, wall));
-            }
+        }
+
+        foreach (var wall in GetChildWalls(group, wallsById, layerWallIds).OrderBy(wall => wall.EntityId))
+        {
+            node.Children.Add(new WallItemViewModel(_session, wall));
         }
 
         return node.Children.Count > 0 ? node : null;
     }
 
+    private static bool IsRootGroup(EntityGroup group, IReadOnlyDictionary<int, EntityGroup> groupsById) =>
+        group.ParentGroupId is not int parentId || !groupsById.ContainsKey(parentId);
+
+    private static IEnumerable<int> GetChildGroupIds(
+        EntityGroup group,
+        IReadOnlyDictionary<int, EntityGroup> groupsById)
+    {
+        var seen = new HashSet<int>();
+        foreach (var memberId in group.MemberIds)
+        {
+            if (groupsById.ContainsKey(memberId) && seen.Add(memberId))
+            {
+                yield return memberId;
+            }
+        }
+
+        foreach (var childGroup in groupsById.Values)
+        {
+            if (childGroup.ParentGroupId == group.GroupId && seen.Add(childGroup.GroupId))
+            {
+                yield return childGroup.GroupId;
+            }
+        }
+    }
+
+    private static IEnumerable<Wall> GetChildWalls(
+        EntityGroup group,
+        IReadOnlyDictionary<int, Wall> wallsById,
+        HashSet<int> layerWallIds)
+    {
+        var seen = new HashSet<int>();
+        foreach (var memberId in group.MemberIds)
+        {
+            if (wallsById.TryGetValue(memberId, out var memberWall) &&
+                layerWallIds.Contains(memberWall.EntityId) &&
+                seen.Add(memberWall.EntityId))
+            {
+                yield return memberWall;
+            }
+        }
+
+        foreach (var wall in wallsById.Values)
+        {
+            if (wall.GroupId == group.GroupId &&
+                layerWallIds.Contains(wall.EntityId) &&
+                seen.Add(wall.EntityId))
+            {
+                yield return wall;
+            }
+        }
+    }
+
     private static bool GroupHasDescendantWall(
         EntityGroup group,
         IReadOnlyDictionary<int, EntityGroup> groupsById,
+        IReadOnlyDictionary<int, Wall> wallsById,
         HashSet<int> layerWallIds)
     {
-        foreach (var memberId in group.MemberIds)
+        if (GetChildWalls(group, wallsById, layerWallIds).Any())
         {
-            if (layerWallIds.Contains(memberId))
-            {
-                return true;
-            }
+            return true;
+        }
 
-            if (groupsById.TryGetValue(memberId, out var childGroup) &&
-                GroupHasDescendantWall(childGroup, groupsById, layerWallIds))
+        foreach (var childGroupId in GetChildGroupIds(group, groupsById))
+        {
+            if (groupsById.TryGetValue(childGroupId, out var childGroup) &&
+                GroupHasDescendantWall(childGroup, groupsById, wallsById, layerWallIds))
             {
                 return true;
             }

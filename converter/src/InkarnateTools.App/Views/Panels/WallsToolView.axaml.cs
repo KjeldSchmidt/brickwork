@@ -1,3 +1,4 @@
+using System.Collections;
 using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Threading;
@@ -8,10 +9,11 @@ namespace InkarnateTools.App.Views.Panels;
 
 public partial class WallsToolView : UserControl
 {
+    private int _expandedForTreeRevision = -1;
+
     public WallsToolView()
     {
         InitializeComponent();
-        Loaded += (_, _) => ScheduleExpandAll();
         DataContextChanged += OnDataContextChanged;
         WallsTree.PropertyChanged += OnWallsTreePropertyChanged;
     }
@@ -28,14 +30,15 @@ public partial class WallsToolView : UserControl
             newContext.PropertyChanged += OnViewModelPropertyChanged;
         }
 
-        ScheduleExpandAll();
+        _expandedForTreeRevision = -1;
+        ScheduleInitialExpandAll();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(WallsToolViewModel.Layers) or nameof(WallsToolViewModel.HasLayers))
+        if (e.PropertyName is nameof(WallsToolViewModel.TreeRevision))
         {
-            ScheduleExpandAll();
+            ScheduleInitialExpandAll();
         }
 
         if (e.PropertyName is nameof(WallsToolViewModel.SelectedTreeItem))
@@ -52,11 +55,37 @@ public partial class WallsToolView : UserControl
         }
     }
 
-    private void ScheduleExpandAll() =>
-        Dispatcher.UIThread.Post(ExpandAllTreeItems, DispatcherPriority.Loaded);
+    private void ScheduleInitialExpandAll()
+    {
+        if (DataContext is not WallsToolViewModel { HasLayers: true } viewModel)
+        {
+            return;
+        }
+
+        if (_expandedForTreeRevision == viewModel.TreeRevision)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(
+            () => TryInitialExpandAll(viewModel.TreeRevision),
+            DispatcherPriority.Loaded);
+    }
 
     private void ScheduleBringSelectionIntoView() =>
         Dispatcher.UIThread.Post(BringSelectionIntoView, DispatcherPriority.Background);
+
+    private void TryInitialExpandAll(int treeRevision)
+    {
+        if (DataContext is not WallsToolViewModel { HasLayers: true } viewModel ||
+            _expandedForTreeRevision == treeRevision)
+        {
+            return;
+        }
+
+        ExpandAllTreeItems();
+        _expandedForTreeRevision = treeRevision;
+    }
 
     /// <summary>
     /// Avalonia has no TreeView.ExpandAll. Nested containers are only created after a parent
@@ -71,9 +100,86 @@ public partial class WallsToolView : UserControl
             return;
         }
 
-        ExpandAllTreeItems();
-        var container = FindTreeViewItem(WallsTree, WallsTree.SelectedItem);
-        container?.BringIntoView();
+        var path = FindDataPath(WallsTree.ItemsSource, WallsTree.SelectedItem);
+        if (path is not null)
+        {
+            ExpandDataPath(WallsTree, path, 0);
+        }
+
+        FindTreeViewItem(WallsTree, WallsTree.SelectedItem)?.BringIntoView();
+    }
+
+    private static void ExpandDataPath(ItemsControl parent, IReadOnlyList<object> path, int depth)
+    {
+        if (depth >= path.Count)
+        {
+            return;
+        }
+
+        parent.UpdateLayout();
+
+        for (var index = 0; index < parent.ItemCount; index++)
+        {
+            if (parent.ContainerFromIndex(index) is not TreeViewItem item)
+            {
+                continue;
+            }
+
+            if (!ReferenceEquals(item.DataContext, path[depth]))
+            {
+                continue;
+            }
+
+            if (depth < path.Count - 1)
+            {
+                item.IsExpanded = true;
+                item.UpdateLayout();
+                ExpandDataPath(item, path, depth + 1);
+            }
+
+            return;
+        }
+    }
+
+    private static List<object>? FindDataPath(IEnumerable? items, object target)
+    {
+        if (items is null)
+        {
+            return null;
+        }
+
+        foreach (var item in items)
+        {
+            if (ReferenceEquals(item, target) || Equals(item, target))
+            {
+                return [item];
+            }
+
+            var children = item switch
+            {
+                WallLayerNodeViewModel layer => layer.Children.Cast<object>(),
+                WallGroupNodeViewModel group => group.Children.Cast<object>(),
+                WallItemViewModel wall => wall.Portals.Cast<object>(),
+                _ => null,
+            };
+
+            if (children is null)
+            {
+                continue;
+            }
+
+            var nestedPath = FindDataPath(children, target);
+            if (nestedPath is null)
+            {
+                continue;
+            }
+
+            var path = new List<object> { item };
+            path.AddRange(nestedPath);
+            return path;
+        }
+
+        return null;
     }
 
     private static void ExpandItemsControl(ItemsControl itemsControl)
@@ -116,7 +222,6 @@ public partial class WallsToolView : UserControl
             }
         }
 
-        // Data templates wrap content; fall back to visual-tree DataContext search.
         foreach (var descendant in parent.GetVisualDescendants().OfType<TreeViewItem>())
         {
             if (ReferenceEquals(descendant.DataContext, dataItem) || Equals(descendant.DataContext, dataItem))

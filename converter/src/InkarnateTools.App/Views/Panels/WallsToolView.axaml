@@ -13,12 +13,6 @@
                   ItemsSource="{Binding Layers}"
                   SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}"
                   IsVisible="{Binding HasLayers}">
-            <TreeView.Styles>
-                <!-- Expand every container as it materializes (nested groups aren't in the tree until parents expand). -->
-                <Style Selector="TreeViewItem">
-                    <Setter Property="IsExpanded" Value="True" />
-                </Style>
-            </TreeView.Styles>
             <TreeView.DataTemplates>
                 <TreeDataTemplate DataType="vm:WallLayerNodeViewModel"
                                   ItemsSource="{Binding Children}">

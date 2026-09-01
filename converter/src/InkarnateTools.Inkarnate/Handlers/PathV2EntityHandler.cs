@@ -93,6 +93,12 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
         WallPointSimplifier.Apply(wall, WallSimplificationSettings.DefaultToleranceSceneUnits);
 
         context.WallsByEntityId[wall.EntityId] = wall;
+        var groupId = InkJsonReader.ReadInt(entity, "groupId");
+        if (groupId is > 0)
+        {
+            wall.GroupId = groupId.Value;
+        }
+
         context.ApplyVisibilityToWall(wall, item.LayerId);
     }
 }

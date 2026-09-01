@@ -52,6 +52,51 @@ internal sealed class LightEntityHandler : IInkEntityHandler
     }
 }
 
+internal sealed class GroupEntityHandler : IInkEntityHandler
+{
+    public string EntityType => "group";
+
+    public TransactionUnderstanding Understanding => TransactionUnderstanding.FullyUnderstood;
+
+    public void Apply(InkImportContext context, InkEntityItem item)
+    {
+        var entity = item.Entity;
+        var entityId = InkJsonReader.ReadInt(entity, "entityId");
+        if (entityId is null or <= 0)
+        {
+            return;
+        }
+
+        if (!context.GroupsById.TryGetValue(entityId.Value, out var group))
+        {
+            group = new EntityGroup { GroupId = entityId.Value };
+            context.GroupsById[entityId.Value] = group;
+        }
+
+        group.Name = InkJsonReader.ReadString(entity, "name")
+            ?? InkJsonReader.ReadString(entity, "defaultName");
+        group.LayerId = item.LayerId ?? group.LayerId;
+        group.ParentGroupId = InkJsonReader.ReadInt(entity, "groupId");
+
+        var originX = InkJsonReader.ReadDouble(entity, "x");
+        var originY = InkJsonReader.ReadDouble(entity, "y");
+        group.Origin = new MapPoint(originX, originY);
+        group.RotationPivot = group.Origin;
+
+        if (entity.TryGetProperty("angle", out var angleElement) &&
+            angleElement.ValueKind == JsonValueKind.Number)
+        {
+            group.Angle = angleElement.GetDouble();
+        }
+
+        if (entity.TryGetProperty("oX", out var oxElement) && oxElement.ValueKind == JsonValueKind.Number &&
+            entity.TryGetProperty("oY", out var oyElement) && oyElement.ValueKind == JsonValueKind.Number)
+        {
+            group.RotationPivot = new MapPoint(oxElement.GetDouble(), oyElement.GetDouble());
+        }
+    }
+}
+
 internal sealed class KnownIgnoredEntityHandler : IInkEntityHandler
 {
     public KnownIgnoredEntityHandler(string entityType)

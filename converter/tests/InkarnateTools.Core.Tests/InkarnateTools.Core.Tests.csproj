@@ -40,6 +40,9 @@
     <None Include="..\..\..\resources\old-map.ink" Link="resources\old-map.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\resources\map-with-mass-edits.ink" Link="resources\map-with-mass-edits.ink">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
