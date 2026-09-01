@@ -2,8 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:InkarnateTools.App.ViewModels"
              x:Class="InkarnateTools.App.Views.Panels.ImportToolView"
-             x:DataType="vm:ImportToolViewModel">
-    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,*,Auto">
+             x:DataType="vm:ImportToolViewModel"
+             Classes="tool-panel">
+    <ScrollViewer Classes="tool-panel-scroll">
+        <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,*,Auto">
         <Button Grid.Row="0"
                 Margin="0,0,0,12"
                 Content="Open source map"
@@ -35,5 +37,6 @@
                    TextWrapping="Wrap"
                    VerticalAlignment="Bottom"
                    Opacity="0.85" />
-    </Grid>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

@@ -45,6 +45,25 @@ public partial class WallsToolViewModel : Tool
         RebuildLayers();
     }
 
+    partial void OnSelectedTreeItemChanged(object? value)
+    {
+        switch (value)
+        {
+            case WallItemViewModel wallItem:
+                _session.SetFocusedWall(wallItem.Wall);
+                break;
+            case WallPortalItemViewModel portalItem:
+                var wall = _session.Map?.Walls.FirstOrDefault(
+                    candidate => candidate.Portals.Contains(portalItem.Portal));
+                if (wall is not null)
+                {
+                    _session.SetFocusedWall(wall, portalItem.Portal);
+                }
+
+                break;
+        }
+    }
+
     private void RefreshBoundValues()
     {
         foreach (var layer in Layers)

@@ -2,8 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:InkarnateTools.App.ViewModels"
              x:Class="InkarnateTools.App.Views.Panels.WallsToolView"
-             x:DataType="vm:WallsToolViewModel">
-    <Grid Margin="12">
+             x:DataType="vm:WallsToolViewModel"
+             Classes="tool-panel">
+    <ScrollViewer Classes="tool-panel-scroll">
+        <Grid Margin="12">
         <TextBlock Text="Open a source map to list walls."
                    Opacity="0.6"
                    TextWrapping="Wrap"
@@ -74,5 +76,6 @@
                 </DataTemplate>
             </TreeView.DataTemplates>
         </TreeView>
-    </Grid>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

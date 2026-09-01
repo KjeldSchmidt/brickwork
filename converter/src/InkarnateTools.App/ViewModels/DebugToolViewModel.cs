@@ -35,6 +35,9 @@ public partial class DebugToolViewModel : Tool
     [ObservableProperty]
     private string _sourceJsonStatus = string.Empty;
 
+    [ObservableProperty]
+    private string _selectedWallSummary = "Click a wall in the map or walls tree to inspect it.";
+
     public DebugToolViewModel(EditorSession session)
     {
         _session = session;
@@ -44,8 +47,16 @@ public partial class DebugToolViewModel : Tool
             {
                 RefreshFromSession();
             }
+
+            if (args.PropertyName is nameof(EditorSession.FocusedWallEntityId)
+                or nameof(EditorSession.FocusedPortal)
+                or nameof(EditorSession.ContentRevision))
+            {
+                RefreshSelectedWall();
+            }
         };
         RefreshFromSession();
+        RefreshSelectedWall();
     }
 
     [RelayCommand(CanExecute = nameof(CanUseSourceJson))]
@@ -111,9 +122,30 @@ public partial class DebugToolViewModel : Tool
 
     private bool CanUseSourceJson() => HasSourceJson;
 
+    private void RefreshSelectedWall()
+    {
+        if (_session.Map is null || _session.FocusedWallEntityId is not int wallId)
+        {
+            SelectedWallSummary = _session.Map is null
+                ? "Open a source map to inspect walls."
+                : "Click a wall in the map or walls tree to inspect it.";
+            return;
+        }
+
+        var wall = _session.Map.Walls.FirstOrDefault(candidate => candidate.EntityId == wallId);
+        if (wall is null)
+        {
+            SelectedWallSummary = $"Wall {wallId} is no longer in the document.";
+            return;
+        }
+
+        SelectedWallSummary = WallDebugFormatter.Format(wall, _session.FocusedPortal);
+    }
+
     private void RefreshFromSession()
     {
         UpdateCompatibilityDisplay(_session.Map?.Compatibility);
+        RefreshSelectedWall();
 
         var path = _session.SourceFilePath;
         HasSourceJson = !string.IsNullOrWhiteSpace(path) && File.Exists(path);

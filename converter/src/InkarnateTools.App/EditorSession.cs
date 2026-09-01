@@ -35,10 +35,15 @@ public sealed partial class EditorSession : ObservableObject
         ContentRevision++;
     }
 
-    public void RequestWallTreeFocus(Wall wall, WallPortal? portal = null)
+    public void SetFocusedWall(Wall wall, WallPortal? portal = null)
     {
         FocusedWallEntityId = wall.EntityId;
         FocusedPortal = portal;
+    }
+
+    public void RequestWallTreeFocus(Wall wall, WallPortal? portal = null)
+    {
+        SetFocusedWall(wall, portal);
         TreeFocusGeneration++;
     }
 

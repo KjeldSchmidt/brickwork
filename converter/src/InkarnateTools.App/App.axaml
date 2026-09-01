@@ -27,5 +27,10 @@
     <Application.Styles>
         <FluentTheme />
         <dock:DockFluentTheme />
+
+        <Style Selector="ScrollViewer.tool-panel-scroll">
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        </Style>
     </Application.Styles>
 </Application>
