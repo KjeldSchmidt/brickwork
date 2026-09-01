@@ -78,6 +78,31 @@ public static class WallThicknessPolygonBuilder
         return new WallTerrainRing(outer, inner);
     }
 
+    public static IReadOnlyList<IReadOnlyList<MapPoint>> BuildTerrainExportLoops(
+        IList<MapPoint> centerline,
+        double thickness,
+        bool isClosed)
+    {
+        if (centerline.Count < 2 || thickness <= Epsilon)
+        {
+            return [];
+        }
+
+        if (isClosed)
+        {
+            var ring = BuildClosedRing(centerline, thickness);
+            if (ring is null || ring.Outer.Count < 3 || ring.Inner.Count < 3)
+            {
+                return [];
+            }
+
+            return [ring.Outer, ring.Inner];
+        }
+
+        var outline = BuildOutline(centerline, thickness);
+        return outline.Count >= 3 ? [outline] : [];
+    }
+
     private static double PolygonArea(IReadOnlyList<MapPoint> points)
     {
         double area = 0;

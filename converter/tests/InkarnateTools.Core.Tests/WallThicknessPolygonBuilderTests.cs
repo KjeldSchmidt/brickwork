@@ -32,6 +32,35 @@ public class WallThicknessPolygonBuilderTests
     }
 
     [Fact]
+    public void BuildTerrainExportLoops_ClosedSquare_ReturnsOuterAndInnerLoops()
+    {
+        var square = new List<MapPoint>
+        {
+            new(0, 0),
+            new(100, 0),
+            new(100, 100),
+            new(0, 100),
+        };
+
+        var loops = WallThicknessPolygonBuilder.BuildTerrainExportLoops(square, thickness: 20, isClosed: true);
+
+        Assert.Equal(2, loops.Count);
+        Assert.Equal(4, loops[0].Count);
+        Assert.Equal(4, loops[1].Count);
+    }
+
+    [Fact]
+    public void BuildTerrainExportLoops_OpenSegment_ReturnsOutlinePolygon()
+    {
+        var centerline = new List<MapPoint> { new(0, 0), new(100, 0) };
+
+        var loops = WallThicknessPolygonBuilder.BuildTerrainExportLoops(centerline, thickness: 20, isClosed: false);
+
+        var outline = Assert.Single(loops);
+        Assert.True(outline.Count >= 4);
+    }
+
+    [Fact]
     public async Task BuildOutline_ImportedWall_ProducesPolygon()
     {
         var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));

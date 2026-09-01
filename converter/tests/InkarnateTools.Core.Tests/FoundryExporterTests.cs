@@ -47,6 +47,69 @@ public class WallExportRunTests
     }
 
     [Fact]
+    public void BuildExportRuns_InactivePortal_LeavesGapWithoutPortalRun()
+    {
+        var wall = new Wall
+        {
+            EntityId = 5,
+            Origin = new MapPoint(0, 0),
+            Scale = 1,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(1000, 0),
+            ],
+            Portals =
+            [
+                new WallPortal
+                {
+                    Anchor = new MapPoint(500, 0),
+                    Width = 200,
+                    LineType = WallLineType.Door,
+                    IsActive = false,
+                },
+            ],
+        };
+
+        var runs = WallPathSegmentBuilder.BuildExportRuns(wall);
+
+        Assert.Equal(2, runs.Count);
+        Assert.All(runs, run => Assert.False(run.IsPortal));
+    }
+
+    [Fact]
+    public void BuildExportRuns_InactiveWallWithActivePortal_StillProducesPortalRun()
+    {
+        var wall = new Wall
+        {
+            EntityId = 5,
+            IsActive = false,
+            Origin = new MapPoint(0, 0),
+            Scale = 1,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(1000, 0),
+            ],
+            Portals =
+            [
+                new WallPortal
+                {
+                    Anchor = new MapPoint(500, 0),
+                    Width = 200,
+                    LineType = WallLineType.Door,
+                    IsActive = true,
+                },
+            ],
+        };
+
+        var runs = WallPathSegmentBuilder.BuildExportRuns(wall);
+
+        Assert.Equal(3, runs.Count);
+        Assert.Single(runs, run => run.IsPortal);
+    }
+
+    [Fact]
     public async Task BuildExportRuns_BasicWallsGappedWall_ProducesThreeRuns()
     {
         var map = await LoadBasicWallsAsync();
@@ -223,16 +286,114 @@ public class FoundryExporterTests
     }
 
     [Fact]
-    public async Task ExportAsync_ClosedTerrainWall_ProducesEightTerrainSegments()
+    public async Task ExportAsync_ClosedTerrainWall_ProducesOuterAndInnerTerrainSegments()
     {
         var map = await LoadPreparedBasicWallsMapAsync();
         var transform = SceneTransform.FromMap(map)!;
         var terrainWall = map.Walls.Single(wall => wall.EntityId == 6);
 
+        var ring = WallThicknessPolygonBuilder.BuildClosedRing(terrainWall.Points, terrainWall.SceneThickness);
+        Assert.NotNull(ring);
+
         var segments = FoundryWallSegmentBuilder.BuildFromWall(terrainWall, transform);
 
         Assert.Equal(8, segments.Count);
         Assert.All(segments, segment => Assert.Equal(10, segment.Sight));
+
+        var outerMaxX = ring!.Outer.Max(point => transform.SceneToPreview(point).X);
+        var innerMaxX = ring.Inner.Max(point => transform.SceneToPreview(point).X);
+        Assert.True(outerMaxX > innerMaxX);
+        Assert.Contains(
+            segments,
+            segment => segment.X0 == (int)Math.Round(outerMaxX) || segment.X1 == (int)Math.Round(outerMaxX));
+        Assert.Contains(
+            segments,
+            segment => segment.X0 == (int)Math.Round(innerMaxX) || segment.X1 == (int)Math.Round(innerMaxX));
+    }
+
+    [Fact]
+    public async Task ExportAsync_OpenTerrainWall_ProducesOutlinePolygonSegments()
+    {
+        var map = await LoadPreparedBasicWallsMapAsync();
+        var transform = SceneTransform.FromMap(map)!;
+        var terrainWall = map.Walls.Single(wall => wall.EntityId == 3);
+        terrainWall.LineType = WallLineType.Terrain;
+
+        var loops = WallThicknessPolygonBuilder.BuildTerrainExportLoops(
+            terrainWall.Points,
+            terrainWall.SceneThickness,
+            terrainWall.IsClosed);
+        var outline = Assert.Single(loops);
+
+        var segments = FoundryWallSegmentBuilder.BuildFromWall(terrainWall, transform);
+
+        Assert.Equal(outline.Count, segments.Count);
+        Assert.All(segments, segment => Assert.Equal(10, segment.Sight));
+        Assert.DoesNotContain(segments, segment => segment.Door == 1);
+    }
+
+    [Fact]
+    public async Task ExportAsync_ClosedTerrainWallWithInactivePortal_SplitsTerrainPolygonsAtGap()
+    {
+        var map = await LoadPreparedBasicWallsMapAsync();
+        var transform = SceneTransform.FromMap(map)!;
+        var terrainWall = map.Walls.Single(wall => wall.EntityId == 6);
+
+        var intactSegments = FoundryWallSegmentBuilder.BuildFromWall(terrainWall, transform);
+        Assert.Equal(8, intactSegments.Count);
+
+        terrainWall.Portals.Add(new WallPortal
+        {
+            Anchor = new MapPoint(50, 0),
+            Width = 20,
+            LineType = WallLineType.Door,
+            IsActive = false,
+        });
+
+        var pathSegments = WallPathSegmentBuilder.BuildSegments(terrainWall);
+        Assert.Single(pathSegments);
+        Assert.False(pathSegments[0].IsClosed);
+
+        var segments = FoundryWallSegmentBuilder.BuildFromWall(terrainWall, transform);
+        Assert.NotEqual(intactSegments.Count, segments.Count);
+        Assert.All(segments, segment => Assert.Equal(10, segment.Sight));
+        Assert.DoesNotContain(segments, segment => segment.Door == 1);
+    }
+
+    [Fact]
+    public async Task ExportAsync_InactiveWallWithActivePortal_ExportsDoorOnly()
+    {
+        var map = await LoadPreparedBasicWallsMapAsync();
+        var transform = SceneTransform.FromMap(map)!;
+        var gappedWall = map.Walls.Single(wall => wall.EntityId == 5);
+        gappedWall.IsActive = false;
+        foreach (var portal in gappedWall.Portals)
+        {
+            portal.IsActive = true;
+        }
+
+        var segments = FoundryWallSegmentBuilder.BuildFromWall(gappedWall, transform);
+
+        Assert.Single(segments);
+        Assert.Equal(1, segments[0].Door);
+    }
+
+    [Fact]
+    public async Task ExportAsync_ActiveWallWithInactivePortal_ExportsSplitWallWithoutDoor()
+    {
+        var map = await LoadPreparedBasicWallsMapAsync();
+        var transform = SceneTransform.FromMap(map)!;
+        var gappedWall = map.Walls.Single(wall => wall.EntityId == 5);
+        gappedWall.IsActive = true;
+        foreach (var portal in gappedWall.Portals)
+        {
+            portal.IsActive = false;
+        }
+
+        var segments = FoundryWallSegmentBuilder.BuildFromWall(gappedWall, transform);
+
+        Assert.Equal(2, segments.Count);
+        Assert.All(segments, segment => Assert.Equal(0, segment.Door));
     }
 
     [Fact]

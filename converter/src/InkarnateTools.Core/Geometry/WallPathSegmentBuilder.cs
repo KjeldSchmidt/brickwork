@@ -17,7 +17,7 @@ public static class WallPathSegmentBuilder
             return [];
         }
 
-        if (wall.Portals.Count == 0)
+        if (!wall.HasPortals())
         {
             return [new WallPathSegment(CopyPoints(wall.Points), wall.IsClosed)];
         }
@@ -48,7 +48,7 @@ public static class WallPathSegmentBuilder
             return [];
         }
 
-        if (wall.Portals.Count == 0)
+        if (!wall.HasPortals())
         {
             return [new WallExportRun(CopyPointsForExport(wall.Points, wall.IsClosed), wall.LineType)];
         }
@@ -69,7 +69,7 @@ public static class WallPathSegmentBuilder
         var runs = new List<WallExportRun>();
         var cursor = 0d;
 
-        foreach (var (gapStart, gapEnd, lineType) in portalIntervals)
+        foreach (var (gapStart, gapEnd, lineType, isActive) in portalIntervals)
         {
             if (gapStart > cursor + Epsilon)
             {
@@ -79,10 +79,14 @@ public static class WallPathSegmentBuilder
                     wall.LineType);
             }
 
-            AddRunIfValid(
-                runs,
-                ExtractIntervalPolyline(wall.Points, wall.IsClosed, gapStart, gapEnd),
-                lineType);
+            if (isActive)
+            {
+                AddRunIfValid(
+                    runs,
+                    ExtractIntervalPolyline(wall.Points, wall.IsClosed, gapStart, gapEnd),
+                    lineType,
+                    isPortal: true);
+            }
 
             cursor = gapEnd;
         }
@@ -118,7 +122,7 @@ public static class WallPathSegmentBuilder
 
         var arcLengths = WallPolylineEdges.ComputeArcLengths(wall.Points, wall.IsClosed);
         var segments = new List<WallPortalSegment>();
-        foreach (var portal in wall.Portals)
+        foreach (var portal in wall.ActivePortals())
         {
             if (portal.Width <= Epsilon)
             {
@@ -235,15 +239,16 @@ public static class WallPathSegmentBuilder
     private static void AddRunIfValid(
         List<WallExportRun> runs,
         IReadOnlyList<MapPoint> points,
-        WallLineType lineType)
+        WallLineType lineType,
+        bool isPortal = false)
     {
         if (points.Count >= 2)
         {
-            runs.Add(new WallExportRun(points, lineType));
+            runs.Add(new WallExportRun(points, lineType, isPortal));
         }
     }
 
-    private sealed record PortalInterval(double Start, double End, WallLineType LineType);
+    private sealed record PortalInterval(double Start, double End, WallLineType LineType, bool IsActive);
 
     private static List<PortalInterval> BuildPortalIntervals(
         Wall wall,
@@ -268,7 +273,7 @@ public static class WallPathSegmentBuilder
                          totalLength,
                          wall.IsClosed))
             {
-                intervals.Add(new PortalInterval(start, end, portal.LineType));
+                intervals.Add(new PortalInterval(start, end, portal.LineType, portal.IsActive));
             }
         }
 
@@ -295,7 +300,8 @@ public static class WallPathSegmentBuilder
                 merged[^1] = new PortalInterval(
                     last.Start,
                     Math.Max(last.End, current.End),
-                    last.LineType);
+                    last.LineType,
+                    last.IsActive || current.IsActive);
             }
             else
             {
@@ -530,7 +536,7 @@ public static class WallPathSegmentBuilder
         }
 
         runs.RemoveAt(runs.Count - 1);
-        runs[0] = new WallExportRun(mergedPoints, first.LineType);
+        runs[0] = new WallExportRun(mergedPoints, first.LineType, first.IsPortal);
     }
 
     private static List<(double Start, double End)> SubtractGaps(

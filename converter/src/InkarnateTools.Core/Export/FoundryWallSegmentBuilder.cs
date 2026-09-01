@@ -23,15 +23,20 @@ public static class FoundryWallSegmentBuilder
 
         var segments = new List<FoundryWallSegment>();
 
-        foreach (var wall in map.ExportableWalls())
+        foreach (var wall in map.Walls.Where(wall => wall.WallEnabled))
         {
-            if (TryBuildTerrainRingSegments(wall, transform, segments))
+            if (wall.IsActive && TryBuildTerrainPolygonSegments(wall, transform, segments))
             {
                 continue;
             }
 
             foreach (var run in WallPathSegmentBuilder.BuildExportRuns(wall))
             {
+                if (!wall.IsActive && !run.IsPortal)
+                {
+                    continue;
+                }
+
                 AddRunSegments(run, transform, segments);
             }
         }
@@ -43,41 +48,58 @@ public static class FoundryWallSegmentBuilder
     {
         var segments = new List<FoundryWallSegment>();
 
-        if (TryBuildTerrainRingSegments(wall, transform, segments))
+        if (wall.IsActive && TryBuildTerrainPolygonSegments(wall, transform, segments))
         {
             return segments;
         }
 
         foreach (var run in WallPathSegmentBuilder.BuildExportRuns(wall))
         {
+            if (!wall.IsActive && !run.IsPortal)
+            {
+                continue;
+            }
+
             AddRunSegments(run, transform, segments);
         }
 
         return segments;
     }
 
-    private static bool TryBuildTerrainRingSegments(
+    private static bool TryBuildTerrainPolygonSegments(
         Wall wall,
         SceneTransform transform,
         List<FoundryWallSegment> segments)
     {
         if (wall.LineType != WallLineType.Terrain ||
-            !wall.IsClosed ||
-            wall.SceneThickness <= 0 ||
-            wall.Portals.Count > 0)
+            wall.Points.Count < 2 ||
+            wall.SceneThickness <= 0)
         {
             return false;
         }
 
-        var ring = WallThicknessPolygonBuilder.BuildClosedRing(wall.Points, wall.SceneThickness);
-        if (ring is null || ring.Outer.Count < 3 || ring.Inner.Count < 3)
+        var pathSegments = WallPathSegmentBuilder.BuildSegments(wall);
+        if (pathSegments.Count == 0)
         {
             return false;
         }
 
-        AddLoopSegments(ring.Outer, WallLineType.Terrain, transform, segments);
-        AddLoopSegments(ring.Inner, WallLineType.Terrain, transform, segments);
-        return true;
+        var added = false;
+        foreach (var pathSegment in pathSegments)
+        {
+            var loops = WallThicknessPolygonBuilder.BuildTerrainExportLoops(
+                pathSegment.Points as IList<MapPoint> ?? pathSegment.Points.ToList(),
+                wall.SceneThickness,
+                pathSegment.IsClosed);
+
+            foreach (var loop in loops)
+            {
+                AddLoopSegments(loop, WallLineType.Terrain, transform, segments);
+                added = true;
+            }
+        }
+
+        return added;
     }
 
     private static void AddLoopSegments(
