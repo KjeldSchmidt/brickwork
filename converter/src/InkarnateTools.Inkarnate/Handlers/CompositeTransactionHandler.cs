@@ -27,22 +27,23 @@ internal sealed class CompositeTransactionHandler : IInkTransactionHandler
                 "missing cmds");
         }
 
+        var parentId = InkJsonReader.ReadInt(transaction, "transactionId") ?? -1;
+        var children = new List<TransactionAnalysis>();
         var understanding = TransactionUnderstanding.FullyUnderstood;
-        var commandCount = 0;
 
         foreach (var cmd in cmdsElement.EnumerateArray())
         {
-            commandCount++;
-            var cmdType = InkJsonReader.ReadString(cmd, "cmdType");
-            understanding = Max(understanding, cmdType switch
+            var nested = _processNested(context, cmd);
+            if (nested.TransactionId < 0 && parentId >= 0)
             {
-                "cmd-entity-group" => ApplyGroup(context, cmd),
-                "cmd-entity-move-to-group" => ApplyMoveToGroup(context, cmd),
-                _ => _processNested(context, cmd).Understanding,
-            });
+                nested = CloneWithTransactionId(nested, parentId);
+            }
+
+            children.Add(nested);
+            understanding = Combine(understanding, nested.Understanding);
         }
 
-        if (commandCount == 0)
+        if (children.Count == 0)
         {
             return TransactionAnalysisFactory.Create(
                 transaction,
@@ -51,18 +52,63 @@ internal sealed class CompositeTransactionHandler : IInkTransactionHandler
                 "empty cmds");
         }
 
-        return TransactionAnalysisFactory.Create(transaction, CommandType, understanding);
+        return TransactionAnalysisFactory.Create(
+            transaction,
+            CommandType,
+            understanding,
+            $"{children.Count} cmds",
+            children);
     }
 
-    private static TransactionUnderstanding ApplyGroup(InkImportContext context, JsonElement cmd)
+    private static TransactionAnalysis CloneWithTransactionId(TransactionAnalysis source, int transactionId) =>
+        new()
+        {
+            TransactionId = transactionId,
+            CommandType = source.CommandType,
+            Understanding = source.Understanding,
+            Detail = source.Detail,
+            Children = source.Children
+                .Select(child => CloneWithTransactionId(child, transactionId))
+                .ToList(),
+        };
+
+    private static TransactionUnderstanding Combine(
+        TransactionUnderstanding current,
+        TransactionUnderstanding candidate)
     {
-        var groupId = InkJsonReader.ReadInt(cmd, "groupId");
-        if (groupId is null or <= 0)
+        if (current == TransactionUnderstanding.Unknown ||
+            candidate == TransactionUnderstanding.Unknown)
         {
             return TransactionUnderstanding.Unknown;
         }
 
-        var memberIds = ReadEntityIds(cmd);
+        if (current == TransactionUnderstanding.FullyUnderstood ||
+            candidate == TransactionUnderstanding.FullyUnderstood)
+        {
+            return TransactionUnderstanding.FullyUnderstood;
+        }
+
+        return TransactionUnderstanding.KnownIgnored;
+    }
+}
+
+internal sealed class EntityGroupTransactionHandler : IInkTransactionHandler
+{
+    public string CommandType => "cmd-entity-group";
+
+    public TransactionAnalysis Process(InkImportContext context, JsonElement transaction)
+    {
+        var groupId = InkJsonReader.ReadInt(transaction, "groupId");
+        if (groupId is null or <= 0)
+        {
+            return TransactionAnalysisFactory.Create(
+                transaction,
+                CommandType,
+                TransactionUnderstanding.Unknown,
+                "missing groupId");
+        }
+
+        var memberIds = ReadEntityIds(transaction);
         if (!context.GroupsById.TryGetValue(groupId.Value, out var group))
         {
             group = new EntityGroup { GroupId = groupId.Value };
@@ -80,7 +126,6 @@ internal sealed class CompositeTransactionHandler : IInkTransactionHandler
         group.MemberIds.Clear();
         foreach (var memberId in memberIds)
         {
-            // Detach without relying on MemberIds membership list (cleared above).
             if (context.WallsByEntityId.TryGetValue(memberId, out var wall) &&
                 wall.GroupId is int previousWallGroup &&
                 previousWallGroup != groupId.Value &&
@@ -110,31 +155,11 @@ internal sealed class CompositeTransactionHandler : IInkTransactionHandler
             group.MemberIds.Add(memberId);
         }
 
-        return TransactionUnderstanding.FullyUnderstood;
-    }
-
-    private static TransactionUnderstanding ApplyMoveToGroup(InkImportContext context, JsonElement cmd)
-    {
-        var memberIds = ReadEntityIds(cmd);
-        if (memberIds.Count == 0)
-        {
-            return TransactionUnderstanding.KnownIgnored;
-        }
-
-        var groupId = InkJsonReader.ReadInt(cmd, "groupId");
-        foreach (var memberId in memberIds)
-        {
-            if (groupId is > 0)
-            {
-                context.AttachToGroup(memberId, groupId.Value);
-            }
-            else
-            {
-                context.DetachFromParent(memberId);
-            }
-        }
-
-        return TransactionUnderstanding.FullyUnderstood;
+        return TransactionAnalysisFactory.Create(
+            transaction,
+            CommandType,
+            TransactionUnderstanding.FullyUnderstood,
+            $"group {groupId.Value} ({memberIds.Count})");
     }
 
     private static List<int> ReadEntityIds(JsonElement cmd)
@@ -156,9 +181,65 @@ internal sealed class CompositeTransactionHandler : IInkTransactionHandler
 
         return ids;
     }
+}
 
-    private static TransactionUnderstanding Max(
-        TransactionUnderstanding current,
-        TransactionUnderstanding candidate) =>
-        (TransactionUnderstanding)Math.Max((int)current, (int)candidate);
+internal sealed class EntityMoveToGroupTransactionHandler : IInkTransactionHandler
+{
+    public string CommandType => "cmd-entity-move-to-group";
+
+    public TransactionAnalysis Process(InkImportContext context, JsonElement transaction)
+    {
+        var memberIds = ReadEntityIds(transaction);
+        if (memberIds.Count == 0)
+        {
+            return TransactionAnalysisFactory.Create(
+                transaction,
+                CommandType,
+                TransactionUnderstanding.KnownIgnored,
+                "empty entityIds");
+        }
+
+        var groupId = InkJsonReader.ReadInt(transaction, "groupId");
+        foreach (var memberId in memberIds)
+        {
+            if (groupId is > 0)
+            {
+                context.AttachToGroup(memberId, groupId.Value);
+            }
+            else
+            {
+                context.DetachFromParent(memberId);
+            }
+        }
+
+        var detail = groupId is > 0
+            ? $"→ group {groupId.Value} ({memberIds.Count})"
+            : $"ungroup ({memberIds.Count})";
+
+        return TransactionAnalysisFactory.Create(
+            transaction,
+            CommandType,
+            TransactionUnderstanding.FullyUnderstood,
+            detail);
+    }
+
+    private static List<int> ReadEntityIds(JsonElement cmd)
+    {
+        var ids = new List<int>();
+        if (!cmd.TryGetProperty("entityIds", out var idsElement) ||
+            idsElement.ValueKind != JsonValueKind.Array)
+        {
+            return ids;
+        }
+
+        foreach (var idElement in idsElement.EnumerateArray())
+        {
+            if (idElement.ValueKind == JsonValueKind.Number)
+            {
+                ids.Add(idElement.GetInt32());
+            }
+        }
+
+        return ids;
+    }
 }

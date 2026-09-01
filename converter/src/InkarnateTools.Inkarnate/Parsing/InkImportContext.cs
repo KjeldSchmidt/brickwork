@@ -56,6 +56,45 @@ internal sealed class InkImportContext
         return layer;
     }
 
+    public void InsertLayerAt(MapLayer layer, int atIndex)
+    {
+        var clamped = Math.Clamp(atIndex, 0, LayersById.Count);
+        foreach (var other in LayersById.Values.Where(other => other.Order >= clamped && other.Id != layer.Id))
+        {
+            other.Order++;
+        }
+
+        layer.Order = clamped;
+    }
+
+    public bool RemoveLayer(string layerId)
+    {
+        if (!LayersById.Remove(layerId))
+        {
+            return false;
+        }
+
+        var wallIds = WallsByEntityId.Values
+            .Where(wall => string.Equals(wall.LayerId, layerId, StringComparison.OrdinalIgnoreCase))
+            .Select(wall => wall.EntityId)
+            .ToList();
+        foreach (var wallId in wallIds)
+        {
+            RemoveEntity(wallId);
+        }
+
+        var groupIds = GroupsById.Values
+            .Where(group => string.Equals(group.LayerId, layerId, StringComparison.OrdinalIgnoreCase))
+            .Select(group => group.GroupId)
+            .ToList();
+        foreach (var groupId in groupIds)
+        {
+            RemoveEntity(groupId);
+        }
+
+        return true;
+    }
+
     public void ReorderLayers(IReadOnlyList<string> newOrder)
     {
         for (var index = 0; index < newOrder.Count; index++)

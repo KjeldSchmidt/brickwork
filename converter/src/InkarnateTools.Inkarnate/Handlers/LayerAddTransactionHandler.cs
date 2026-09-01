@@ -44,6 +44,12 @@ internal sealed class LayerAddTransactionHandler : IInkTransactionHandler
         layer.Name = name ?? layer.Name;
         layer.IsVisible = isVisible;
 
+        var atIndex = InkJsonReader.ReadInt(transaction, "atIndex");
+        if (atIndex is >= 0)
+        {
+            context.InsertLayerAt(layer, atIndex.Value);
+        }
+
         var detail = layerKind is not null
             ? $"layer:{layerKind} ({layerId})"
             : layerId;

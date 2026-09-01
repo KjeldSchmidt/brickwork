@@ -173,6 +173,31 @@ internal sealed class LayerUpdateVisibilityTransactionHandler : IInkTransactionH
     }
 }
 
+internal sealed class LayerRemoveTransactionHandler : IInkTransactionHandler
+{
+    public string CommandType => "cmd-layer-remove";
+
+    public TransactionAnalysis Process(InkImportContext context, JsonElement transaction)
+    {
+        var layerId = InkJsonReader.ReadString(transaction, "layerId");
+        if (string.IsNullOrWhiteSpace(layerId))
+        {
+            return TransactionAnalysisFactory.Create(
+                transaction,
+                CommandType,
+                TransactionUnderstanding.Unknown,
+                "missing layerId");
+        }
+
+        var removed = context.RemoveLayer(layerId);
+        return TransactionAnalysisFactory.Create(
+            transaction,
+            CommandType,
+            removed ? TransactionUnderstanding.FullyUnderstood : TransactionUnderstanding.KnownIgnored,
+            layerId);
+    }
+}
+
 internal sealed class KnownIgnoredCommandHandler : IInkTransactionHandler
 {
     public KnownIgnoredCommandHandler(string commandType, string? detail = null)

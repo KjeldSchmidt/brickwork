@@ -1,6 +1,5 @@
 using System.Text.Json;
 using InkarnateTools.Core.Models;
-using InkarnateTools.Inkarnate.Parsing;
 
 namespace InkarnateTools.Inkarnate.Parsing;
 
@@ -10,12 +9,15 @@ internal static class TransactionAnalysisFactory
         JsonElement transaction,
         string commandType,
         TransactionUnderstanding understanding,
-        string? detail = null) =>
+        string? detail = null,
+        IReadOnlyList<TransactionAnalysis>? children = null,
+        int? transactionIdOverride = null) =>
         new()
         {
-            TransactionId = InkJsonReader.ReadInt(transaction, "transactionId") ?? -1,
+            TransactionId = transactionIdOverride ?? InkJsonReader.ReadInt(transaction, "transactionId") ?? -1,
             CommandType = commandType,
             Understanding = understanding,
             Detail = detail,
+            Children = children ?? [],
         };
 }

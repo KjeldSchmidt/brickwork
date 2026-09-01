@@ -29,7 +29,7 @@ public sealed class CompatibilityReport
         TotalTransactions == 0 ? 0d : UnknownCount * 100d / TotalTransactions;
 
     public IReadOnlyList<UnknownActionGroup> UnknownActionGroups =>
-        Transactions
+        EnumerateSelfAndDescendants(Transactions)
             .Where(transaction => transaction.Understanding == TransactionUnderstanding.Unknown)
             .GroupBy(DescribeUnknownAction)
             .Select(group => new UnknownActionGroup(group.Key, group.Count()))
@@ -75,16 +75,13 @@ public sealed class CompatibilityReport
 
     public string FormatTransactionLines()
     {
-        return string.Join(
-            Environment.NewLine,
-            Transactions.Select(transaction =>
-            {
-                var label = FormatUnderstanding(transaction.Understanding);
-                var detail = string.IsNullOrWhiteSpace(transaction.Detail)
-                    ? string.Empty
-                    : $" — {transaction.Detail}";
-                return $"  #{transaction.TransactionId} {transaction.CommandType} [{label}]{detail}";
-            }));
+        var lines = new List<string>();
+        foreach (var transaction in Transactions)
+        {
+            AppendTransactionLines(lines, transaction, indent: 0);
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     public string FormatDetails()
@@ -106,6 +103,40 @@ public sealed class CompatibilityReport
 
     public string FormatDetailed() =>
         string.Join(Environment.NewLine, FormatSummary(), string.Empty, FormatDetails());
+
+    private static void AppendTransactionLines(
+        List<string> lines,
+        TransactionAnalysis transaction,
+        int indent)
+    {
+        var pad = new string(' ', 2 + indent * 2);
+        var label = FormatUnderstanding(transaction.Understanding);
+        var detail = string.IsNullOrWhiteSpace(transaction.Detail)
+            ? string.Empty
+            : $" — {transaction.Detail}";
+        var idPrefix = transaction.TransactionId >= 0
+            ? $"#{transaction.TransactionId} "
+            : string.Empty;
+        lines.Add($"{pad}{idPrefix}{transaction.CommandType} [{label}]{detail}");
+
+        foreach (var child in transaction.Children)
+        {
+            AppendTransactionLines(lines, child, indent + 1);
+        }
+    }
+
+    private static IEnumerable<TransactionAnalysis> EnumerateSelfAndDescendants(
+        IEnumerable<TransactionAnalysis> transactions)
+    {
+        foreach (var transaction in transactions)
+        {
+            yield return transaction;
+            foreach (var nested in EnumerateSelfAndDescendants(transaction.Children))
+            {
+                yield return nested;
+            }
+        }
+    }
 
     private static string DescribeUnknownAction(TransactionAnalysis transaction)
     {

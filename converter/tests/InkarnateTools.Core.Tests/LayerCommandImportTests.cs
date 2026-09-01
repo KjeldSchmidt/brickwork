@@ -193,4 +193,139 @@ public class LayerCommandImportTests
         Assert.Equal("layer-b", map.Walls.Single().LayerId);
         Assert.Equal("layer-b", map.Groups.Single().LayerId);
     }
+
+    [Fact]
+    public void Import_Composite_ShowsNestedCommandsInDebugOverview()
+    {
+        const string json = """
+            {
+              "title": "composite",
+              "version": 3,
+              "history": [
+                {
+                  "transactionId": 6,
+                  "cmdType": "cmd-composite",
+                  "cmds": [
+                    {
+                      "cmdType": "cmd-layer-add",
+                      "layerId": "layer-grid",
+                      "layerData": {
+                        "isVisible": false,
+                        "name": "Grid",
+                        "opacity": 1
+                      },
+                      "layerKind": "entity",
+                      "atIndex": 0
+                    },
+                    {
+                      "cmdType": "cmd-entity-add",
+                      "items": [
+                        {
+                          "layerId": "layer-grid",
+                          "entity": {
+                            "entityId": 1,
+                            "entityType": "grid",
+                            "style": { "size": 100 }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                { "transactionId": 7, "cmdType": "cmd-mask" },
+                { "transactionId": 8, "cmdType": "cmd-set-base-color" }
+              ]
+            }
+            """;
+
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var map = InkarnateDocumentParser.Parse(document.RootElement);
+
+        Assert.Equal(100, map.Grid.CellSize);
+        Assert.Equal("Grid", Assert.Single(map.Layers).Name);
+        Assert.False(map.Layers[0].IsVisible);
+
+        Assert.NotNull(map.Compatibility);
+        var composite = Assert.Single(
+            map.Compatibility!.Transactions,
+            tx => tx.CommandType == "cmd-composite");
+        Assert.Equal(TransactionUnderstanding.FullyUnderstood, composite.Understanding);
+        Assert.Equal(2, composite.Children.Count);
+        Assert.Equal("cmd-layer-add", composite.Children[0].CommandType);
+        Assert.Equal("cmd-entity-add", composite.Children[1].CommandType);
+        Assert.All(composite.Children, child => Assert.Equal(6, child.TransactionId));
+
+        var details = map.Compatibility.FormatTransactionLines();
+        Assert.Contains("cmd-composite", details, StringComparison.Ordinal);
+        Assert.Contains("cmd-layer-add", details, StringComparison.Ordinal);
+        Assert.Contains("cmd-entity-add", details, StringComparison.Ordinal);
+        Assert.Equal(2, map.Compatibility.KnownIgnoredCount);
+    }
+
+    [Fact]
+    public void Import_LayerRemove_RemovesLayerAndWalls()
+    {
+        const string json = """
+            {
+              "title": "layer-remove",
+              "version": 3,
+              "history": [
+                {
+                  "transactionId": 1,
+                  "cmdType": "cmd-layer-add",
+                  "layerId": "layer-keep",
+                  "layerData": { "name": "Keep", "isVisible": true }
+                },
+                {
+                  "transactionId": 2,
+                  "cmdType": "cmd-layer-add",
+                  "layerId": "layer-top",
+                  "layerData": { "name": "Top", "isVisible": true }
+                },
+                {
+                  "transactionId": 3,
+                  "cmdType": "cmd-entity-add",
+                  "items": [
+                    {
+                      "layerId": "layer-keep",
+                      "entity": {
+                        "entityType": "path-v2",
+                        "entityId": 1,
+                        "wallEnabled": true,
+                        "x": 0,
+                        "y": 0,
+                        "scale": 1,
+                        "paths": "M0,0 L10,0"
+                      }
+                    },
+                    {
+                      "layerId": "layer-top",
+                      "entity": {
+                        "entityType": "path-v2",
+                        "entityId": 2,
+                        "wallEnabled": true,
+                        "x": 0,
+                        "y": 0,
+                        "scale": 1,
+                        "paths": "M0,0 L10,0"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "transactionId": 4,
+                  "cmdType": "cmd-layer-remove",
+                  "layerId": "layer-top"
+                }
+              ]
+            }
+            """;
+
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var map = InkarnateDocumentParser.Parse(document.RootElement);
+
+        Assert.Equal(["layer-keep"], map.Layers.Select(layer => layer.Id).ToList());
+        Assert.Equal(1, Assert.Single(map.Walls).EntityId);
+        Assert.Equal(0, map.Compatibility!.UnknownCount);
+    }
 }

@@ -9,4 +9,6 @@ public sealed class TransactionAnalysis
     public required TransactionUnderstanding Understanding { get; init; }
 
     public string? Detail { get; init; }
+
+    public IReadOnlyList<TransactionAnalysis> Children { get; init; } = [];
 }
