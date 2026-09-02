@@ -5,16 +5,31 @@ namespace Brickwork.Core.Services;
 
 public sealed class ConvertMapService
 {
-    private readonly IMapImporter _importer;
+    private readonly IReadOnlyList<IMapImporter> _importers;
+    private readonly IMapImporter _defaultImporter;
     private readonly IReadOnlyDictionary<string, IMapExporter> _exporters;
 
-    public ConvertMapService(IMapImporter importer, IEnumerable<IMapExporter> exporters)
+    public ConvertMapService(IEnumerable<IMapImporter> importers, IEnumerable<IMapExporter> exporters)
     {
-        ArgumentNullException.ThrowIfNull(importer);
+        ArgumentNullException.ThrowIfNull(importers);
         ArgumentNullException.ThrowIfNull(exporters);
 
-        _importer = importer;
+        _importers = importers.ToList();
+        if (_importers.Count == 0)
+        {
+            throw new ArgumentException("At least one importer is required.", nameof(importers));
+        }
+
+        _defaultImporter = _importers.FirstOrDefault(importer =>
+            string.Equals(importer.FormatId, "inkarnate", StringComparison.OrdinalIgnoreCase))
+            ?? _importers[0];
+
         _exporters = exporters.ToDictionary(exporter => exporter.FormatId, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public ConvertMapService(IMapImporter importer, IEnumerable<IMapExporter> exporters)
+        : this([importer], exporters)
+    {
     }
 
     public IReadOnlyList<string> SupportedExportFormats =>
@@ -29,7 +44,8 @@ public sealed class ConvertMapService
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        var map = await _importer.ImportAsync(input, cancellationToken).ConfigureAwait(false);
+        var importer = ResolveImporter(sourceFileName);
+        var map = await importer.ImportAsync(input, cancellationToken).ConfigureAwait(false);
         if (!string.IsNullOrWhiteSpace(sourceFileName))
         {
             map.SourceFileName = sourceFileName;
@@ -61,4 +77,28 @@ public sealed class ConvertMapService
 
         return exporter.ExportAsync(map, output, cancellationToken);
     }
+
+    private IMapImporter ResolveImporter(string? sourceFileName)
+    {
+        if (string.IsNullOrWhiteSpace(sourceFileName))
+        {
+            return _defaultImporter;
+        }
+
+        var extension = Path.GetExtension(sourceFileName);
+        var uvttImporter = _importers.FirstOrDefault(importer =>
+            string.Equals(importer.FormatId, "uvtt1", StringComparison.OrdinalIgnoreCase));
+
+        if (uvttImporter is not null && IsUvttExtension(extension))
+        {
+            return uvttImporter;
+        }
+
+        return _defaultImporter;
+    }
+
+    private static bool IsUvttExtension(string extension) =>
+        extension.Equals(".uvtt", StringComparison.OrdinalIgnoreCase) ||
+        extension.Equals(".dd2vtt", StringComparison.OrdinalIgnoreCase) ||
+        extension.Equals(".df2vtt", StringComparison.OrdinalIgnoreCase);
 }

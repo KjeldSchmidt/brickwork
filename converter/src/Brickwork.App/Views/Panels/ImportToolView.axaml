@@ -8,7 +8,7 @@
         <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,*,Auto">
         <Button Grid.Row="0"
                 Margin="0,0,0,12"
-                Content="Open source map"
+                Content="Open Original Map"
                 Command="{Binding OpenSourceMapCommand}"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center" />

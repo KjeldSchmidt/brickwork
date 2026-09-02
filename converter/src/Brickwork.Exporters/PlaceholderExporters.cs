@@ -35,11 +35,6 @@ public abstract class PlaceholderExporterBase : IMapExporter
     }
 }
 
-public sealed class Uvtt1Exporter : PlaceholderExporterBase
-{
-    public override string FormatId => "uvtt1";
-}
-
 public sealed class Uvtt2Exporter : PlaceholderExporterBase
 {
     public override string FormatId => "uvtt2";

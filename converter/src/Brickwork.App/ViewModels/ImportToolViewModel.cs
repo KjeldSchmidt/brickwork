@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Mvvm.Controls;
 using Brickwork.Composition;
 using Brickwork.Core.Geometry;
-using Brickwork.Core.Ports;
 using Brickwork.Core.Services;
 
 namespace Brickwork.App.ViewModels;
@@ -13,7 +12,6 @@ public partial class ImportToolViewModel : Tool
 {
     private readonly EditorSession _session;
     private readonly ConvertMapService _convertMapService = ServiceFactory.CreateGuiConvertMapService();
-    private readonly IMapImporter _importer = ServiceFactory.CreateInkarnateImporter();
     private readonly IReadOnlyList<ExportFormatChoice> _exportFormatChoices;
 
     [ObservableProperty]
@@ -72,7 +70,8 @@ public partial class ImportToolViewModel : Tool
         try
         {
             await using var input = File.OpenRead(path);
-            var map = await _importer.ImportAsync(input).ConfigureAwait(true);
+            var importer = ServiceFactory.CreateImporterForPath(path);
+            var map = await importer.ImportAsync(input).ConfigureAwait(true);
             WallPointSimplifier.ApplyAll(map.Walls, _session.WallSimplificationTolerance);
             map.SourceFileName = Path.GetFileName(path);
             _session.SourceFilePath = path;
@@ -148,11 +147,16 @@ public partial class ImportToolViewModel : Tool
 
         var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open source map",
+            Title = "Open original map",
             AllowMultiple = false,
             FileTypeFilter =
             [
+                new FilePickerFileType("All supported files")
+                {
+                    Patterns = ["*.ink", "*.uvtt", "*.dd2vtt", "*.df2vtt", "*.json"],
+                },
                 new FilePickerFileType("Inkarnate maps") { Patterns = ["*.ink"] },
+                new FilePickerFileType("Universal VTT") { Patterns = ["*.uvtt", "*.dd2vtt", "*.df2vtt"] },
                 new FilePickerFileType("JSON files") { Patterns = ["*.json"] },
                 new FilePickerFileType("All files") { Patterns = ["*.*"] },
             ],
