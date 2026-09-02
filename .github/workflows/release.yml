@@ -60,7 +60,7 @@ jobs:
         run: |
           mkdir artifact
           if [ "${{ runner.os }}" = "Windows" ]; then
-            powershell Compress-Archive -Path publish/* -DestinationPath artifact/${{ matrix.artifact }}.zip
+            powershell -NoLogo -Command "Compress-Archive -Path 'publish\*' -DestinationPath 'artifact/${{ matrix.artifact }}.zip'"
           else
             tar -czf artifact/${{ matrix.artifact }}.tar.gz -C publish .
           fi
