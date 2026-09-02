@@ -1,4 +1,15 @@
 * text eol=lf
 
+# Binary assets — never apply text/eol conversion
+*.png -text -diff -merge -eol
+*.jpg -text -diff -merge -eol
+*.jpeg -text -diff -merge -eol
+*.gif -text -diff -merge -eol
+*.webp -text -diff -merge -eol
+*.ico -text -diff -merge -eol
+*.pdf -text -diff -merge -eol
+*.zip -text -diff -merge -eol
+*.gz -text -diff -merge -eol
+
 # Inkarnate backups are gzip-compressed binaries
 *.ink -text -diff -merge -eol

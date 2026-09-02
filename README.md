@@ -8,7 +8,7 @@ The GUI currently supports **Foundry VTT JSON export**. UVTT1/UVTT2 exporters ex
 
 ## Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (run `just setup-repo` on Windows to install automatically)
 
 ## Build
 
