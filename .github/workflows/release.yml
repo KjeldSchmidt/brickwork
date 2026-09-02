@@ -55,14 +55,15 @@ jobs:
           -p:InformationalVersion=${{ inputs.version }}
           -o publish
 
-      - name: Archive
+      - name: Prepare release asset
         shell: bash
         run: |
           mkdir artifact
           if [ "${{ runner.os }}" = "Windows" ]; then
-            powershell -NoLogo -Command "Compress-Archive -Path 'publish/Brickwork.App.exe' -DestinationPath 'artifact/${{ matrix.artifact }}.zip'"
+            cp publish/Brickwork.App.exe "artifact/${{ matrix.artifact }}.exe"
           else
-            tar -czf artifact/${{ matrix.artifact }}.tar.gz -C publish Brickwork.App
+            cp publish/Brickwork.App "artifact/${{ matrix.artifact }}"
+            chmod +x "artifact/${{ matrix.artifact }}"
           fi
 
       - name: Upload artifact
@@ -89,5 +90,5 @@ jobs:
         run: |
           gh release create "v${{ inputs.version }}" \
             --title "Brickwork v${{ inputs.version }}" \
-            --notes "Beta release. GUI exports Foundry VTT JSON. Download the archive for your platform." \
+            --notes "Beta release. GUI exports Foundry VTT JSON. Download the binary for your platform." \
             artifacts/**/*
