@@ -12,12 +12,18 @@ namespace InkarnateTools.App.ViewModels;
 public partial class ImportToolViewModel : Tool
 {
     private readonly EditorSession _session;
-    private readonly ConvertMapService _convertMapService = ServiceFactory.CreateConvertMapService();
+    private readonly ConvertMapService _convertMapService = ServiceFactory.CreateGuiConvertMapService();
     private readonly IMapImporter _importer = ServiceFactory.CreateInkarnateImporter();
     private readonly IReadOnlyList<ExportFormatChoice> _exportFormatChoices;
 
     [ObservableProperty]
     private string _statusMessage = "Ready.";
+
+    [ObservableProperty]
+    private bool _showCompatibilityWarning;
+
+    [ObservableProperty]
+    private string _compatibilityWarningMessage = string.Empty;
 
     public ImportToolViewModel(EditorSession session)
     {
@@ -28,9 +34,31 @@ public partial class ImportToolViewModel : Tool
             if (args.PropertyName is nameof(EditorSession.Map))
             {
                 ConvertCommand.NotifyCanExecuteChanged();
+                UpdateCompatibilityWarning();
             }
         };
     }
+
+    [RelayCommand(CanExecute = nameof(CanReportCompatibilityIssue))]
+    private async Task ReportCompatibilityIssueAsync()
+    {
+        var mapName = _session.SourceFileName ?? _session.Map?.Name ?? "map";
+        await ReportIssueService.ReportCompatibilityIssueAsync(
+            _session,
+            $"Unknown commands in {mapName}").ConfigureAwait(true);
+    }
+
+    private void UpdateCompatibilityWarning()
+    {
+        var report = _session.Map?.Compatibility;
+        ShowCompatibilityWarning = report?.UnknownCount > 0;
+        CompatibilityWarningMessage = report?.UnknownCount > 0
+            ? $"{report.UnknownCount} unknown command(s) found during import. See Debug panel or report an issue."
+            : string.Empty;
+        ReportCompatibilityIssueCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanReportCompatibilityIssue() => _session.Map?.Compatibility?.UnknownCount > 0;
 
     [RelayCommand]
     private async Task OpenSourceMapAsync()
@@ -51,6 +79,7 @@ public partial class ImportToolViewModel : Tool
             _session.Map = map;
             _session.SourceFileName = Path.GetFileName(path);
             StatusMessage = $"Loaded {_session.SourceFileName}.";
+            UpdateCompatibilityWarning();
         }
         catch (Exception ex)
         {
@@ -58,6 +87,7 @@ public partial class ImportToolViewModel : Tool
             _session.SourceFileName = null;
             _session.SourceFilePath = null;
             StatusMessage = $"Failed to load input: {ex.Message}";
+            UpdateCompatibilityWarning();
         }
     }
 
@@ -149,7 +179,7 @@ public partial class ImportToolViewModel : Tool
 
         var file = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export map",
+            Title = "Export to VTT",
             FileTypeChoices = fileTypes,
             DefaultExtension = defaultChoice.Extension.TrimStart('.'),
             SuggestedFileName = $"{suggestedBaseName}{defaultChoice.Extension}",

@@ -21,6 +21,8 @@ public static class WallLineColors
                 _ => DefaultActiveColor,
             };
 
+    public static SKColor ForHighlight() => new SKColor(0xAA, 0xDD, 0xFF, 0xCC);
+
     public static SKColor FillForLine(WallLineType lineType, bool isActive)
     {
         var stroke = ForLine(lineType, isActive);

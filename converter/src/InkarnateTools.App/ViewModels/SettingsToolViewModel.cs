@@ -19,6 +19,8 @@ public partial class SettingsToolViewModel : Tool
         };
     }
 
+    public string AppVersionLabel => $"Inkarnate Tools {GitHubIssueReporter.GetAppVersion()}";
+
     public double WallSimplificationTolerance
     {
         get => _session.WallSimplificationTolerance;

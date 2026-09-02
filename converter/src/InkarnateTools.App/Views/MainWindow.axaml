@@ -5,6 +5,7 @@
         x:Class="InkarnateTools.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Inkarnate Tools"
+        Icon="/Assets/app-icon.png"
         Width="1280"
         Height="800"
         MinWidth="800"

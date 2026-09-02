@@ -24,6 +24,19 @@ public partial class MapPreviewDocumentView : UserControl
         MapViewport.AddHandler(InputElement.PointerPressedEvent, OnMapViewportPointerPressed, handledEventsToo: true);
         MapViewport.AddHandler(InputElement.PointerMovedEvent, OnMapViewportPointerMoved, handledEventsToo: true);
         MapViewport.AddHandler(InputElement.PointerReleasedEvent, OnMapViewportPointerReleased, handledEventsToo: true);
+        MapViewport.AddHandler(InputElement.PointerExitedEvent, OnMapViewportPointerExited, handledEventsToo: true);
+        KeyDown += OnKeyDown;
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || DataContext is not MapPreviewDocumentViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.ClearWallSelection();
+        e.Handled = true;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -46,6 +59,9 @@ public partial class MapPreviewDocumentView : UserControl
     {
         if (e.PropertyName is nameof(MapPreviewDocumentViewModel.Map) or nameof(MapPreviewDocumentViewModel.HasMap))
         {
+            _vertexDragActive = false;
+            _leftPressPosition = null;
+
             if (sender is MapPreviewDocumentViewModel { HasMap: false })
             {
                 _lastFittedMap = null;
@@ -91,18 +107,37 @@ public partial class MapPreviewDocumentView : UserControl
 
     private void OnMapViewportPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (DataContext is not MapPreviewDocumentViewModel { HasMap: true } viewModel || !_vertexDragActive)
+        if (DataContext is not MapPreviewDocumentViewModel { HasMap: true } viewModel)
         {
             return;
         }
 
-        if (!e.GetCurrentPoint(MapViewport).Properties.IsLeftButtonPressed)
+        if (_vertexDragActive)
         {
+            if (!e.GetCurrentPoint(MapViewport).Properties.IsLeftButtonPressed)
+            {
+                return;
+            }
+
+            viewModel.DragVertexTo(ToPreviewPoint(e.GetPosition(MapViewport)));
+            e.Handled = true;
             return;
         }
 
-        viewModel.DragVertexTo(ToPreviewPoint(e.GetPosition(MapViewport)));
-        e.Handled = true;
+        viewModel.UpdateHoverAt(ToPreviewPoint(e.GetPosition(MapViewport)));
+        MapViewport.Cursor = viewModel.HoveredWallEntityId is not null
+            ? new Cursor(StandardCursorType.Hand)
+            : Cursor.Default;
+    }
+
+    private void OnMapViewportPointerExited(object? sender, PointerEventArgs e)
+    {
+        if (DataContext is MapPreviewDocumentViewModel viewModel)
+        {
+            viewModel.ClearHover();
+        }
+
+        MapViewport.Cursor = Cursor.Default;
     }
 
     private void OnMapViewportPointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -138,8 +173,16 @@ public partial class MapPreviewDocumentView : UserControl
             if (Math.Abs(delta.X) <= ClickMoveThreshold && Math.Abs(delta.Y) <= ClickMoveThreshold)
             {
                 var previewPoint = ToPreviewPoint(releasePosition);
-                viewModel.EditWallAt(previewPoint, cycleType: true, toggleActive: false);
-                e.Handled = true;
+                if (!viewModel.HasWallAt(previewPoint))
+                {
+                    viewModel.ClearWallSelection();
+                    e.Handled = true;
+                }
+                else
+                {
+                    viewModel.EditWallAt(previewPoint, cycleType: true, toggleActive: false);
+                    e.Handled = true;
+                }
             }
         }
 

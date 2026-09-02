@@ -12,6 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <AvaloniaResource Include="..\..\assets\app-icon.png" Link="Assets\app-icon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.12" />
     <PackageReference Include="Avalonia.Controls.PanAndZoom" Version="11.3.0" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
@@ -23,6 +27,7 @@
     <PackageReference Include="Dock.Avalonia.Themes.Fluent" Version="11.3.2" />
     <PackageReference Include="Dock.Controls.DeferredContentControl" Version="11.3.12" />
     <PackageReference Include="Dock.Model.Mvvm" Version="11.3.2" />
+    <PackageReference Include="Semi.Avalonia" Version="11.3.7.3" />
     <PackageReference Include="SkiaSharp" Version="2.88.9" />
   </ItemGroup>
 

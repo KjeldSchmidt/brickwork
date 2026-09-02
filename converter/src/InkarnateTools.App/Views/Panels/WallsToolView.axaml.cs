@@ -1,6 +1,9 @@
 using System.Collections;
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using InkarnateTools.App.ViewModels;
@@ -16,6 +19,20 @@ public partial class WallsToolView : UserControl
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
         WallsTree.PropertyChanged += OnWallsTreePropertyChanged;
+        WallsTree.AddHandler(InputElement.PointerMovedEvent, OnTreePointerMoved, RoutingStrategies.Bubble, handledEventsToo: true);
+        WallsTree.AddHandler(InputElement.PointerPressedEvent, OnTreePointerPressed, RoutingStrategies.Bubble, handledEventsToo: true);
+        KeyDown += OnKeyDown;
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || DataContext is not WallsToolViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.ClearSelection();
+        e.Handled = true;
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -38,6 +55,7 @@ public partial class WallsToolView : UserControl
     {
         if (e.PropertyName is nameof(WallsToolViewModel.TreeRevision))
         {
+            WallsTree.SelectedItem = null;
             ScheduleInitialExpandAll();
         }
 
@@ -53,6 +71,60 @@ public partial class WallsToolView : UserControl
         {
             ScheduleBringSelectionIntoView();
         }
+    }
+
+    private void OnTreePointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (DataContext is not WallsToolViewModel viewModel)
+        {
+            return;
+        }
+
+        var treeItem = ResolveTreeViewItem(WallsTree, e.GetPosition(WallsTree));
+        switch (treeItem?.DataContext)
+        {
+            case WallItemViewModel wallItem:
+                viewModel.SetHoveredTreeItem(wallItem);
+                return;
+            case WallPortalItemViewModel portalItem:
+                viewModel.SetHoveredTreeItem(portalItem);
+                return;
+        }
+
+        viewModel.ClearTreeHover();
+    }
+
+    private void OnTreePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(WallsTree).Properties.IsLeftButtonPressed ||
+            DataContext is not WallsToolViewModel viewModel)
+        {
+            return;
+        }
+
+        var treeItem = ResolveTreeViewItem(WallsTree, e.GetPosition(WallsTree));
+        switch (treeItem?.DataContext)
+        {
+            case WallItemViewModel wallItem:
+                viewModel.ActivateTreeItem(wallItem);
+                break;
+            case WallPortalItemViewModel portalItem:
+                viewModel.ActivateTreeItem(portalItem);
+                break;
+            default:
+                viewModel.ClearSelection();
+                break;
+        }
+    }
+
+    private static TreeViewItem? ResolveTreeViewItem(TreeView tree, Point position)
+    {
+        if (tree.InputHitTest(position) is not Visual visual)
+        {
+            return null;
+        }
+
+        return visual.GetSelfAndVisualAncestors().OfType<TreeViewItem>().FirstOrDefault();
     }
 
     private void ScheduleInitialExpandAll()
@@ -231,5 +303,13 @@ public partial class WallsToolView : UserControl
         }
 
         return null;
+    }
+
+    private void OnTreePointerExited(object? sender, PointerEventArgs e)
+    {
+        if (DataContext is WallsToolViewModel viewModel)
+        {
+            viewModel.ClearTreeHover();
+        }
     }
 }

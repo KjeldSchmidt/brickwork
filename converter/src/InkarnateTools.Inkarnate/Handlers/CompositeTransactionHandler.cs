@@ -67,6 +67,7 @@ internal sealed class CompositeTransactionHandler : IInkTransactionHandler
             CommandType = source.CommandType,
             Understanding = source.Understanding,
             Detail = source.Detail,
+            RawJson = source.RawJson,
             Children = source.Children
                 .Select(child => CloneWithTransactionId(child, transactionId))
                 .ToList(),

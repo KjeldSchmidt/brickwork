@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (e.g. 0.1.0-beta.1)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            artifact: InkarnateTools-${{ inputs.version }}-win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+            artifact: InkarnateTools-${{ inputs.version }}-linux-x64
+          - os: macos-latest
+            rid: osx-x64
+            artifact: InkarnateTools-${{ inputs.version }}-osx-x64
+          - os: macos-latest
+            rid: osx-arm64
+            artifact: InkarnateTools-${{ inputs.version }}-osx-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install SkiaSharp native dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1 libfreetype6 libharfbuzz0b libpng16-16 libjpeg-turbo8 libwebp7 libgl1
+
+      - name: Publish
+        run: >
+          dotnet publish converter/src/InkarnateTools.App/InkarnateTools.App.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:Version=${{ inputs.version }}
+          -p:InformationalVersion=${{ inputs.version }}
+          -o publish
+
+      - name: Archive
+        shell: bash
+        run: |
+          mkdir artifact
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            powershell Compress-Archive -Path publish/* -DestinationPath artifact/${{ matrix.artifact }}.zip
+          else
+            tar -czf artifact/${{ matrix.artifact }}.tar.gz -C publish .
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: artifact/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ inputs.version }}" \
+            --title "Inkarnate Tools v${{ inputs.version }}" \
+            --notes "Beta release. GUI exports Foundry VTT JSON. Download the archive for your platform." \
+            artifacts/**/*

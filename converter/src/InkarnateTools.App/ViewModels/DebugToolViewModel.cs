@@ -59,6 +59,17 @@ public partial class DebugToolViewModel : Tool
         RefreshSelectedWall();
     }
 
+    [RelayCommand(CanExecute = nameof(CanReportCompatibilityIssue))]
+    private async Task ReportCompatibilityIssueAsync()
+    {
+        var mapName = _session.SourceFileName ?? _session.Map?.Name ?? "map";
+        await ReportIssueService.ReportCompatibilityIssueAsync(
+            _session,
+            $"Unknown commands in {mapName}").ConfigureAwait(true);
+    }
+
+    private bool CanReportCompatibilityIssue() => _session.Map?.Compatibility?.UnknownCount > 0;
+
     [RelayCommand(CanExecute = nameof(CanUseSourceJson))]
     private async Task CopySourceJsonAsync()
     {
@@ -151,6 +162,7 @@ public partial class DebugToolViewModel : Tool
         HasSourceJson = !string.IsNullOrWhiteSpace(path) && File.Exists(path);
         CopySourceJsonCommand.NotifyCanExecuteChanged();
         SaveSourceJsonCommand.NotifyCanExecuteChanged();
+        ReportCompatibilityIssueCommand.NotifyCanExecuteChanged();
 
         if (!HasSourceJson)
         {
@@ -171,6 +183,7 @@ public partial class DebugToolViewModel : Tool
         CompatibilityTransactionsMessage = string.Empty;
         HasCompatibilityDetails = false;
         HasUnknownActions = false;
+        ReportCompatibilityIssueCommand.NotifyCanExecuteChanged();
     }
 
     private void UpdateCompatibilityDisplay(CompatibilityReport? report)
@@ -186,6 +199,7 @@ public partial class DebugToolViewModel : Tool
         CompatibilityTransactionsMessage = report.FormatTransactionLines().TrimEnd();
         HasCompatibilityDetails = report.TotalTransactions > 0;
         HasUnknownActions = report.UnknownCount > 0;
+        ReportCompatibilityIssueCommand.NotifyCanExecuteChanged();
     }
 
     private static Avalonia.Input.Platform.IClipboard? GetClipboard()

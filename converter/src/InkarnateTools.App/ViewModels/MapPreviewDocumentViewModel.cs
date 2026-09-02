@@ -28,6 +28,21 @@ public partial class MapPreviewDocumentViewModel : Document
     [ObservableProperty]
     private int _contentRevision;
 
+    [ObservableProperty]
+    private int _highlightRevision;
+
+    [ObservableProperty]
+    private int? _focusedWallEntityId;
+
+    [ObservableProperty]
+    private WallPortal? _focusedPortal;
+
+    [ObservableProperty]
+    private int? _hoveredWallEntityId;
+
+    [ObservableProperty]
+    private WallPortal? _hoveredPortal;
+
     public MapPreviewDocumentViewModel(EditorSession session)
     {
         _session = session;
@@ -42,8 +57,18 @@ public partial class MapPreviewDocumentViewModel : Document
             {
                 ContentRevision = _session.ContentRevision;
             }
+
+            if (args.PropertyName is nameof(EditorSession.HighlightRevision)
+                or nameof(EditorSession.FocusedWallEntityId)
+                or nameof(EditorSession.FocusedPortal)
+                or nameof(EditorSession.HoveredWallEntityId)
+                or nameof(EditorSession.HoveredPortal))
+            {
+                UpdateHighlightFromSession();
+            }
         };
         UpdateFromSession();
+        UpdateHighlightFromSession();
         ContentRevision = _session.ContentRevision;
     }
 
@@ -54,6 +79,55 @@ public partial class MapPreviewDocumentViewModel : Document
         ShowPlaceholder = !HasMap;
         PreviewWidth = Map?.Preview?.Width ?? 2048;
         PreviewHeight = Map?.Preview?.Height ?? 1536;
+    }
+
+    private void UpdateHighlightFromSession()
+    {
+        HighlightRevision = _session.HighlightRevision;
+        FocusedWallEntityId = _session.FocusedWallEntityId;
+        FocusedPortal = _session.FocusedPortal;
+        HoveredWallEntityId = _session.HoveredWallEntityId;
+        HoveredPortal = _session.HoveredPortal;
+    }
+
+    public void UpdateHoverAt(MapPoint previewPoint)
+    {
+        if (Map is null)
+        {
+            _session.ClearHoveredWall();
+            return;
+        }
+
+        var vertexHit = WallVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (vertexHit is not null)
+        {
+            _session.SetHoveredWall(vertexHit.Wall, vertexHit.Portal);
+            return;
+        }
+
+        var wallHit = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (wallHit is not null)
+        {
+            _session.SetHoveredWall(wallHit.Wall, wallHit.Portal);
+            return;
+        }
+
+        _session.ClearHoveredWall();
+    }
+
+    public void ClearHover() => _session.ClearHoveredWall();
+
+    public void ClearWallSelection() => _session.ClearWallSelection();
+
+    public bool HasWallAt(MapPoint previewPoint)
+    {
+        if (Map is null)
+        {
+            return false;
+        }
+
+        return WallVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null
+            || WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null;
     }
 
     public bool TryBeginVertexDrag(MapPoint previewPoint)

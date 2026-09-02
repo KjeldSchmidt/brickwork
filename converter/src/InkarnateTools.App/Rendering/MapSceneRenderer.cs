@@ -14,7 +14,7 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
 
     private readonly Dictionary<MapDocument, SKImage> _imageCache = new(ReferenceEqualityComparer.Instance);
 
-    public void Render(SKCanvas canvas, MapDocument map, SKRect destinationBounds)
+    public void Render(SKCanvas canvas, MapDocument map, SKRect destinationBounds, MapRenderHighlight? highlight = null)
     {
         canvas.Clear(SKColors.Black);
 
@@ -62,6 +62,166 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             }
 
             DrawWallNodes(canvas, transform, wall);
+        }
+
+        if (highlight?.ActiveTarget is not { } target)
+        {
+            return;
+        }
+
+        DrawWallHighlight(canvas, map, transform, target.WallEntityId, target.Portal);
+    }
+
+    public void ReleaseMap(MapDocument map) => _imageCache.Remove(map);
+
+    private static void DrawWallHighlight(
+        SKCanvas canvas,
+        MapDocument map,
+        SceneTransform transform,
+        int wallEntityId,
+        WallPortal? portal)
+    {
+        var wall = map.Walls.FirstOrDefault(candidate => candidate.EntityId == wallEntityId);
+        if (wall is null || !wall.WallEnabled || wall.Points.Count < 2)
+        {
+            return;
+        }
+
+        var color = WallLineColors.ForHighlight();
+        var underlayWidth = LineStrokeWidth * 2f;
+
+        DrawWallHighlightOverlay(
+            canvas,
+            transform,
+            wall,
+            portal,
+            color,
+            underlayWidth,
+            nodeRadius: NodeRadius + 1.5f);
+
+        RedrawCoreWallGeometry(canvas, transform, wall, portal);
+    }
+
+    private static void DrawWallHighlightOverlay(
+        SKCanvas canvas,
+        SceneTransform transform,
+        Wall wall,
+        WallPortal? portal,
+        SKColor color,
+        float strokeWidth,
+        float nodeRadius)
+    {
+        foreach (var segment in WallPathSegmentBuilder.BuildSegments(wall))
+        {
+            if (wall.LineType == WallLineType.Terrain && wall.SceneThickness > 0)
+            {
+                DrawTerrainHighlightStroke(
+                    canvas,
+                    transform,
+                    segment.Points,
+                    wall.SceneThickness,
+                    segment.IsClosed,
+                    color,
+                    strokeWidth);
+            }
+            else
+            {
+                DrawPolyline(canvas, transform, segment.Points, color, segment.IsClosed, strokeWidth);
+            }
+        }
+
+        if (portal is null)
+        {
+            foreach (var portalSegment in WallPathSegmentBuilder.BuildPortalSegments(wall))
+            {
+                DrawPolyline(canvas, transform, portalSegment.Points, color, isClosed: false, strokeWidth);
+            }
+
+            DrawWallNodes(canvas, transform, wall, color, nodeRadius, strokeWidth);
+            return;
+        }
+
+        foreach (var portalSegment in WallPathSegmentBuilder.BuildPortalSegments(wall))
+        {
+            if (ReferenceEquals(portalSegment.Portal, portal))
+            {
+                DrawPolyline(canvas, transform, portalSegment.Points, color, isClosed: false, strokeWidth);
+            }
+        }
+
+        if (WallPathSegmentBuilder.TryGetPortalArcInterval(wall, portal, out var start, out var end))
+        {
+            DrawPortalWidthTick(canvas, transform, wall, start, portal.LineType, portal.IsActive, color, strokeWidth);
+            DrawPortalWidthTick(canvas, transform, wall, end, portal.LineType, portal.IsActive, color, strokeWidth);
+        }
+
+        var anchorScene = WallPathSegmentBuilder.PortalAnchorToScene(wall, portal);
+        DrawWallNode(canvas, transform, anchorScene, portal.LineType, portal.IsActive, color, nodeRadius, strokeWidth);
+    }
+
+    private static void RedrawCoreWallGeometry(
+        SKCanvas canvas,
+        SceneTransform transform,
+        Wall wall,
+        WallPortal? portal)
+    {
+        foreach (var segment in WallPathSegmentBuilder.BuildSegments(wall))
+        {
+            DrawWallSegment(
+                canvas,
+                transform,
+                segment.Points,
+                wall.LineType,
+                wall.IsActive,
+                wall.SceneThickness,
+                segment.IsClosed);
+        }
+
+        foreach (var portalSegment in WallPathSegmentBuilder.BuildPortalSegments(wall))
+        {
+            DrawWallSegment(
+                canvas,
+                transform,
+                portalSegment.Points,
+                portalSegment.Portal.LineType,
+                portalSegment.Portal.IsActive,
+                wall.SceneThickness,
+                isClosed: false);
+        }
+
+        if (portal is null)
+        {
+            DrawWallNodes(canvas, transform, wall);
+            return;
+        }
+
+        if (WallPathSegmentBuilder.TryGetPortalArcInterval(wall, portal, out var start, out var end))
+        {
+            DrawPortalWidthTick(canvas, transform, wall, start, portal.LineType, portal.IsActive);
+            DrawPortalWidthTick(canvas, transform, wall, end, portal.LineType, portal.IsActive);
+        }
+
+        var anchorScene = WallPathSegmentBuilder.PortalAnchorToScene(wall, portal);
+        DrawWallNode(canvas, transform, anchorScene, portal.LineType, portal.IsActive);
+    }
+
+    private static void DrawTerrainHighlightStroke(
+        SKCanvas canvas,
+        SceneTransform transform,
+        IReadOnlyList<MapPoint> scenePoints,
+        double sceneThickness,
+        bool isClosed,
+        SKColor color,
+        float strokeWidth)
+    {
+        var loops = WallThicknessPolygonBuilder.BuildTerrainExportLoops(
+            scenePoints as IList<MapPoint> ?? scenePoints.ToList(),
+            sceneThickness,
+            isClosed);
+
+        foreach (var loop in loops)
+        {
+            DrawPolyline(canvas, transform, loop, color, isClosed: true, strokeWidth);
         }
     }
 
@@ -220,7 +380,8 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         SceneTransform transform,
         IReadOnlyList<MapPoint> scenePoints,
         SKColor color,
-        bool isClosed)
+        bool isClosed,
+        float strokeWidth = LineStrokeWidth)
     {
         using var path = BuildPath(transform, scenePoints);
         if (isClosed)
@@ -233,7 +394,7 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             Color = color,
             IsAntialias = true,
             Style = SKPaintStyle.Stroke,
-            StrokeWidth = LineStrokeWidth,
+            StrokeWidth = strokeWidth,
             StrokeJoin = SKStrokeJoin.Round,
             StrokeCap = SKStrokeCap.Round,
         };
@@ -241,23 +402,61 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         canvas.DrawPath(path, paint);
     }
 
-    private static void DrawWallNodes(SKCanvas canvas, SceneTransform transform, Wall wall)
+    private static void DrawWallNodes(
+        SKCanvas canvas,
+        SceneTransform transform,
+        Wall wall,
+        SKColor? overrideColor = null,
+        float? overrideRadius = null,
+        float? overrideBorderWidth = null)
     {
         for (var i = 0; i < wall.Points.Count; i++)
         {
-            DrawWallNode(canvas, transform, wall.Points[i], wall.LineType, wall.IsActive);
+            DrawWallNode(
+                canvas,
+                transform,
+                wall.Points[i],
+                wall.LineType,
+                wall.IsActive,
+                overrideColor,
+                overrideRadius,
+                overrideBorderWidth);
         }
 
         foreach (var portal in wall.Portals)
         {
             if (WallPathSegmentBuilder.TryGetPortalArcInterval(wall, portal, out var start, out var end))
             {
-                DrawPortalWidthTick(canvas, transform, wall, start, portal.LineType, portal.IsActive);
-                DrawPortalWidthTick(canvas, transform, wall, end, portal.LineType, portal.IsActive);
+                DrawPortalWidthTick(
+                    canvas,
+                    transform,
+                    wall,
+                    start,
+                    portal.LineType,
+                    portal.IsActive,
+                    overrideColor,
+                    overrideBorderWidth);
+                DrawPortalWidthTick(
+                    canvas,
+                    transform,
+                    wall,
+                    end,
+                    portal.LineType,
+                    portal.IsActive,
+                    overrideColor,
+                    overrideBorderWidth);
             }
 
             var anchorScene = WallPathSegmentBuilder.PortalAnchorToScene(wall, portal);
-            DrawWallNode(canvas, transform, anchorScene, portal.LineType, portal.IsActive);
+            DrawWallNode(
+                canvas,
+                transform,
+                anchorScene,
+                portal.LineType,
+                portal.IsActive,
+                overrideColor,
+                overrideRadius,
+                overrideBorderWidth);
         }
     }
 
@@ -267,7 +466,9 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         Wall wall,
         double arcLength,
         WallLineType lineType,
-        bool isActive)
+        bool isActive,
+        SKColor? overrideColor = null,
+        float? overrideBorderWidth = null)
     {
         var (center, angleRadians) = PortalWidthHandleGeometry.GetPreviewTickPose(wall, arcLength, transform);
         var degrees = (float)(angleRadians * 180d / Math.PI);
@@ -296,10 +497,10 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
 
         using var borderPaint = new SKPaint
         {
-            Color = WallLineColors.ForLine(lineType, isActive),
+            Color = overrideColor ?? WallLineColors.ForLine(lineType, isActive),
             IsAntialias = true,
             Style = SKPaintStyle.Stroke,
-            StrokeWidth = NodeBorderWidth,
+            StrokeWidth = overrideBorderWidth ?? NodeBorderWidth,
         };
         canvas.DrawRect(rect, borderPaint);
 
@@ -311,7 +512,10 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         SceneTransform transform,
         MapPoint scenePoint,
         WallLineType lineType,
-        bool isActive)
+        bool isActive,
+        SKColor? overrideColor = null,
+        float? overrideRadius = null,
+        float? overrideBorderWidth = null)
     {
         var preview = transform.SceneToPreview(scenePoint);
         var x = (float)preview.X;
@@ -327,16 +531,16 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             IsAntialias = true,
             Style = SKPaintStyle.Fill,
         };
-        canvas.DrawCircle(x, y, NodeRadius, fillPaint);
+        canvas.DrawCircle(x, y, overrideRadius ?? NodeRadius, fillPaint);
 
         using var borderPaint = new SKPaint
         {
-            Color = WallLineColors.ForLine(lineType, isActive),
+            Color = overrideColor ?? WallLineColors.ForLine(lineType, isActive),
             IsAntialias = true,
             Style = SKPaintStyle.Stroke,
-            StrokeWidth = NodeBorderWidth,
+            StrokeWidth = overrideBorderWidth ?? NodeBorderWidth,
         };
-        canvas.DrawCircle(x, y, NodeRadius, borderPaint);
+        canvas.DrawCircle(x, y, overrideRadius ?? NodeRadius, borderPaint);
     }
 
     private static SKPath BuildPath(SceneTransform transform, IReadOnlyList<MapPoint> scenePoints)

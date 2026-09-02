@@ -4,7 +4,8 @@
              xmlns:paz="using:Avalonia.Controls.PanAndZoom"
              xmlns:vm="using:InkarnateTools.App.ViewModels"
              x:Class="InkarnateTools.App.Views.Map.MapPreviewDocumentView"
-             x:DataType="vm:MapPreviewDocumentViewModel">
+             x:DataType="vm:MapPreviewDocumentViewModel"
+             Focusable="True">
     <Grid Background="#FF1E1E1E">
         <TextBlock Text="Open a source map to preview it."
                    HorizontalAlignment="Center"
@@ -25,6 +26,11 @@
             <controls:MapViewportControl x:Name="MapViewport"
                                          Map="{Binding Map}"
                                          ContentRevision="{Binding ContentRevision}"
+                                         HighlightRevision="{Binding HighlightRevision}"
+                                         FocusedWallEntityId="{Binding FocusedWallEntityId}"
+                                         FocusedPortal="{Binding FocusedPortal}"
+                                         HoveredWallEntityId="{Binding HoveredWallEntityId}"
+                                         HoveredPortal="{Binding HoveredPortal}"
                                          Width="{Binding PreviewWidth}"
                                          Height="{Binding PreviewHeight}" />
         </paz:ZoomBorder>

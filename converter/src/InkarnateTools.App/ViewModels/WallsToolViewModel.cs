@@ -8,6 +8,7 @@ namespace InkarnateTools.App.ViewModels;
 public partial class WallsToolViewModel : Tool
 {
     private readonly EditorSession _session;
+    private bool _syncingSelection;
 
     [ObservableProperty]
     private ObservableCollection<WallLayerNodeViewModel> _layers = [];
@@ -41,13 +42,69 @@ public partial class WallsToolViewModel : Tool
             {
                 ApplyTreeFocusFromSession();
             }
+
+            if (args.PropertyName is nameof(EditorSession.HighlightRevision)
+                or nameof(EditorSession.FocusedWallEntityId)
+                or nameof(EditorSession.FocusedPortal)
+                or nameof(EditorSession.HoveredWallEntityId)
+                or nameof(EditorSession.HoveredPortal))
+            {
+                if (args.PropertyName is nameof(EditorSession.FocusedWallEntityId)
+                    && _session.FocusedWallEntityId is null
+                    && SelectedTreeItem is not null)
+                {
+                    _syncingSelection = true;
+                    SelectedTreeItem = null;
+                    _syncingSelection = false;
+                }
+
+                RefreshHighlightStates();
+            }
         };
         RebuildLayers();
     }
 
-    partial void OnSelectedTreeItemChanged(object? value)
+    public void SetHoveredTreeItem(object? item)
     {
-        switch (value)
+        switch (item)
+        {
+            case WallItemViewModel wallItem:
+                _session.SetHoveredWall(wallItem.Wall);
+                break;
+            case WallPortalItemViewModel portalItem:
+                var wall = _session.Map?.Walls.FirstOrDefault(
+                    candidate => candidate.Portals.Contains(portalItem.Portal));
+                if (wall is not null)
+                {
+                    _session.SetHoveredWall(wall, portalItem.Portal);
+                }
+
+                break;
+            default:
+                _session.ClearHoveredWall();
+                break;
+        }
+    }
+
+    public void ClearTreeHover() => _session.ClearHoveredWall();
+
+    public void ClearSelection()
+    {
+        if (SelectedTreeItem is not null)
+        {
+            _syncingSelection = true;
+            SelectedTreeItem = null;
+            _syncingSelection = false;
+        }
+
+        _session.ClearWallSelection();
+    }
+
+    public void ActivateTreeItem(object item) => SelectedTreeItem = item;
+
+    private void ApplyTreeFocus(object? item)
+    {
+        switch (item)
         {
             case WallItemViewModel wallItem:
                 _session.SetFocusedWall(wallItem.Wall);
@@ -62,6 +119,46 @@ public partial class WallsToolViewModel : Tool
 
                 break;
         }
+    }
+
+    private void RefreshHighlightStates()
+    {
+        foreach (var layer in Layers)
+        {
+            RefreshHighlightStates(layer.Children);
+        }
+    }
+
+    private static void RefreshHighlightStates(IEnumerable<object> children)
+    {
+        foreach (var child in children)
+        {
+            switch (child)
+            {
+                case WallGroupNodeViewModel group:
+                    RefreshHighlightStates(group.Children);
+                    break;
+                case WallItemViewModel wall:
+                    wall.RefreshHighlightState();
+                    break;
+            }
+        }
+    }
+
+    partial void OnSelectedTreeItemChanged(object? value)
+    {
+        if (_syncingSelection)
+        {
+            return;
+        }
+
+        if (value is null)
+        {
+            _session.ClearWallSelection();
+            return;
+        }
+
+        ApplyTreeFocus(value);
     }
 
     private void RefreshBoundValues()
@@ -140,7 +237,9 @@ public partial class WallsToolViewModel : Tool
 
     private void RebuildLayers()
     {
+        _syncingSelection = true;
         SelectedTreeItem = null;
+        _syncingSelection = false;
         Layers.Clear();
         OnPropertyChanged(nameof(HasLayers));
         OnPropertyChanged(nameof(ShowEmptyMessage));
@@ -197,6 +296,7 @@ public partial class WallsToolViewModel : Tool
         OnPropertyChanged(nameof(ShowEmptyMessage));
         TreeRevision++;
         ApplyTreeFocusFromSession();
+        RefreshHighlightStates();
     }
 
     private static IEnumerable<string> OrderLayerIds(
@@ -434,9 +534,11 @@ public partial class WallItemViewModel : ObservableObject
         _session = session;
         Wall = wall;
 
+        var portalNumber = 1;
         foreach (var portal in wall.Portals)
         {
-            Portals.Add(new WallPortalItemViewModel(session, portal));
+            Portals.Add(new WallPortalItemViewModel(session, wall.EntityId, portal, portalNumber));
+            portalNumber++;
         }
     }
 
@@ -448,6 +550,14 @@ public partial class WallItemViewModel : ObservableObject
         Enum.GetValues<WallLineType>();
 
     public string DisplayName => Wall.DisplayName;
+
+    public bool IsFocused =>
+        _session.FocusedWallEntityId == Wall.EntityId && _session.FocusedPortal is null;
+
+    public bool IsHovered =>
+        _session.HoveredWallEntityId == Wall.EntityId && _session.HoveredPortal is null;
+
+    public bool IsTreeHighlighted => IsFocused || IsHovered;
 
     public bool IsActive
     {
@@ -486,10 +596,22 @@ public partial class WallItemViewModel : ObservableObject
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(LineType));
         OnPropertyChanged(nameof(DisplayName));
+        RefreshHighlightState();
 
         foreach (var portal in Portals)
         {
             portal.RefreshFromModel();
+        }
+    }
+
+    public void RefreshHighlightState()
+    {
+        OnPropertyChanged(nameof(IsFocused));
+        OnPropertyChanged(nameof(IsHovered));
+        OnPropertyChanged(nameof(IsTreeHighlighted));
+        foreach (var portal in Portals)
+        {
+            portal.RefreshHighlightState();
         }
     }
 }
@@ -498,19 +620,34 @@ public partial class WallPortalItemViewModel : ObservableObject
 {
     private readonly EditorSession _session;
 
-    public WallPortalItemViewModel(EditorSession session, WallPortal portal)
+    public WallPortalItemViewModel(EditorSession session, int wallEntityId, WallPortal portal, int portalNumber)
     {
         _session = session;
+        WallEntityId = wallEntityId;
         Portal = portal;
+        PortalNumber = portalNumber;
     }
 
+    public int WallEntityId { get; }
+
     public WallPortal Portal { get; }
+
+    public int PortalNumber { get; }
 
     public IReadOnlyList<WallLineType> LineTypeOptions { get; } =
         Enum.GetValues<WallLineType>();
 
-    public string DisplayName =>
-        string.IsNullOrWhiteSpace(Portal.Id) ? "Gap" : Portal.Id;
+    public string DisplayName => $"Portal {PortalNumber}";
+
+    public bool IsFocused =>
+        _session.FocusedWallEntityId == WallEntityId &&
+        ReferenceEquals(_session.FocusedPortal, Portal);
+
+    public bool IsHovered =>
+        _session.HoveredWallEntityId == WallEntityId &&
+        ReferenceEquals(_session.HoveredPortal, Portal);
+
+    public bool IsTreeHighlighted => IsFocused || IsHovered;
 
     public bool IsActive
     {
@@ -548,6 +685,14 @@ public partial class WallPortalItemViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(LineType));
+        RefreshHighlightState();
+    }
+
+    public void RefreshHighlightState()
+    {
+        OnPropertyChanged(nameof(IsFocused));
+        OnPropertyChanged(nameof(IsHovered));
+        OnPropertyChanged(nameof(IsTreeHighlighted));
     }
 }
 

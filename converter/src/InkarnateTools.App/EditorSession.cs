@@ -28,6 +28,15 @@ public sealed partial class EditorSession : ObservableObject
     private WallPortal? _focusedPortal;
 
     [ObservableProperty]
+    private int? _hoveredWallEntityId;
+
+    [ObservableProperty]
+    private WallPortal? _hoveredPortal;
+
+    [ObservableProperty]
+    private int _highlightRevision;
+
+    [ObservableProperty]
     private double _wallSimplificationTolerance = WallSimplificationSettings.DefaultToleranceSceneUnits;
 
     public void NotifyContentChanged()
@@ -39,6 +48,7 @@ public sealed partial class EditorSession : ObservableObject
     {
         FocusedWallEntityId = wall.EntityId;
         FocusedPortal = portal;
+        HighlightRevision++;
     }
 
     public void RequestWallTreeFocus(Wall wall, WallPortal? portal = null)
@@ -46,6 +56,50 @@ public sealed partial class EditorSession : ObservableObject
         SetFocusedWall(wall, portal);
         TreeFocusGeneration++;
     }
+
+    public void SetHoveredWall(Wall? wall, WallPortal? portal = null)
+    {
+        var entityId = wall?.EntityId;
+        if (HoveredWallEntityId == entityId && ReferenceEquals(HoveredPortal, portal))
+        {
+            return;
+        }
+
+        HoveredWallEntityId = entityId;
+        HoveredPortal = portal;
+        HighlightRevision++;
+    }
+
+    public void ClearHoveredWall()
+    {
+        if (HoveredWallEntityId is null && HoveredPortal is null)
+        {
+            return;
+        }
+
+        HoveredWallEntityId = null;
+        HoveredPortal = null;
+        HighlightRevision++;
+    }
+
+    public void ClearWallSelection()
+    {
+        if (FocusedWallEntityId is null &&
+            FocusedPortal is null &&
+            HoveredWallEntityId is null &&
+            HoveredPortal is null)
+        {
+            return;
+        }
+
+        FocusedWallEntityId = null;
+        FocusedPortal = null;
+        HoveredWallEntityId = null;
+        HoveredPortal = null;
+        HighlightRevision++;
+    }
+
+    partial void OnMapChanged(MapDocument? value) => ClearWallSelection();
 
     partial void OnWallSimplificationToleranceChanged(double value)
     {

@@ -1,0 +1,29 @@
+name: Compatibility report
+description: Report unknown Inkarnate commands or import issues
+title: "[Compatibility] "
+labels: ["compatibility"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the map behavior and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility summary
+      description: Paste the summary from the Debug panel if available.
+  - type: textarea
+    id: unknown-json
+    attributes:
+      label: Sample unknown transaction JSON
+      description: Paste the JSON snippet from the issue reporter if available.
+  - type: checkboxes
+    id: attachments
+    attributes:
+      label: Attachments
+      options:
+        - label: I attached a screenshot
+        - label: I attached the source .ink file

@@ -24,6 +24,10 @@
                           IsVisible="{Binding HasCompatibilityDetails}"
                           IsExpanded="False">
                     <StackPanel Margin="0,8,0,0" Spacing="12">
+                        <Button Content="Report issue on GitHub"
+                                Command="{Binding ReportCompatibilityIssueCommand}"
+                                IsVisible="{Binding HasUnknownActions}"
+                                HorizontalAlignment="Left" />
                         <StackPanel Spacing="4" IsVisible="{Binding HasUnknownActions}">
                             <TextBlock Text="Unknown actions"
                                        FontWeight="SemiBold"

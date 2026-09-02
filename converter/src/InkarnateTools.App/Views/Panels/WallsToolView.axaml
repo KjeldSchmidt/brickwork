@@ -3,7 +3,8 @@
              xmlns:vm="using:InkarnateTools.App.ViewModels"
              x:Class="InkarnateTools.App.Views.Panels.WallsToolView"
              x:DataType="vm:WallsToolViewModel"
-             Classes="tool-panel">
+             Classes="tool-panel"
+             Focusable="True">
     <ScrollViewer Classes="tool-panel-scroll">
         <Grid Margin="12">
         <TextBlock Text="Open a source map to list walls."
@@ -14,6 +15,7 @@
         <TreeView x:Name="WallsTree"
                   ItemsSource="{Binding Layers}"
                   SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}"
+                  PointerExited="OnTreePointerExited"
                   IsVisible="{Binding HasLayers}">
             <TreeView.DataTemplates>
                 <TreeDataTemplate DataType="vm:WallLayerNodeViewModel"
@@ -43,36 +45,49 @@
 
                 <TreeDataTemplate DataType="vm:WallItemViewModel"
                                   ItemsSource="{Binding Portals}">
-                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2">
-                        <CheckBox Grid.Column="0"
-                                  IsChecked="{Binding IsActive}"
-                                  VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding DisplayName}"
-                                   VerticalAlignment="Center"
-                                   Margin="6,0" />
-                        <ComboBox Grid.Column="2"
-                                  Width="90"
-                                  ItemsSource="{Binding LineTypeOptions}"
-                                  SelectedItem="{Binding LineType}" />
-                    </Grid>
+                    <Border Padding="2,4"
+                            HorizontalAlignment="Stretch"
+                            CornerRadius="4"
+                            Classes.wall-tree-highlight="{Binding IsTreeHighlighted}">
+                        <Grid HorizontalAlignment="Stretch"
+                              ColumnDefinitions="Auto,*,Auto">
+                            <CheckBox Grid.Column="0"
+                                      IsChecked="{Binding IsActive}"
+                                      VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding DisplayName}"
+                                       VerticalAlignment="Center"
+                                       Margin="6,0" />
+                            <ComboBox Grid.Column="2"
+                                      Width="90"
+                                      ItemsSource="{Binding LineTypeOptions}"
+                                      SelectedItem="{Binding LineType}" />
+                        </Grid>
+                    </Border>
                 </TreeDataTemplate>
 
                 <DataTemplate DataType="vm:WallPortalItemViewModel">
-                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="20,2,0,2">
-                        <CheckBox Grid.Column="0"
-                                  IsChecked="{Binding IsActive}"
-                                  VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding DisplayName}"
-                                   VerticalAlignment="Center"
-                                   Margin="6,0"
-                                   Opacity="0.85" />
-                        <ComboBox Grid.Column="2"
-                                  Width="90"
-                                  ItemsSource="{Binding LineTypeOptions}"
-                                  SelectedItem="{Binding LineType}" />
-                    </Grid>
+                    <Border Padding="2,4"
+                            Margin="20,0,0,0"
+                            HorizontalAlignment="Stretch"
+                            CornerRadius="4"
+                            Classes.wall-tree-highlight="{Binding IsTreeHighlighted}">
+                        <Grid HorizontalAlignment="Stretch"
+                              ColumnDefinitions="Auto,*,Auto">
+                            <CheckBox Grid.Column="0"
+                                      IsChecked="{Binding IsActive}"
+                                      VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding DisplayName}"
+                                       VerticalAlignment="Center"
+                                       Margin="6,0"
+                                       Opacity="0.85" />
+                            <ComboBox Grid.Column="2"
+                                      Width="90"
+                                      ItemsSource="{Binding LineTypeOptions}"
+                                      SelectedItem="{Binding LineType}" />
+                        </Grid>
+                    </Border>
                 </DataTemplate>
             </TreeView.DataTemplates>
         </TreeView>

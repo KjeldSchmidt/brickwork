@@ -10,5 +10,7 @@ public sealed class TransactionAnalysis
 
     public string? Detail { get; init; }
 
+    public string? RawJson { get; init; }
+
     public IReadOnlyList<TransactionAnalysis> Children { get; init; } = [];
 }

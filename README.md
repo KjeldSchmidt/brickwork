@@ -1,6 +1,10 @@
 # Inkarnate ↔ VTT Converter
 
-Tools for converting map exports between Inkarnate and virtual tabletop formats (Foundry VTT, UVTT1, UVTT2).
+Tools for converting Inkarnate map backups into virtual tabletop formats.
+
+## Beta status
+
+The GUI currently supports **Foundry VTT JSON export**. UVTT1/UVTT2 exporters exist in the CLI only and are still placeholders.
 
 ## Prerequisites
 
@@ -27,26 +31,32 @@ dotnet test converter/InkarnateTools.sln
 cd converter && just gui
 ```
 
-Minimal Avalonia editor: open an Inkarnate `.ink` backup or JSON input, preview the map with wall overlays, and export via the Convert dialog.
+Open an Inkarnate `.ink` backup, preview wall overlays, edit walls, and use **Export to VTT** (Foundry JSON).
 
 ## Run (CLI)
 
 ```bash
-cd converter && just cli convert -i ../resources/empty-backup.ink -o output.uvtt -f uvtt2
+cd converter && just cli convert -i ../resources/empty-backup.ink -o output.json -f foundry
 cd converter && just cli analyze -i ../resources/empty-backup.ink
 cd converter && just cli analyze -i ../resources/empty-backup.ink --summary
 ```
 
-Supported export formats: `uvtt1`, `uvtt2`, `foundry`.
+CLI export formats: `foundry` (supported), `uvtt1` / `uvtt2` (placeholders).
+
+## Releases
+
+Create a release from GitHub Actions → **Release** → Run workflow, and enter a version such as `0.1.0-beta.1`.
+
+Builds are published for Windows, Linux, and macOS (x64 and arm64).
 
 ## Architecture
 
 ```
 converter/
   src/
-    InkarnateTools.Core/         Domain model, ports, ConvertMapService (UI/CLI agnostic)
+    InkarnateTools.Core/         Domain model, ports, ConvertMapService
     InkarnateTools.Inkarnate/    Inkarnate JSON importer
-    InkarnateTools.Exporters/    UVTT / Foundry exporter stubs
+    InkarnateTools.Exporters/    Foundry exporter (+ UVTT stubs)
     InkarnateTools.Composition/  Wires adapters for App and Cli hosts
     InkarnateTools.App/          Avalonia desktop shell
     InkarnateTools.Cli/          Console host
@@ -54,4 +64,4 @@ converter/
     InkarnateTools.Core.Tests/
 ```
 
-Importers read gzipped Inkarnate `.ink` backups (JSON inside) and map title, scene size, preview dimensions, and grid metadata into the internal model. Exporters are still stubs.
+Importers read gzipped Inkarnate `.ink` backups and reconstruct walls, layers, portals, and compatibility metadata.

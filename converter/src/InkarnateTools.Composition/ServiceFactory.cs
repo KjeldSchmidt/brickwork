@@ -22,6 +22,9 @@ public static class ServiceFactory
         return new ConvertMapService(importer, exporters);
     }
 
+    public static ConvertMapService CreateGuiConvertMapService() =>
+        new(CreateInkarnateImporter(), [new FoundryExporter()]);
+
     public static IInkFileAnalyzer CreateInkFileAnalyzer() =>
         new InkarnateCompatibilityAnalyzer(CreateInkarnateImporter());
 }
