@@ -1,10 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:InkarnateTools.App.Converters"
+             xmlns:models="using:InkarnateTools.Core.Models"
              xmlns:vm="using:InkarnateTools.App.ViewModels"
              x:Class="InkarnateTools.App.Views.Panels.WallsToolView"
              x:DataType="vm:WallsToolViewModel"
              Classes="tool-panel"
              Focusable="True">
+    <UserControl.Resources>
+        <conv:WallLineTypeDisplayConverter x:Key="WallLineTypeDisplayConverter" />
+    </UserControl.Resources>
     <ScrollViewer Classes="tool-panel-scroll">
         <Grid Margin="12">
         <TextBlock Text="Open a source map to list walls."
@@ -59,9 +64,15 @@
                                        VerticalAlignment="Center"
                                        Margin="6,0" />
                             <ComboBox Grid.Column="2"
-                                      Width="90"
+                                      Width="118"
                                       ItemsSource="{Binding LineTypeOptions}"
-                                      SelectedItem="{Binding LineType}" />
+                                      SelectedItem="{Binding LineType}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="models:WallLineType">
+                                        <TextBlock Text="{Binding Converter={StaticResource WallLineTypeDisplayConverter}}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                         </Grid>
                     </Border>
                 </TreeDataTemplate>
@@ -83,9 +94,15 @@
                                        Margin="6,0"
                                        Opacity="0.85" />
                             <ComboBox Grid.Column="2"
-                                      Width="90"
+                                      Width="118"
                                       ItemsSource="{Binding LineTypeOptions}"
-                                      SelectedItem="{Binding LineType}" />
+                                      SelectedItem="{Binding LineType}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="models:WallLineType">
+                                        <TextBlock Text="{Binding Converter={StaticResource WallLineTypeDisplayConverter}}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                         </Grid>
                     </Border>
                 </DataTemplate>
