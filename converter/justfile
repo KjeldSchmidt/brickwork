@@ -2,24 +2,24 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
 # Apply dotnet format to the solution
 fmt:
-    dotnet format InkarnateTools.sln
+    dotnet format Brickwork.sln
 
 # Verify formatting without writing files (for CI)
 fmt-check:
-    dotnet format InkarnateTools.sln --verify-no-changes
+    dotnet format Brickwork.sln --verify-no-changes
 
 # Rebuild the converter solution
 recompile:
-    dotnet build InkarnateTools.sln
+    dotnet build Brickwork.sln
 
 # Start the Avalonia GUI
 gui:
-    dotnet run --project src/InkarnateTools.App
+    dotnet run --project src/Brickwork.App
 
 # Rebuild and restart the GUI on file changes (incremental compile + auto-restart)
 watch:
-    dotnet watch run --project src/InkarnateTools.App
+    dotnet watch run --project src/Brickwork.App
 
 # Invoke the CLI (passthrough args after --)
 cli *args:
-    dotnet run --project src/InkarnateTools.Cli -- {{args}}
+    dotnet run --project src/Brickwork.Cli -- {{args}}

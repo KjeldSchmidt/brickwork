@@ -1,6 +1,6 @@
-# Inkarnate ↔ VTT Converter
+# Brickwork
 
-Tools for converting Inkarnate map backups into virtual tabletop formats.
+Desktop and CLI tools for converting Inkarnate map backups into virtual tabletop formats.
 
 ## Beta status
 
@@ -21,8 +21,8 @@ just recompile
 Or with `dotnet` directly:
 
 ```bash
-dotnet build converter/InkarnateTools.sln
-dotnet test converter/InkarnateTools.sln
+dotnet build converter/Brickwork.sln
+dotnet test converter/Brickwork.sln
 ```
 
 ## Run (GUI)
@@ -54,14 +54,14 @@ Builds are published for Windows, Linux, and macOS (x64 and arm64).
 ```
 converter/
   src/
-    InkarnateTools.Core/         Domain model, ports, ConvertMapService
-    InkarnateTools.Inkarnate/    Inkarnate JSON importer
-    InkarnateTools.Exporters/    Foundry exporter (+ UVTT stubs)
-    InkarnateTools.Composition/  Wires adapters for App and Cli hosts
-    InkarnateTools.App/          Avalonia desktop shell
-    InkarnateTools.Cli/          Console host
+    Brickwork.Core/         Domain model, ports, ConvertMapService
+    Brickwork.Inkarnate/    Inkarnate JSON importer
+    Brickwork.Exporters/    Foundry exporter (+ UVTT stubs)
+    Brickwork.Composition/  Wires adapters for App and Cli hosts
+    Brickwork.App/          Avalonia desktop shell
+    Brickwork.Cli/          Console host
   tests/
-    InkarnateTools.Core.Tests/
+    Brickwork.Core.Tests/
 ```
 
 Importers read gzipped Inkarnate `.ink` backups and reconstruct walls, layers, portals, and compatibility metadata.

@@ -19,16 +19,16 @@ jobs:
         include:
           - os: windows-latest
             rid: win-x64
-            artifact: InkarnateTools-${{ inputs.version }}-win-x64
+            artifact: Brickwork-${{ inputs.version }}-win-x64
           - os: ubuntu-latest
             rid: linux-x64
-            artifact: InkarnateTools-${{ inputs.version }}-linux-x64
+            artifact: Brickwork-${{ inputs.version }}-linux-x64
           - os: macos-latest
             rid: osx-x64
-            artifact: InkarnateTools-${{ inputs.version }}-osx-x64
+            artifact: Brickwork-${{ inputs.version }}-osx-x64
           - os: macos-latest
             rid: osx-arm64
-            artifact: InkarnateTools-${{ inputs.version }}-osx-arm64
+            artifact: Brickwork-${{ inputs.version }}-osx-arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -46,7 +46,7 @@ jobs:
 
       - name: Publish
         run: >
-          dotnet publish converter/src/InkarnateTools.App/InkarnateTools.App.csproj
+          dotnet publish converter/src/Brickwork.App/Brickwork.App.csproj
           -c Release
           -r ${{ matrix.rid }}
           --self-contained true
@@ -88,6 +88,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v${{ inputs.version }}" \
-            --title "Inkarnate Tools v${{ inputs.version }}" \
+            --title "Brickwork v${{ inputs.version }}" \
             --notes "Beta release. GUI exports Foundry VTT JSON. Download the archive for your platform." \
             artifacts/**/*

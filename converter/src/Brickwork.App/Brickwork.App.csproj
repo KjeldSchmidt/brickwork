@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <RootNamespace>Brickwork.App</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="..\..\assets\app-icon.png" Link="Assets\app-icon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Controls.PanAndZoom" Version="11.3.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Skia" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.12" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Dock.Avalonia" Version="11.3.2" />
+    <PackageReference Include="Dock.Avalonia.Themes.Fluent" Version="11.3.2" />
+    <PackageReference Include="Dock.Controls.DeferredContentControl" Version="11.3.12" />
+    <PackageReference Include="Dock.Model.Mvvm" Version="11.3.2" />
+    <PackageReference Include="Semi.Avalonia" Version="11.3.7.3" />
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
+    <!-- Transitive Avalonia dep; pin past GHSA-xrw6-gwf8-vvr9 until Avalonia >= 11.3.14 -->
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Brickwork.Composition\Brickwork.Composition.csproj" />
+  </ItemGroup>
+
+</Project>

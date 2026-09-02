@@ -21,13 +21,13 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1 libfreetype6 libharfbuzz0b libpng16-16 libjpeg-turbo8 libwebp7 libgl1
 
       - name: Restore
-        run: dotnet restore converter/InkarnateTools.sln
+        run: dotnet restore converter/Brickwork.sln
 
       - name: Format check
-        run: dotnet format converter/InkarnateTools.sln --verify-no-changes
+        run: dotnet format converter/Brickwork.sln --verify-no-changes
 
       - name: Build
-        run: dotnet build converter/InkarnateTools.sln --configuration Release --no-restore
+        run: dotnet build converter/Brickwork.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test converter/InkarnateTools.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test converter/Brickwork.sln --configuration Release --no-build --verbosity normal

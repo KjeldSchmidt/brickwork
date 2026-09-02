@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Brickwork.Exporters</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Foundry\FoundrySceneTemplate.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Brickwork.Core\Brickwork.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Brickwork.App.ViewModels"
+             x:Class="Brickwork.App.Views.Panels.ImportToolView"
+             x:DataType="vm:ImportToolViewModel"
+             Classes="tool-panel">
+    <ScrollViewer Classes="tool-panel-scroll">
+        <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,*,Auto">
+        <Button Grid.Row="0"
+                Margin="0,0,0,12"
+                Content="Open source map"
+                Command="{Binding OpenSourceMapCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center" />
+
+        <Button Grid.Row="1"
+                Margin="0,0,0,12"
+                Content="Export to VTT"
+                Command="{Binding ConvertCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center" />
+
+        <Border Grid.Row="2"
+                Margin="0,0,0,12"
+                Padding="10"
+                CornerRadius="6"
+                Background="#33FFAA44"
+                IsVisible="{Binding ShowCompatibilityWarning}">
+            <StackPanel Spacing="8">
+                <TextBlock Text="{Binding CompatibilityWarningMessage}"
+                           TextWrapping="Wrap" />
+                <Button Content="Report issue on GitHub"
+                        Command="{Binding ReportCompatibilityIssueCommand}"
+                        HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock Grid.Row="4"
+                   Text="{Binding StatusMessage}"
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Bottom"
+                   Opacity="0.85" />
+        </Grid>
+    </ScrollViewer>
+</UserControl>

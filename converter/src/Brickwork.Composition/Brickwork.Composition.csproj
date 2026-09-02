@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Brickwork.Composition</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Brickwork.Core\Brickwork.Core.csproj" />
+    <ProjectReference Include="..\Brickwork.Inkarnate\Brickwork.Inkarnate.csproj" />
+    <ProjectReference Include="..\Brickwork.Exporters\Brickwork.Exporters.csproj" />
+  </ItemGroup>
+
+</Project>

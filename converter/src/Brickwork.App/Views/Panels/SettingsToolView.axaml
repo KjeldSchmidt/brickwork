@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Brickwork.App.ViewModels"
+             x:Class="Brickwork.App.Views.Panels.SettingsToolView"
+             x:DataType="vm:SettingsToolViewModel"
+             Classes="tool-panel">
+    <ScrollViewer Classes="tool-panel-scroll">
+        <StackPanel Margin="12" Spacing="16">
+            <StackPanel Spacing="4">
+                <TextBlock Text="About" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding AppVersionLabel}" Opacity="0.85" />
+                <TextBlock Text="Beta build — Foundry VTT export supported."
+                           TextWrapping="Wrap"
+                           Opacity="0.75" />
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="Wall simplification tolerance"
+                           FontWeight="SemiBold" />
+                <TextBlock Text="Maximum deviation from the original centerline, in scene units. Uses the Ramer-Douglas-Peucker algorithm. Lower values keep more detail; higher values remove more nodes."
+                           TextWrapping="Wrap"
+                           Opacity="0.75" />
+                <NumericUpDown Minimum="0"
+                               Maximum="500"
+                               Increment="1"
+                               FormatString="0.##"
+                               Value="{Binding WallSimplificationTolerance}" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
