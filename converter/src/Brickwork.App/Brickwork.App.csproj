@@ -11,6 +11,13 @@
     <RootNamespace>Brickwork.App</RootNamespace>
   </PropertyGroup>
 
+  <!-- When publishing as a single file, bundle native Skia/Avalonia libs and omit debug symbols. -->
+  <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
   <ItemGroup>
     <AvaloniaResource Include="..\..\assets\app-icon.png" Link="Assets\app-icon.png" />
   </ItemGroup>
