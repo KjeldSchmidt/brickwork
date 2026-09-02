@@ -38,9 +38,9 @@ public class WallExportRunTests
         var runs = WallPathSegmentBuilder.BuildExportRuns(wall);
 
         Assert.Equal(3, runs.Count);
-        Assert.Equal(WallLineType.Default, runs[0].LineType);
+        Assert.Equal(WallLineType.Solid, runs[0].LineType);
         Assert.Equal(WallLineType.Door, runs[1].LineType);
-        Assert.Equal(WallLineType.Default, runs[2].LineType);
+        Assert.Equal(WallLineType.Solid, runs[2].LineType);
         Assert.Equal(2, runs[0].Points.Count);
         Assert.Equal(2, runs[1].Points.Count);
         Assert.Equal(2, runs[2].Points.Count);
@@ -131,7 +131,7 @@ public class WallExportRunTests
             Origin = new MapPoint(0, 0),
             PathOrigin = new MapPoint(0, 0),
             Scale = 1,
-            LineType = WallLineType.Default,
+            LineType = WallLineType.Solid,
             Points =
             [
                 new MapPoint(0, 0),
@@ -153,7 +153,7 @@ public class WallExportRunTests
         var runs = WallPathSegmentBuilder.BuildExportRuns(wall);
 
         Assert.Equal(2, runs.Count);
-        Assert.Equal(WallLineType.Default, runs[0].LineType);
+        Assert.Equal(WallLineType.Solid, runs[0].LineType);
         Assert.Equal(WallLineType.Door, runs[1].LineType);
         Assert.True(runs[0].Points.Count >= 4);
     }

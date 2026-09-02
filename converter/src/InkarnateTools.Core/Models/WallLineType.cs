@@ -2,7 +2,11 @@ namespace InkarnateTools.Core.Models;
 
 public enum WallLineType
 {
-    Default,
-    Door,
+    Solid,
     Terrain,
+    Invisible,
+    Ethereal,
+    Door,
+    SecretDoor,
+    Window,
 }

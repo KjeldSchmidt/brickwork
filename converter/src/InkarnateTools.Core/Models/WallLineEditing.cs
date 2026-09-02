@@ -2,13 +2,18 @@ namespace InkarnateTools.Core.Models;
 
 public static class WallLineEditing
 {
-    public static WallLineType CycleType(WallLineType current) =>
-        current switch
+    private static readonly WallLineType[] CycleOrder = Enum.GetValues<WallLineType>();
+
+    public static WallLineType CycleType(WallLineType current)
+    {
+        var index = Array.IndexOf(CycleOrder, current);
+        if (index < 0)
         {
-            WallLineType.Default => WallLineType.Door,
-            WallLineType.Door => WallLineType.Terrain,
-            _ => WallLineType.Default,
-        };
+            return CycleOrder[0];
+        }
+
+        return CycleOrder[(index + 1) % CycleOrder.Length];
+    }
 
     public static void CycleType(Wall wall, WallPortal? portal)
     {

@@ -43,6 +43,9 @@
     <None Include="..\..\..\resources\map-with-mass-edits.ink" Link="resources\map-with-mass-edits.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\resources\fvtt-scene-basic-walls.json" Link="resources\fvtt-scene-basic-walls.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

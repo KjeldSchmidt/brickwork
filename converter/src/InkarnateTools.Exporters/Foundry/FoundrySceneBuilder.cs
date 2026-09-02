@@ -58,10 +58,10 @@ internal static class FoundrySceneBuilder
             ["ds"] = 0,
             ["threshold"] = new JsonObject
             {
-                ["light"] = null,
-                ["sight"] = null,
-                ["sound"] = null,
-                ["attenuation"] = false,
+                ["light"] = segment.ThresholdLight,
+                ["sight"] = segment.ThresholdSight,
+                ["sound"] = segment.ThresholdSound,
+                ["attenuation"] = segment.ThresholdAttenuation,
             },
             ["animation"] = null,
             ["flags"] = new JsonObject(),

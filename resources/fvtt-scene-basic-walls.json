@@ -1,9 +1,9 @@
 {
-  "name": "Basic Walls",
+  "name": "all-foundry-walls",
   "navigation": false,
-  "thumb": "worlds/module-dev/assets/scenes/thumb-2tZt_m1rU-EBqHz66tHzoQ.webp",
-  "width": 2048,
-  "height": 1536,
+  "thumb": null,
+  "width": 4000,
+  "height": 3000,
   "padding": 0.25,
   "shiftX": 0,
   "shiftY": 0,
@@ -82,7 +82,7 @@
       },
       "background": {
         "color": "#999999",
-        "src": "Maps/basic-walls.webp",
+        "src": null,
         "tint": "#ffffff",
         "alphaThreshold": 0.75
       },
@@ -121,222 +121,6 @@
       "levels": [
         "defaultLevel0000"
       ],
-      "light": 10,
-      "move": 20,
-      "sight": 10,
-      "sound": 10,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        675,
-        1650,
-        913,
-        1650
-      ],
-      "_id": "bh2ePqr8g2wfTeYy"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 10,
-      "move": 20,
-      "sight": 10,
-      "sound": 10,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        913,
-        1650,
-        913,
-        1850
-      ],
-      "_id": "jW6W5ECioqn3Ctpg"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 10,
-      "move": 20,
-      "sight": 10,
-      "sound": 10,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        913,
-        1850,
-        675,
-        1850
-      ],
-      "_id": "3FPetfNhdy5gmt8B"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 10,
-      "move": 20,
-      "sight": 10,
-      "sound": 10,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        675,
-        1850,
-        675,
-        1650
-      ],
-      "_id": "2qMvBqiMe4rQep5Q"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 10,
-      "move": 20,
-      "sight": 10,
-      "sound": 10,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        713,
-        1700,
-        863,
-        1700
-      ],
-      "_id": "S4WTM6fu5TjR9o7T"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 10,
-      "move": 20,
-      "sight": 10,
-      "sound": 10,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        863,
-        1700,
-        863,
-        1813
-      ],
-      "_id": "v3gebwnPoExwTcYj"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 10,
-      "move": 20,
-      "sight": 10,
-      "sound": 10,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        863,
-        1813,
-        713,
-        1813
-      ],
-      "_id": "GYmA5RoXuH09Sfnb"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 10,
-      "move": 20,
-      "sight": 10,
-      "sound": 10,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        713,
-        1813,
-        713,
-        1700
-      ],
-      "_id": "D6UbV8bqKDmVD9as"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
       "light": 20,
       "move": 20,
       "sight": 20,
@@ -353,39 +137,93 @@
       "animation": null,
       "flags": {},
       "c": [
-        1388,
-        1688,
-        1563,
+        1625,
+        1075,
+        1650,
+        1613
+      ],
+      "_id": "9gsGUH44asz7l1Qr"
+    },
+    {
+      "levels": [
+        "defaultLevel0000"
+      ],
+      "light": 10,
+      "move": 20,
+      "sight": 10,
+      "sound": 10,
+      "dir": 0,
+      "door": 0,
+      "ds": 0,
+      "threshold": {
+        "light": null,
+        "sight": null,
+        "sound": null,
+        "attenuation": false
+      },
+      "animation": null,
+      "flags": {},
+      "c": [
+        1713,
+        1075,
+        1763,
+        1625
+      ],
+      "_id": "zdrC9V8z8pJhnXMs"
+    },
+    {
+      "levels": [
+        "defaultLevel0000"
+      ],
+      "light": 0,
+      "move": 20,
+      "sight": 0,
+      "sound": 0,
+      "dir": 0,
+      "door": 0,
+      "ds": 0,
+      "threshold": {
+        "light": null,
+        "sight": null,
+        "sound": null,
+        "attenuation": false
+      },
+      "animation": null,
+      "flags": {},
+      "c": [
+        1888,
+        1125,
+        1925,
+        1600
+      ],
+      "_id": "DIqxL0A7i1DcIKl4"
+    },
+    {
+      "levels": [
+        "defaultLevel0000"
+      ],
+      "light": 20,
+      "move": 0,
+      "sight": 20,
+      "sound": 0,
+      "dir": 0,
+      "door": 0,
+      "ds": 0,
+      "threshold": {
+        "light": null,
+        "sight": null,
+        "sound": null,
+        "attenuation": false
+      },
+      "animation": null,
+      "flags": {},
+      "c": [
+        1988,
+        1138,
+        2038,
         1638
       ],
-      "_id": "VSeRP3O9B5lKlhEM"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        1825,
-        1563,
-        2025,
-        1500
-      ],
-      "_id": "lamJ6zphqtPRhp2e"
+      "_id": "nBb5NrVV1f0iJgZo"
     },
     {
       "levels": [
@@ -407,12 +245,12 @@
       "animation": null,
       "flags": {},
       "c": [
-        1563,
-        1638,
-        1825,
-        1563
+        2100,
+        1138,
+        2150,
+        1663
       ],
-      "_id": "wMeTCessvBycBBza"
+      "_id": "YjBVCTluPFZ19lK6"
     },
     {
       "levels": [
@@ -423,7 +261,7 @@
       "sight": 20,
       "sound": 20,
       "dir": 0,
-      "door": 0,
+      "door": 2,
       "ds": 0,
       "threshold": {
         "light": null,
@@ -434,336 +272,39 @@
       "animation": null,
       "flags": {},
       "c": [
-        1075,
-        1550,
-        1600,
-        1000
-      ],
-      "_id": "YBvk7WE1Trhg2htR"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        850,
-        1088,
-        813,
-        963
-      ],
-      "_id": "dYTaxXNkTWRrX3j6"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        813,
-        963,
-        875,
-        850
-      ],
-      "_id": "RyN2nvfvcDFigU6T"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        875,
-        850,
+        2213,
         1125,
-        700
+        2250,
+        1688
       ],
-      "_id": "sCYwP9GrhLcxrY3n"
+      "_id": "NpaBOtgliNsxujuD"
     },
     {
       "levels": [
         "defaultLevel0000"
       ],
-      "light": 20,
+      "light": 30,
       "move": 20,
-      "sight": 20,
+      "sight": 30,
       "sound": 20,
       "dir": 0,
       "door": 0,
       "ds": 0,
       "threshold": {
-        "light": null,
-        "sight": null,
+        "light": 10,
+        "sight": 10,
         "sound": null,
-        "attenuation": false
+        "attenuation": true
       },
       "animation": null,
       "flags": {},
       "c": [
-        2138,
-        600,
-        1950,
-        563
+        2300,
+        1125,
+        2363,
+        1713
       ],
-      "_id": "ciiPc9moNRmPSdua"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        1950,
-        563,
-        1800,
-        550
-      ],
-      "_id": "dbGMs0a3yUGGGpr4"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        1800,
-        550,
-        1738,
-        575
-      ],
-      "_id": "YM9if6TsncUFXRqR"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        1738,
-        575,
-        1700,
-        638
-      ],
-      "_id": "SpPBjYBYhu0BVyV2"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        1700,
-        638,
-        1750,
-        763
-      ],
-      "_id": "NMBkX4qM9oj8yKrF"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        1750,
-        763,
-        1888,
-        900
-      ],
-      "_id": "5TmfE9zRtH05eE1L"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        1888,
-        900,
-        2063,
-        963
-      ],
-      "_id": "xy82SYrH0xka7EAd"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        2063,
-        963,
-        2163,
-        963
-      ],
-      "_id": "fsWaBPEPEJswkODA"
-    },
-    {
-      "levels": [
-        "defaultLevel0000"
-      ],
-      "light": 20,
-      "move": 20,
-      "sight": 20,
-      "sound": 20,
-      "dir": 0,
-      "door": 0,
-      "ds": 0,
-      "threshold": {
-        "light": null,
-        "sight": null,
-        "sound": null,
-        "attenuation": false
-      },
-      "animation": null,
-      "flags": {},
-      "c": [
-        2163,
-        963,
-        2225,
-        888
-      ],
-      "_id": "3T2K8GXSCFG5zV0n"
+      "_id": "tdIaqrDGl5PFpmHZ"
     }
   ],
   "playlist": null,
@@ -787,14 +328,14 @@
     "coreVersion": "14.366",
     "systemId": "pf2e",
     "systemVersion": "8.2.0",
-    "createdTime": 1788184649869,
-    "modifiedTime": 1788184668451,
+    "createdTime": 1788348839406,
+    "modifiedTime": 1788348847329,
     "lastModifiedBy": "deHGoQwnI6ONy00i",
     "compendiumSource": null,
     "duplicateSource": null,
     "exportSource": {
       "worldId": "module-dev",
-      "uuid": "Scene.IEJV0AcJVyBnJXZA",
+      "uuid": "Scene.xuVFiDPkcoZnJSyb",
       "coreVersion": "14.366",
       "systemId": "pf2e",
       "systemVersion": "8.2.0"

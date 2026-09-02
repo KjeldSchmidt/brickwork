@@ -6,12 +6,26 @@ namespace InkarnateTools.Core.Tests;
 
 public class WallLineEditingTests
 {
-    [Theory]
-    [InlineData(WallLineType.Default, WallLineType.Door)]
-    [InlineData(WallLineType.Door, WallLineType.Terrain)]
-    [InlineData(WallLineType.Terrain, WallLineType.Default)]
-    public void CycleType_AdvancesThroughKnownTypes(WallLineType current, WallLineType expected) =>
-        Assert.Equal(expected, WallLineEditing.CycleType(current));
+    [Fact]
+    public void CycleType_AdvancesThroughAllFoundryWallTypes()
+    {
+        var current = WallLineType.Solid;
+
+        foreach (var expected in new[]
+                 {
+                     WallLineType.Terrain,
+                     WallLineType.Invisible,
+                     WallLineType.Ethereal,
+                     WallLineType.Door,
+                     WallLineType.SecretDoor,
+                     WallLineType.Window,
+                     WallLineType.Solid,
+                 })
+        {
+            current = WallLineEditing.CycleType(current);
+            Assert.Equal(expected, current);
+        }
+    }
 
     [Fact]
     public void CycleType_UpdatesPortalWithoutChangingWall()
@@ -19,14 +33,14 @@ public class WallLineEditingTests
         var wall = new Wall
         {
             EntityId = 5,
-            LineType = WallLineType.Default,
-            Portals = [new WallPortal { Id = "gap-1", LineType = WallLineType.Default }],
+            LineType = WallLineType.Solid,
+            Portals = [new WallPortal { Id = "gap-1", LineType = WallLineType.Solid }],
         };
 
         WallLineEditing.CycleType(wall, wall.Portals[0]);
 
-        Assert.Equal(WallLineType.Default, wall.LineType);
-        Assert.Equal(WallLineType.Door, wall.Portals[0].LineType);
+        Assert.Equal(WallLineType.Solid, wall.LineType);
+        Assert.Equal(WallLineType.Terrain, wall.Portals[0].LineType);
     }
 }
 

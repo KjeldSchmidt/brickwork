@@ -10,7 +10,7 @@ public sealed class Wall
 
     public bool IsActive { get; set; } = true;
 
-    public WallLineType LineType { get; set; } = WallLineType.Default;
+    public WallLineType LineType { get; set; } = WallLineType.Solid;
 
     public bool WallEnabled { get; set; } = true;
 

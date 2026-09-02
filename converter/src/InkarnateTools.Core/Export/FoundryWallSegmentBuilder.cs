@@ -12,7 +12,11 @@ public sealed record FoundryWallSegment(
     int Light,
     int Sound,
     int Move,
-    int Door);
+    int Door,
+    int? ThresholdLight = null,
+    int? ThresholdSight = null,
+    int? ThresholdSound = null,
+    bool ThresholdAttenuation = false);
 
 public static class FoundryWallSegmentBuilder
 {
@@ -147,15 +151,20 @@ public static class FoundryWallSegmentBuilder
             return;
         }
 
-        var (sight, door) = MapLineType(lineType);
-        segments.Add(new FoundryWallSegment(x0, y0, x1, y1, sight, sight, sight, 20, door));
+        var restrictions = FoundryWallRestrictions.ForLineType(lineType);
+        segments.Add(new FoundryWallSegment(
+            x0,
+            y0,
+            x1,
+            y1,
+            restrictions.Sight,
+            restrictions.Light,
+            restrictions.Sound,
+            restrictions.Move,
+            restrictions.Door,
+            restrictions.ThresholdLight,
+            restrictions.ThresholdSight,
+            restrictions.ThresholdSound,
+            restrictions.ThresholdAttenuation));
     }
-
-    private static (int Sight, int Door) MapLineType(WallLineType lineType) =>
-        lineType switch
-        {
-            WallLineType.Terrain => (10, 0),
-            WallLineType.Door => (20, 1),
-            _ => (20, 0),
-        };
 }
