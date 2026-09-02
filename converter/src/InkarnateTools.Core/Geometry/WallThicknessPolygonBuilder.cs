@@ -5,7 +5,6 @@ namespace InkarnateTools.Core.Geometry;
 public static class WallThicknessPolygonBuilder
 {
     private const double Epsilon = 1e-9;
-    private const double MiterLimit = 4d;
 
     public static IReadOnlyList<MapPoint> BuildOutline(
         IEnumerable<MapPoint> centerline,
@@ -129,26 +128,64 @@ public static class WallThicknessPolygonBuilder
         var current = centerline[index];
         var next = centerline[nextIndex];
 
+        var incoming = Subtract(current, previous);
+        var outgoing = Subtract(next, current);
+        var turnCross = incoming.X * outgoing.Y - incoming.Y * outgoing.X;
+
         var incomingNormal = LeftNormal(previous, current);
         var outgoingNormal = LeftNormal(current, next);
 
-        if (TryIntersectOffsetLines(previous, current, incomingNormal, current, next, outgoingNormal, half, out var leftJoin))
+        // CCW turn: interior lies to the left of the path. CW turn: interior lies to the right.
+        var leftIsInner = turnCross > Epsilon;
+        var rightIsInner = turnCross < -Epsilon;
+
+        AddSideJoin(
+            leftSide,
+            previous,
+            current,
+            next,
+            incomingNormal,
+            outgoingNormal,
+            half,
+            useIntersection: leftIsInner);
+        AddSideJoin(
+            rightSide,
+            previous,
+            current,
+            next,
+            incomingNormal,
+            outgoingNormal,
+            -half,
+            useIntersection: rightIsInner);
+    }
+
+    private static void AddSideJoin(
+        List<MapPoint> side,
+        MapPoint previous,
+        MapPoint current,
+        MapPoint next,
+        MapPoint incomingNormal,
+        MapPoint outgoingNormal,
+        double distance,
+        bool useIntersection)
+    {
+        if (useIntersection &&
+            TryIntersectOffsetLines(
+                previous,
+                current,
+                incomingNormal,
+                current,
+                next,
+                outgoingNormal,
+                distance,
+                out var intersection))
         {
-            leftSide.Add(leftJoin);
-        }
-        else
-        {
-            leftSide.Add(Offset(current, incomingNormal, half));
+            AddPointIfDistinct(side, intersection);
+            return;
         }
 
-        if (TryIntersectOffsetLines(previous, current, incomingNormal, current, next, outgoingNormal, -half, out var rightJoin))
-        {
-            rightSide.Add(rightJoin);
-        }
-        else
-        {
-            rightSide.Add(Offset(current, incomingNormal, -half));
-        }
+        AddBevelPoint(side, current, incomingNormal, distance);
+        AddBevelPoint(side, current, outgoingNormal, distance);
     }
 
     private static bool TryIntersectOffsetLines(
@@ -158,21 +195,17 @@ public static class WallThicknessPolygonBuilder
         MapPoint line2Start,
         MapPoint line2End,
         MapPoint line2Normal,
-        double half,
+        double distance,
         out MapPoint intersection)
     {
-        var a1 = Offset(line1Start, line1Normal, half);
-        var a2 = Offset(line1End, line1Normal, half);
-        var b1 = Offset(line2Start, line2Normal, half);
-        var b2 = Offset(line2End, line2Normal, half);
+        var a1 = Offset(line1Start, line1Normal, distance);
+        var a2 = Offset(line1End, line1Normal, distance);
+        var b1 = Offset(line2Start, line2Normal, distance);
+        var b2 = Offset(line2End, line2Normal, distance);
 
         if (TryLineIntersection(a1, a2, b1, b2, out intersection))
         {
-            var miterLength = Distance(intersection, Offset(line1End, line1Normal, half));
-            if (miterLength <= half * MiterLimit)
-            {
-                return true;
-            }
+            return true;
         }
 
         intersection = default;
@@ -203,6 +236,27 @@ public static class WallThicknessPolygonBuilder
         return true;
     }
 
+    private static void AddBevelPoint(
+        List<MapPoint> side,
+        MapPoint current,
+        MapPoint normal,
+        double distance)
+    {
+        AddPointIfDistinct(side, Offset(current, normal, distance));
+    }
+
+    private static void AddPointIfDistinct(List<MapPoint> side, MapPoint point)
+    {
+        if (side.Count == 0 || !PointsEqual(side[^1], point))
+        {
+            side.Add(point);
+        }
+    }
+
+    private static bool PointsEqual(MapPoint left, MapPoint right) =>
+        Math.Abs(left.X - right.X) <= Epsilon &&
+        Math.Abs(left.Y - right.Y) <= Epsilon;
+
     private static MapPoint LeftNormal(MapPoint start, MapPoint end)
     {
         var direction = Normalize(Subtract(end, start));
@@ -225,11 +279,4 @@ public static class WallThicknessPolygonBuilder
 
     private static MapPoint Offset(MapPoint point, MapPoint normal, double distance) =>
         new(point.X + normal.X * distance, point.Y + normal.Y * distance);
-
-    private static double Distance(MapPoint left, MapPoint right)
-    {
-        var dx = left.X - right.X;
-        var dy = left.Y - right.Y;
-        return Math.Sqrt(dx * dx + dy * dy);
-    }
 }

@@ -45,8 +45,41 @@ public class WallThicknessPolygonBuilderTests
         var loops = WallThicknessPolygonBuilder.BuildTerrainExportLoops(square, thickness: 20, isClosed: true);
 
         Assert.Equal(2, loops.Count);
-        Assert.Equal(4, loops[0].Count);
+        Assert.Equal(8, loops[0].Count);
         Assert.Equal(4, loops[1].Count);
+    }
+
+    [Fact]
+    public void BuildOutline_RightAngle_OuterBevelsAndInnerIntersection()
+    {
+        var centerline = new List<MapPoint>
+        {
+            new(0, 0),
+            new(100, 0),
+            new(100, 100),
+        };
+
+        var polygon = WallThicknessPolygonBuilder.BuildOutline(centerline, thickness: 20);
+
+        Assert.Equal(7, polygon.Count);
+    }
+
+    [Fact]
+    public void BuildClosedRing_Square_InnerLoopUsesIntersectionJoins()
+    {
+        var square = new List<MapPoint>
+        {
+            new(0, 0),
+            new(100, 0),
+            new(100, 100),
+            new(0, 100),
+        };
+
+        var ring = WallThicknessPolygonBuilder.BuildClosedRing(square, thickness: 20);
+
+        Assert.NotNull(ring);
+        Assert.Equal(8, ring!.Outer.Count);
+        Assert.Equal(4, ring.Inner.Count);
     }
 
     [Fact]

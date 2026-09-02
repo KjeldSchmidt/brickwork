@@ -61,7 +61,7 @@ public class ClosedTerrainRingTests
         var ring = WallThicknessPolygonBuilder.BuildClosedRing(closedWall.Points, closedWall.SceneThickness);
 
         Assert.NotNull(ring);
-        Assert.Equal(4, ring!.Outer.Count);
+        Assert.Equal(8, ring!.Outer.Count);
         Assert.Equal(4, ring.Inner.Count);
 
         var outerBounds = Bounds(ring.Outer);

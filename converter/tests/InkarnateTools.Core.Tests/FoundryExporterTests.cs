@@ -297,7 +297,7 @@ public class FoundryExporterTests
 
         var segments = FoundryWallSegmentBuilder.BuildFromWall(terrainWall, transform);
 
-        Assert.Equal(8, segments.Count);
+        Assert.Equal(12, segments.Count);
         Assert.All(segments, segment => Assert.Equal(10, segment.Sight));
 
         var outerMaxX = ring!.Outer.Max(point => transform.SceneToPreview(point).X);
@@ -340,7 +340,7 @@ public class FoundryExporterTests
         var terrainWall = map.Walls.Single(wall => wall.EntityId == 6);
 
         var intactSegments = FoundryWallSegmentBuilder.BuildFromWall(terrainWall, transform);
-        Assert.Equal(8, intactSegments.Count);
+        Assert.Equal(12, intactSegments.Count);
 
         terrainWall.Portals.Add(new WallPortal
         {
@@ -403,7 +403,7 @@ public class FoundryExporterTests
         var segments = FoundryWallSegmentBuilder.BuildFromMap(map);
 
         Assert.Single(segments, segment => segment.Door == 1);
-        Assert.Equal(8, segments.Count(segment => segment.Sight == 10));
+        Assert.Equal(12, segments.Count(segment => segment.Sight == 10));
     }
 
     private static async Task<MapDocument> LoadPreparedBasicWallsMapAsync()
