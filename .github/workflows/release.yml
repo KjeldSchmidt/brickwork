@@ -62,7 +62,7 @@ jobs:
           if [ "${{ runner.os }}" = "Windows" ]; then
             cp publish/Brickwork.exe "artifact/${{ matrix.artifact }}.exe"
           else
-            cp publish/Brickwork.App "artifact/${{ matrix.artifact }}"
+            cp publish/Brickwork "artifact/${{ matrix.artifact }}"
             chmod +x "artifact/${{ matrix.artifact }}"
           fi
 
