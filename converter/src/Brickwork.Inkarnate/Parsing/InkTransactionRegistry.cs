@@ -34,6 +34,7 @@ internal sealed class InkTransactionRegistry
         Register(new LayerUpdateNameTransactionHandler());
         Register(new LayerUpdateVisibilityTransactionHandler());
         Register(new KnownIgnoredCommandHandler("cmd-layer-update-layer-shadows"));
+        Register(new KnownIgnoredCommandHandler("cmd-layer-update-opacity"));
         Register(new KnownIgnoredCommandHandler("cmd-layer-add-mask"));
         Register(new KnownIgnoredCommandHandler("cmd-layer-update-mask-visibility"));
         Register(new KnownIgnoredCommandHandler("cmd-metadata"));
