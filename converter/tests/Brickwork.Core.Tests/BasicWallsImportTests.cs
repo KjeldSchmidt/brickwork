@@ -59,16 +59,17 @@ public class BasicWallsImportTests
     }
 
     [Fact]
-    public async Task ImportAsync_BezierWall_HasFewerThanFifteenNodes_AtDefaultTolerance()
+    public async Task ImportAsync_BezierWall_IsSimplifiedAtDefaultTolerance()
     {
         await using var input = File.OpenRead(BasicWallsInkPath);
         var map = await new InkarnateImporter().ImportAsync(input);
 
         var bezierWall = map.Walls.Single(wall => wall.EntityId == 4);
 
+        Assert.InRange(bezierWall.Points.Count, 2, 20);
         Assert.True(
-            bezierWall.Points.Count < 15,
-            $"Expected bezier-wall to stay under 15 nodes at default tolerance, got {bezierWall.Points.Count}.");
+            bezierWall.RawPoints.Count > bezierWall.Points.Count,
+            $"Expected simplification to reduce bezier-wall nodes (raw={bezierWall.RawPoints.Count}, simplified={bezierWall.Points.Count}).");
     }
 }
 

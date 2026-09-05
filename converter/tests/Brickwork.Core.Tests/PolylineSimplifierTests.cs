@@ -86,9 +86,10 @@ public class WallPointSimplifierTests
         Assert.Equal(2, straightWall.Points.Count);
         Assert.Equal(2, straightWall.RawPoints.Count);
 
-        Assert.InRange(bezierWall.Points.Count, 2, 10);
+        // Default tolerance is 20 scene units (more detail than the old 50).
+        Assert.InRange(bezierWall.Points.Count, 2, 20);
         Assert.True(bezierWall.RawPoints.Count > bezierWall.Points.Count);
-        Assert.InRange(freehandWall.Points.Count, 4, 30);
+        Assert.InRange(freehandWall.Points.Count, 4, 40);
         Assert.True(freehandWall.RawPoints.Count > freehandWall.Points.Count);
     }
 
