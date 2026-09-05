@@ -75,7 +75,7 @@ public class WallPointSimplifierTests
     [Fact]
     public async Task ImportAsync_SimplifiesCurvedWalls_WithDefaultTolerance()
     {
-        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "basic-walls.ink"));
         await using var input = File.OpenRead(path);
         var map = await new InkarnateImporter().ImportAsync(input);
 

@@ -9,7 +9,7 @@ namespace Brickwork.Core.Tests;
 public class FoundryWallRestrictionsTests
 {
     private static string ReferenceScenePath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "fvtt-scene-basic-walls.json"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "fvtt-scene-basic-walls.json"));
 
     public static IEnumerable<object[]> ReferenceWallTypes =>
     [

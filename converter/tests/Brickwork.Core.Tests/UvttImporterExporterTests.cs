@@ -9,10 +9,10 @@ namespace Brickwork.Core.Tests;
 public class UvttImporterExporterTests
 {
     private static string PigAndWhistlePath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "The Pig and Whistle tavern.uvtt"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "The Pig and Whistle tavern.uvtt"));
 
     private static string EmptyBackupInkPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "empty-backup.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "empty-backup.ink"));
 
     [Fact]
     public async Task ImportAsync_LoadsPigAndWhistleMetadata()

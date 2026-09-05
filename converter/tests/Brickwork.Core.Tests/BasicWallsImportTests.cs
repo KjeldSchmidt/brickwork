@@ -9,7 +9,7 @@ namespace Brickwork.Core.Tests;
 public class BasicWallsImportTests
 {
     private static string BasicWallsInkPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "basic-walls.ink"));
 
     [Fact]
     public async Task ImportAsync_LoadsFiveWalls_FromBasicWallsInk()

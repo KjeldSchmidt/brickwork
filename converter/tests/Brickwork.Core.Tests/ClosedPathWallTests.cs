@@ -36,7 +36,7 @@ public class WallPolylineEdgesTests
     [Fact]
     public async Task ImportAsync_ClosedPathWall_HasFourEdgesAndFourPoints()
     {
-        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "basic-walls.ink"));
         await using var input = File.OpenRead(path);
         var map = await new InkarnateImporter().ImportAsync(input);
 
@@ -53,7 +53,7 @@ public class ClosedTerrainRingTests
     [Fact]
     public async Task BuildClosedRing_ImportedSquare_InnerFitsInsideOuter()
     {
-        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "basic-walls.ink"));
         await using var input = File.OpenRead(path);
         var map = await new InkarnateImporter().ImportAsync(input);
 

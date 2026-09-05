@@ -8,7 +8,7 @@ namespace Brickwork.Core.Tests;
 public class ConvertMapServiceTests
 {
     private static string EmptyBackupInkPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "empty-backup.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "empty-backup.ink"));
 
     [Fact]
     public void ServiceFactory_RegistersExpectedExportFormats()
@@ -75,7 +75,7 @@ public class ConvertMapServiceTests
 public class InkarnateImporterTests
 {
     private static string EmptyBackupInkPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "empty-backup.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "empty-backup.ink"));
 
     [Fact]
     public async Task ImportAsync_ReadsEssentialMetadata_FromInkBackup()

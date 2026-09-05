@@ -11,7 +11,7 @@ public class OldMapStoneWallTests
     private const int StoneWallEntityId = 559;
 
     private static string OldMapInkPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "old-map.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "old-map.ink"));
 
     [Fact]
     public void IsClosedPath_DetectsSvgCloseVerb()

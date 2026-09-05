@@ -8,10 +8,10 @@ namespace Brickwork.Core.Tests;
 public class WallPortalSegmentTests
 {
     private static string BasicWallsInkPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "basic-walls.ink"));
 
     private static string ClosedGapsInkPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "debug-closed-paths-with-gaps.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "debug-closed-paths-with-gaps.ink"));
 
     [Fact]
     public void BuildSegments_WithoutPortals_ReturnsFullPolyline()

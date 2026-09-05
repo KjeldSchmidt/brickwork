@@ -96,7 +96,7 @@ public class WallThicknessPolygonBuilderTests
     [Fact]
     public async Task BuildOutline_ImportedWall_ProducesPolygon()
     {
-        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "basic-walls.ink"));
         await using var input = File.OpenRead(path);
         var map = await new Brickwork.Inkarnate.InkarnateImporter().ImportAsync(input);
         var wall = map.Walls.Single(w => w.EntityId == 3);

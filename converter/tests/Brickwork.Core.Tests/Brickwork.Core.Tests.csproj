@@ -25,28 +25,28 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\..\resources\empty-backup.ink" Link="resources\empty-backup.ink">
+    <None Include="..\..\..\resources\test-maps\empty-backup.ink" Link="resources\test-maps\empty-backup.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\resources\basic-walls.ink" Link="resources\basic-walls.ink">
+    <None Include="..\..\..\resources\test-maps\basic-walls.ink" Link="resources\test-maps\basic-walls.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\resources\walls-with-history.ink" Link="resources\walls-with-history.ink">
+    <None Include="..\..\..\resources\test-maps\walls-with-history.ink" Link="resources\test-maps\walls-with-history.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\resources\debug-closed-paths-with-gaps.ink" Link="resources\debug-closed-paths-with-gaps.ink">
+    <None Include="..\..\..\resources\test-maps\debug-closed-paths-with-gaps.ink" Link="resources\test-maps\debug-closed-paths-with-gaps.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\resources\old-map.ink" Link="resources\old-map.ink">
+    <None Include="..\..\..\resources\test-maps\old-map.ink" Link="resources\test-maps\old-map.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\resources\map-with-mass-edits.ink" Link="resources\map-with-mass-edits.ink">
+    <None Include="..\..\..\resources\test-maps\map-with-mass-edits.ink" Link="resources\test-maps\map-with-mass-edits.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\resources\The Pig and Whistle tavern.uvtt" Link="resources\The Pig and Whistle tavern.uvtt">
+    <None Include="..\..\..\resources\test-maps\The Pig and Whistle tavern.uvtt" Link="resources\test-maps\The Pig and Whistle tavern.uvtt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\resources\fvtt-scene-basic-walls.json" Link="resources\fvtt-scene-basic-walls.json">
+    <None Include="..\..\..\resources\test-maps\fvtt-scene-basic-walls.json" Link="resources\test-maps\fvtt-scene-basic-walls.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -9,7 +9,7 @@ namespace Brickwork.Core.Tests;
 public class WallsWithHistoryImportTests
 {
     private static string WallsWithHistoryInkPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "walls-with-history.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "walls-with-history.ink"));
 
     [Fact]
     public async Task ImportAsync_RemovesDeletedWall()

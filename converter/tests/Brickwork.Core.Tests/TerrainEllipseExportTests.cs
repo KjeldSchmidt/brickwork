@@ -9,7 +9,7 @@ namespace Brickwork.Core.Tests;
 public class TerrainEllipseExportTests
 {
     private static string MapPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "map-with-mass-edits.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "map-with-mass-edits.ink"));
 
     [Theory]
     [InlineData(1646)]

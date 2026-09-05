@@ -6,7 +6,7 @@ namespace Brickwork.Core.Tests;
 public class MassEditsImportTests
 {
     private static string MapPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "map-with-mass-edits.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "map-with-mass-edits.ink"));
 
     [Fact]
     public async Task ImportAsync_DoesNotKeepReplacedPrisonBars()

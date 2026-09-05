@@ -8,7 +8,7 @@ namespace Brickwork.Core.Tests;
 public class InkarnateCompatibilityAnalyzerTests
 {
     private static string EmptyBackupInkPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "empty-backup.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "empty-backup.ink"));
 
     [Fact]
     public async Task AnalyzeAsync_ReportsEmptyBackupCompatibility()

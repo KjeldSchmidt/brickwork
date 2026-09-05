@@ -209,14 +209,14 @@ public class WallExportRunTests
 
     private static async Task<MapDocument> LoadMassEditsMapAsync()
     {
-        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "map-with-mass-edits.ink"));
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "map-with-mass-edits.ink"));
         await using var input = File.OpenRead(path);
         return await new InkarnateImporter().ImportAsync(input);
     }
 
     private static async Task<MapDocument> LoadBasicWallsAsync()
     {
-        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "basic-walls.ink"));
         await using var input = File.OpenRead(path);
         return await new InkarnateImporter().ImportAsync(input);
     }
@@ -225,7 +225,7 @@ public class WallExportRunTests
 public class FoundryExporterTests
 {
     private static string BasicWallsInkPath =>
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "basic-walls.ink"));
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "resources", "test-maps", "basic-walls.ink"));
 
     [Fact]
     public async Task ExportAsync_WritesFoundryScene_WithExpectedMetadata()
