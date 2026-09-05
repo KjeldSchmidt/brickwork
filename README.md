@@ -1,4 +1,4 @@
-# ![Brickwork](resources/logo/icon-48.png) Brickwork
+# ![Brickwork](resources/logo/icon-32.png) Brickwork
 
 ## For Users
 
