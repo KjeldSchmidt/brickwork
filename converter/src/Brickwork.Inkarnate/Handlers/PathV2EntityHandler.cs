@@ -46,7 +46,8 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
         var wall = new Wall
         {
             EntityId = entityId.Value,
-            Name = InkJsonReader.ReadString(entity, "defaultName"),
+            Name = InkJsonReader.ReadString(entity, "name")
+                ?? InkJsonReader.ReadString(entity, "defaultName"),
             LayerId = item.LayerId,
             WallEnabled = true,
             IsClosed = isClosed,
@@ -93,6 +94,12 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
         WallPointSimplifier.Apply(wall, WallSimplificationSettings.DefaultToleranceSceneUnits);
 
         EntityParsing.ApplyPortalsIfPresent(wall, entity);
+
+        if (entity.TryGetProperty("isVisible", out var visibleElement) &&
+            visibleElement.ValueKind == JsonValueKind.False)
+        {
+            wall.IsEntityVisible = false;
+        }
 
         context.WallsByEntityId[wall.EntityId] = wall;
         var groupId = InkJsonReader.ReadInt(entity, "groupId");

@@ -43,15 +43,6 @@ internal sealed class CompositeTransactionHandler : IInkTransactionHandler
             understanding = Combine(understanding, nested.Understanding);
         }
 
-        if (children.Count == 0)
-        {
-            return TransactionAnalysisFactory.Create(
-                transaction,
-                CommandType,
-                TransactionUnderstanding.Unknown,
-                "empty cmds");
-        }
-
         return TransactionAnalysisFactory.Create(
             transaction,
             CommandType,

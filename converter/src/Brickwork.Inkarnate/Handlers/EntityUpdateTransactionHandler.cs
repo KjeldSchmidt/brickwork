@@ -65,7 +65,7 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
             return TransactionUnderstanding.KnownIgnored;
         }
 
-        return ApplyWallUpdate(wall, updateElement);
+        return ApplyWallUpdate(context, wall, updateElement);
     }
 
     private static TransactionUnderstanding ApplyGroupUpdate(
@@ -153,7 +153,10 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
         return appliedKnownField ? understanding : TransactionUnderstanding.KnownIgnored;
     }
 
-    private static TransactionUnderstanding ApplyWallUpdate(Wall wall, JsonElement updateElement)
+    private static TransactionUnderstanding ApplyWallUpdate(
+        InkImportContext context,
+        Wall wall,
+        JsonElement updateElement)
     {
         var understanding = TransactionUnderstanding.FullyUnderstood;
         var appliedKnownField = false;
@@ -165,6 +168,7 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
         double? scale = null;
         var hasTransform = false;
         var pathsChanged = false;
+        bool? isVisible = null;
 
         foreach (var property in updateElement.EnumerateObject())
         {
@@ -251,6 +255,31 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
                 case "order":
                     appliedKnownField = true;
                     break;
+                case "wallEnabled":
+                    if (property.Value.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                    {
+                        wall.WallEnabled = property.Value.ValueKind == JsonValueKind.True;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "isVisible":
+                    if (property.Value.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                    {
+                        isVisible = property.Value.ValueKind == JsonValueKind.True;
+                        appliedKnownField = true;
+                    }
+
+                    break;
+                case "defaultName":
+                    // Create uses defaultName; some updates may still send it.
+                    if (property.Value.ValueKind == JsonValueKind.String)
+                    {
+                        wall.Name = property.Value.GetString();
+                        appliedKnownField = true;
+                    }
+
+                    break;
                 default:
                     understanding = TransactionUnderstanding.KnownIgnored;
                     break;
@@ -271,6 +300,11 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
             }
 
             WallGeometryRebuilder.RebuildFromPath(wall);
+        }
+
+        if (isVisible is bool visible)
+        {
+            context.SetEntityVisible(wall, visible);
         }
 
         return appliedKnownField ? understanding : TransactionUnderstanding.KnownIgnored;

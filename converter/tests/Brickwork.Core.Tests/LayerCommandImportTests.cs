@@ -263,6 +263,59 @@ public class LayerCommandImportTests
     }
 
     [Fact]
+    public void Import_EmptyComposite_IsFullyUnderstood()
+    {
+        const string json = """
+            {
+              "title": "empty-composite",
+              "version": 3,
+              "history": [
+                {
+                  "transactionId": 896,
+                  "cmdType": "cmd-composite",
+                  "cmds": []
+                }
+              ]
+            }
+            """;
+
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var map = InkarnateDocumentParser.Parse(document.RootElement);
+
+        Assert.NotNull(map.Compatibility);
+        var composite = Assert.Single(map.Compatibility!.Transactions);
+        Assert.Equal("cmd-composite", composite.CommandType);
+        Assert.Equal(TransactionUnderstanding.FullyUnderstood, composite.Understanding);
+        Assert.Empty(composite.Children);
+        Assert.Equal(0, map.Compatibility.UnknownCount);
+    }
+
+    [Fact]
+    public void Import_LayerMaskCommands_AreKnownIgnored()
+    {
+        const string json = """
+            {
+              "title": "masks",
+              "version": 3,
+              "history": [
+                { "transactionId": 1, "cmdType": "cmd-layer-add-mask" },
+                { "transactionId": 2, "cmdType": "cmd-layer-update-mask-visibility" }
+              ]
+            }
+            """;
+
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var map = InkarnateDocumentParser.Parse(document.RootElement);
+
+        Assert.NotNull(map.Compatibility);
+        Assert.Equal(0, map.Compatibility!.UnknownCount);
+        Assert.Equal(2, map.Compatibility.KnownIgnoredCount);
+        Assert.All(
+            map.Compatibility.Transactions,
+            tx => Assert.Equal(TransactionUnderstanding.KnownIgnored, tx.Understanding));
+    }
+
+    [Fact]
     public void Import_LayerRemove_RemovesLayerAndWalls()
     {
         const string json = """

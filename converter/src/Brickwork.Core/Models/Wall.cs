@@ -10,6 +10,9 @@ public sealed class Wall
 
     public bool IsActive { get; set; } = true;
 
+    /// <summary>Inkarnate per-entity <c>isVisible</c>; combined with layer visibility into <see cref="IsActive"/>.</summary>
+    public bool IsEntityVisible { get; set; } = true;
+
     public WallLineType LineType { get; set; } = WallLineType.Solid;
 
     public bool WallEnabled { get; set; } = true;

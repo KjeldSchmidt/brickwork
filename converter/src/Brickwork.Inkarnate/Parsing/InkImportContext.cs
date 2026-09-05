@@ -150,17 +150,16 @@ internal sealed class InkImportContext
 
     public void ApplyVisibilityToWall(Wall wall, string? layerId)
     {
-        if (layerId is null ||
-            !LayersById.TryGetValue(layerId, out var layer))
-        {
-            return;
-        }
+        var layerVisible = layerId is null ||
+                           !LayersById.TryGetValue(layerId, out var layer) ||
+                           layer.IsVisible;
+        SetWallActive(wall, wall.IsEntityVisible && layerVisible);
+    }
 
-        wall.IsActive = layer.IsVisible;
-        foreach (var portal in wall.Portals)
-        {
-            portal.IsActive = layer.IsVisible;
-        }
+    public void SetEntityVisible(Wall wall, bool isVisible)
+    {
+        wall.IsEntityVisible = isVisible;
+        ApplyVisibilityToWall(wall, wall.LayerId);
     }
 
     private void ApplyLayerVisibilityToEntities(string layerId, bool isVisible)
@@ -168,11 +167,16 @@ internal sealed class InkImportContext
         foreach (var wall in WallsByEntityId.Values.Where(wall =>
                      string.Equals(wall.LayerId, layerId, StringComparison.OrdinalIgnoreCase)))
         {
-            wall.IsActive = isVisible;
-            foreach (var portal in wall.Portals)
-            {
-                portal.IsActive = isVisible;
-            }
+            SetWallActive(wall, wall.IsEntityVisible && isVisible);
+        }
+    }
+
+    private static void SetWallActive(Wall wall, bool isActive)
+    {
+        wall.IsActive = isActive;
+        foreach (var portal in wall.Portals)
+        {
+            portal.IsActive = isActive;
         }
     }
 

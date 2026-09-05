@@ -186,6 +186,107 @@ public class EntityUpdateHandlerTests
         Assert.Single(wall.Portals);
         Assert.Equal(1012.49, wall.Portals[0].Width, precision: 2);
     }
+
+    [Fact]
+    public void Process_AppliesIsVisible_AndPreservesAcrossLayerShow()
+    {
+        const string json = """
+            {
+              "title": "visibility",
+              "version": 3,
+              "history": [
+                {
+                  "transactionId": 1,
+                  "cmdType": "cmd-layer-add",
+                  "layerId": "layer-a",
+                  "layerKind": "entity",
+                  "layerData": { "name": "A", "isVisible": true }
+                },
+                {
+                  "transactionId": 2,
+                  "cmdType": "cmd-entity-add",
+                  "items": [{
+                    "layerId": "layer-a",
+                    "entity": {
+                      "entityType": "path-v2",
+                      "entityId": 29695,
+                      "wallEnabled": true,
+                      "paths": "M0,0l100,0",
+                      "x": 0,
+                      "y": 0,
+                      "scale": 1
+                    }
+                  }]
+                },
+                {
+                  "transactionId": 3,
+                  "cmdType": "cmd-entity-update",
+                  "items": [{ "entityId": 29695, "update": { "isVisible": false } }]
+                },
+                {
+                  "transactionId": 4,
+                  "cmdType": "cmd-layer-update-visibility",
+                  "layerId": "layer-a",
+                  "isVisible": false
+                },
+                {
+                  "transactionId": 5,
+                  "cmdType": "cmd-layer-update-visibility",
+                  "layerId": "layer-a",
+                  "isVisible": true
+                }
+              ]
+            }
+            """;
+
+        using var document = JsonDocument.Parse(json);
+        var map = InkarnateDocumentParser.Parse(document.RootElement);
+
+        var wall = Assert.Single(map.Walls);
+        Assert.False(wall.IsEntityVisible);
+        Assert.False(wall.IsActive);
+        Assert.Equal(0, map.Compatibility!.UnknownCount);
+    }
+
+    [Fact]
+    public void Process_AppliesWallEnabled()
+    {
+        const string json = """
+            {
+              "title": "wall-enabled",
+              "version": 3,
+              "history": [
+                {
+                  "transactionId": 1,
+                  "cmdType": "cmd-entity-add",
+                  "items": [{
+                    "layerId": "layer-a",
+                    "entity": {
+                      "entityType": "path-v2",
+                      "entityId": 7,
+                      "wallEnabled": true,
+                      "paths": "M0,0l100,0",
+                      "x": 0,
+                      "y": 0,
+                      "scale": 1
+                    }
+                  }]
+                },
+                {
+                  "transactionId": 2,
+                  "cmdType": "cmd-entity-update",
+                  "items": [{ "entityId": 7, "update": { "wallEnabled": false } }]
+                }
+              ]
+            }
+            """;
+
+        using var document = JsonDocument.Parse(json);
+        var map = InkarnateDocumentParser.Parse(document.RootElement);
+
+        var wall = Assert.Single(map.Walls);
+        Assert.False(wall.WallEnabled);
+    }
 }
 
 public class MapExportFiltersTests
