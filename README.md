@@ -1,4 +1,4 @@
-# Brickwork
+# ![Brickwork](resources/logo/icon-48.png) Brickwork
 
 Desktop and CLI tools for converting Inkarnate map backups into virtual tabletop formats.
 

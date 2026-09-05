@@ -60,7 +60,7 @@ jobs:
         run: |
           mkdir artifact
           if [ "${{ runner.os }}" = "Windows" ]; then
-            cp publish/Brickwork.App.exe "artifact/${{ matrix.artifact }}.exe"
+            cp publish/Brickwork.exe "artifact/${{ matrix.artifact }}.exe"
           else
             cp publish/Brickwork.App "artifact/${{ matrix.artifact }}"
             chmod +x "artifact/${{ matrix.artifact }}"

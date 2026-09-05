@@ -7,6 +7,10 @@
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\..\resources\logo\icon.ico</ApplicationIcon>
+    <AssemblyName>Brickwork</AssemblyName>
+    <AssemblyTitle>Brickwork</AssemblyTitle>
+    <Product>Brickwork</Product>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <RootNamespace>Brickwork.App</RootNamespace>
   </PropertyGroup>
