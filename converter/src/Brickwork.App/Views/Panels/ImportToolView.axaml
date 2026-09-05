@@ -5,41 +5,38 @@
              x:DataType="vm:ImportToolViewModel"
              Classes="tool-panel">
     <ScrollViewer Classes="tool-panel-scroll">
-        <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,*,Auto">
-        <Button Grid.Row="0"
-                Margin="0,0,0,12"
-                Content="Open Original Map"
+        <StackPanel Margin="12" Spacing="12">
+        <Button Content="Open Original Map"
                 Command="{Binding OpenSourceMapCommand}"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center" />
 
-        <Button Grid.Row="1"
-                Margin="0,0,0,12"
-                Content="Export to VTT"
+        <Button Content="Export to VTT"
                 Command="{Binding ConvertCommand}"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center" />
 
-        <Border Grid.Row="2"
-                Margin="0,0,0,12"
-                Padding="10"
+        <Border Padding="10"
                 CornerRadius="6"
                 Background="#33FFAA44"
                 IsVisible="{Binding ShowCompatibilityWarning}">
             <StackPanel Spacing="8">
                 <TextBlock Text="{Binding CompatibilityWarningMessage}"
                            TextWrapping="Wrap" />
-                <Button Content="Report issue on GitHub"
-                        Command="{Binding ReportCompatibilityIssueCommand}"
-                        HorizontalAlignment="Left" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Report issue on GitHub"
+                            Classes="accent"
+                            Command="{Binding ReportCompatibilityIssueCommand}" />
+                    <Button Content="Dismiss"
+                            Classes="muted"
+                            Command="{Binding DismissCompatibilityWarningCommand}" />
+                </StackPanel>
             </StackPanel>
         </Border>
 
-        <TextBlock Grid.Row="4"
-                   Text="{Binding StatusMessage}"
+        <TextBlock Text="{Binding StatusMessage}"
                    TextWrapping="Wrap"
-                   VerticalAlignment="Bottom"
                    Opacity="0.85" />
-        </Grid>
+        </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -10,6 +10,23 @@
     <UserControl.Resources>
         <conv:WallLineTypeDisplayConverter x:Key="WallLineTypeDisplayConverter" />
     </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="TreeViewItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="TreeViewItem CheckBox">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ComboBox.wall-tree-type">
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
     <ScrollViewer Classes="tool-panel-scroll">
         <Grid Margin="12">
         <TextBlock Text="Open a source map to list walls."
@@ -25,7 +42,7 @@
             <TreeView.DataTemplates>
                 <TreeDataTemplate DataType="vm:WallLayerNodeViewModel"
                                   ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1">
                         <CheckBox IsChecked="{Binding IsActive}"
                                   IsThreeState="True"
                                   VerticalAlignment="Center" />
@@ -37,7 +54,7 @@
 
                 <TreeDataTemplate DataType="vm:WallGroupNodeViewModel"
                                   ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1">
                         <CheckBox IsChecked="{Binding IsActive}"
                                   IsThreeState="True"
                                   VerticalAlignment="Center" />
@@ -50,7 +67,7 @@
 
                 <TreeDataTemplate DataType="vm:WallItemViewModel"
                                   ItemsSource="{Binding Portals}">
-                    <Border Padding="2,4"
+                    <Border Padding="2,1"
                             HorizontalAlignment="Stretch"
                             CornerRadius="4"
                             Classes.wall-tree-highlight="{Binding IsTreeHighlighted}">
@@ -64,6 +81,7 @@
                                        VerticalAlignment="Center"
                                        Margin="6,0" />
                             <ComboBox Grid.Column="2"
+                                      Classes="wall-tree-type"
                                       Width="118"
                                       ItemsSource="{Binding LineTypeOptions}"
                                       SelectedItem="{Binding LineType}">
@@ -78,7 +96,7 @@
                 </TreeDataTemplate>
 
                 <DataTemplate DataType="vm:WallPortalItemViewModel">
-                    <Border Padding="2,4"
+                    <Border Padding="2,1"
                             Margin="20,0,0,0"
                             HorizontalAlignment="Stretch"
                             CornerRadius="4"
@@ -94,6 +112,7 @@
                                        Margin="6,0"
                                        Opacity="0.85" />
                             <ComboBox Grid.Column="2"
+                                      Classes="wall-tree-type"
                                       Width="118"
                                       ItemsSource="{Binding LineTypeOptions}"
                                       SelectedItem="{Binding LineType}">

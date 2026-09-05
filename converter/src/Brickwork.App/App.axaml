@@ -11,9 +11,6 @@
         <DataTemplate DataType="vm:ImportToolViewModel">
             <panels:ImportToolView />
         </DataTemplate>
-        <DataTemplate DataType="vm:DebugToolViewModel">
-            <panels:DebugToolView />
-        </DataTemplate>
         <DataTemplate DataType="vm:WallsToolViewModel">
             <panels:WallsToolView />
         </DataTemplate>
@@ -159,6 +156,26 @@
         <Style Selector="Border.wall-tree-highlight">
             <Setter Property="Background" Value="#334488CC" />
             <Setter Property="CornerRadius" Value="4" />
+        </Style>
+
+        <Style Selector="Button.accent">
+            <Setter Property="Background" Value="#3B82F6" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#2563EB" />
+        </Style>
+
+        <Style Selector="Button.accent:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2563EB" />
+        </Style>
+
+        <Style Selector="Button.muted">
+            <Setter Property="Background" Value="#353945" />
+            <Setter Property="Foreground" Value="#B8C0CC" />
+            <Setter Property="BorderBrush" Value="#4A5364" />
+        </Style>
+
+        <Style Selector="Button.muted:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#424957" />
         </Style>
     </Application.Styles>
 </Application>

@@ -23,6 +23,11 @@ public partial class ImportToolViewModel : Tool
     [ObservableProperty]
     private string _compatibilityWarningMessage = string.Empty;
 
+    private bool _compatibilityWarningDismissed;
+
+    /// <summary>Invoked when the File dock should grow/shrink for the compatibility banner.</summary>
+    public Action<bool>? FileDockExpandedChanged { get; set; }
+
     public ImportToolViewModel(EditorSession session)
     {
         _session = session;
@@ -32,6 +37,7 @@ public partial class ImportToolViewModel : Tool
             if (args.PropertyName is nameof(EditorSession.Map))
             {
                 ConvertCommand.NotifyCanExecuteChanged();
+                _compatibilityWarningDismissed = false;
                 UpdateCompatibilityWarning();
             }
         };
@@ -46,17 +52,41 @@ public partial class ImportToolViewModel : Tool
             $"Unknown commands in {mapName}").ConfigureAwait(true);
     }
 
+    [RelayCommand(CanExecute = nameof(CanDismissCompatibilityWarning))]
+    private void DismissCompatibilityWarning()
+    {
+        _compatibilityWarningDismissed = true;
+        SetCompatibilityWarningVisible(false);
+        DismissCompatibilityWarningCommand.NotifyCanExecuteChanged();
+    }
+
     private void UpdateCompatibilityWarning()
     {
         var report = _session.Map?.Compatibility;
-        ShowCompatibilityWarning = report?.UnknownCount > 0;
-        CompatibilityWarningMessage = report?.UnknownCount > 0
-            ? $"{report.UnknownCount} unknown command(s) found during import. See Debug panel or report an issue."
+        var hasUnknown = report?.UnknownCount > 0;
+        CompatibilityWarningMessage = hasUnknown
+            ? $"{report!.UnknownCount} unknown command(s) found during import. See Debug + Settings or report an issue."
             : string.Empty;
+        SetCompatibilityWarningVisible(hasUnknown && !_compatibilityWarningDismissed);
         ReportCompatibilityIssueCommand.NotifyCanExecuteChanged();
+        DismissCompatibilityWarningCommand.NotifyCanExecuteChanged();
     }
 
-    private bool CanReportCompatibilityIssue() => _session.Map?.Compatibility?.UnknownCount > 0;
+    private void SetCompatibilityWarningVisible(bool visible)
+    {
+        if (ShowCompatibilityWarning == visible)
+        {
+            return;
+        }
+
+        ShowCompatibilityWarning = visible;
+        FileDockExpandedChanged?.Invoke(visible);
+    }
+
+    private bool CanReportCompatibilityIssue() =>
+        !_compatibilityWarningDismissed && _session.Map?.Compatibility?.UnknownCount > 0;
+
+    private bool CanDismissCompatibilityWarning() => ShowCompatibilityWarning;
 
     [RelayCommand]
     private async Task OpenSourceMapAsync()

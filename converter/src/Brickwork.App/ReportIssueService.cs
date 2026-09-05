@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Brickwork.App.Views.Dialogs;
-using Brickwork.Core.Models;
 
 namespace Brickwork.App;
 
@@ -15,27 +14,18 @@ public static class ReportIssueService
         }
 
         var viewport = MapScreenshotCapture.FindMainMapViewport();
-        var dialog = await ReportIssueDialog.ShowAsync(
-            owner,
-            defaultTitle,
-            canIncludeScreenshot: viewport?.Map is not null).ConfigureAwait(true);
+        var dialog = await ReportIssueDialog.ShowAsync(owner, defaultTitle, viewport).ConfigureAwait(true);
 
         if (dialog is null)
         {
             return;
         }
 
-        string? screenshotPath = null;
-        if (dialog.IncludeScreenshot && viewport is not null)
-        {
-            screenshotPath = await MapScreenshotCapture.SaveViewportScreenshotAsync(viewport).ConfigureAwait(true);
-        }
-
         var body = GitHubIssueReporter.BuildCompatibilityIssueBody(
             session.Map,
             session.Map?.Compatibility,
-            dialog.IncludeSourceFile,
-            screenshotPath);
+            dialog.ScreenshotPath,
+            dialog.IssueTitle);
 
         GitHubIssueReporter.OpenIssueInBrowser(GitHubIssueReporter.BuildIssueUrl(dialog.IssueTitle, body));
     }

@@ -9,15 +9,12 @@
             <StackPanel Spacing="4">
                 <TextBlock Text="About" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding AppVersionLabel}" Opacity="0.85" />
-                <TextBlock Text="Beta build — Foundry VTT export supported."
-                           TextWrapping="Wrap"
-                           Opacity="0.75" />
             </StackPanel>
 
             <StackPanel Spacing="8">
                 <TextBlock Text="Wall simplification tolerance"
                            FontWeight="SemiBold" />
-                <TextBlock Text="Maximum deviation from the original centerline, in scene units. Uses the Ramer-Douglas-Peucker algorithm. Lower values keep more detail; higher values remove more nodes."
+                <TextBlock Text="Lower values keep more detail; higher values remove more nodes."
                            TextWrapping="Wrap"
                            Opacity="0.75" />
                 <NumericUpDown Minimum="0"
@@ -25,6 +22,68 @@
                                Increment="1"
                                FormatString="0.##"
                                Value="{Binding WallSimplificationTolerance}" />
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="Selected wall" FontWeight="SemiBold" />
+                <SelectableTextBlock Text="{Binding SelectedWallSummary}"
+                                     TextWrapping="Wrap"
+                                     FontFamily="Consolas, Courier New, monospace"
+                                     Opacity="0.9" />
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="Compatibility" FontWeight="SemiBold" />
+                <SelectableTextBlock Text="{Binding CompatibilityMessage}"
+                                     TextWrapping="Wrap"
+                                     FontFamily="Consolas, Courier New, monospace"
+                                     Opacity="0.9" />
+                <Expander Header="Details"
+                          IsVisible="{Binding HasCompatibilityDetails}"
+                          IsExpanded="False">
+                    <StackPanel Margin="0,8,0,0" Spacing="12">
+                        <Button Content="Report issue on GitHub"
+                                Command="{Binding ReportCompatibilityIssueCommand}"
+                                IsVisible="{Binding HasUnknownActions}"
+                                HorizontalAlignment="Left" />
+                        <StackPanel Spacing="4" IsVisible="{Binding HasUnknownActions}">
+                            <TextBlock Text="Unknown actions"
+                                       FontWeight="SemiBold"
+                                       Opacity="0.9" />
+                            <SelectableTextBlock Text="{Binding CompatibilityUnknownActionsMessage}"
+                                                 TextWrapping="Wrap"
+                                                 FontFamily="Consolas, Courier New, monospace"
+                                                 Opacity="0.9" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Transactions"
+                                       FontWeight="SemiBold"
+                                       Opacity="0.9" />
+                            <SelectableTextBlock Text="{Binding CompatibilityTransactionsMessage}"
+                                                 TextWrapping="Wrap"
+                                                 FontFamily="Consolas, Courier New, monospace"
+                                                 Opacity="0.9" />
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="Source JSON" FontWeight="SemiBold" />
+                <SelectableTextBlock Text="{Binding SourceJsonSummary}"
+                                     TextWrapping="Wrap"
+                                     Opacity="0.85" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Copy"
+                            Command="{Binding CopySourceJsonCommand}"
+                            MinWidth="88" />
+                    <Button Content="Save as..."
+                            Command="{Binding SaveSourceJsonCommand}"
+                            MinWidth="88" />
+                </StackPanel>
+                <SelectableTextBlock Text="{Binding SourceJsonStatus}"
+                                     TextWrapping="Wrap"
+                                     Opacity="0.85" />
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

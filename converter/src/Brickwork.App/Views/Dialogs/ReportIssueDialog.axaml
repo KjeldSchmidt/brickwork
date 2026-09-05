@@ -17,10 +17,14 @@
 
         <StackPanel Spacing="8">
             <TextBlock Text="Optional attachments" FontWeight="SemiBold" />
-            <CheckBox x:Name="ScreenshotOption"
-                      Content="Save a map screenshot locally and mention it in the issue" />
-            <CheckBox x:Name="SourceFileOption"
-                      Content="I will manually attach the full source .ink file to the issue" />
+            <Button x:Name="ScreenshotButton"
+                    Content="Save screenshot"
+                    HorizontalAlignment="Left"
+                    Click="OnSaveScreenshotClick" />
+            <TextBlock Text="You are welcome to attach the source .ink file to the issue, but it is not required."
+                       TextWrapping="Wrap"
+                       Opacity="0.75"
+                       FontSize="12" />
         </StackPanel>
 
         <TextBlock Text="Compatibility details are always included. Nothing is uploaded automatically."

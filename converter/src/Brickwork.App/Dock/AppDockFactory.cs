@@ -8,6 +8,11 @@ namespace Brickwork.App.Dock;
 
 public sealed class AppDockFactory : Factory
 {
+    private const double FileDockCompactProportion = 0.17;
+    private const double FileDockExpandedProportion = 0.27;
+    private const double WallsDockCompactProportion = 1d - FileDockCompactProportion;
+    private const double WallsDockExpandedProportion = 1d - FileDockExpandedProportion;
+
     private readonly EditorSession _session;
     private IRootDock? _rootDock;
 
@@ -26,14 +31,6 @@ public sealed class AppDockFactory : Factory
             CanPin = true,
         };
 
-        var debugTool = new DebugToolViewModel(_session)
-        {
-            Id = "DebugTool",
-            Title = "Debug",
-            CanClose = false,
-            CanPin = true,
-        };
-
         var wallsTool = new WallsToolViewModel(_session)
         {
             Id = "WallsTool",
@@ -45,7 +42,7 @@ public sealed class AppDockFactory : Factory
         var settingsTool = new SettingsToolViewModel(_session)
         {
             Id = "SettingsTool",
-            Title = "Settings",
+            Title = "Debug + Settings",
             CanClose = false,
             CanPin = true,
         };
@@ -60,10 +57,10 @@ public sealed class AppDockFactory : Factory
         var importDock = new ToolDock
         {
             ActiveDockable = importTool,
-            VisibleDockables = CreateList<IDockable>(importTool, debugTool),
+            VisibleDockables = CreateList<IDockable>(importTool),
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible,
-            Proportion = 0.35,
+            Proportion = FileDockCompactProportion,
         };
 
         var wallsDock = new ToolDock
@@ -72,7 +69,13 @@ public sealed class AppDockFactory : Factory
             VisibleDockables = CreateList<IDockable>(wallsTool, settingsTool),
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible,
-            Proportion = 0.65,
+            Proportion = WallsDockCompactProportion,
+        };
+
+        importTool.FileDockExpandedChanged = expanded =>
+        {
+            importDock.Proportion = expanded ? FileDockExpandedProportion : FileDockCompactProportion;
+            wallsDock.Proportion = expanded ? WallsDockExpandedProportion : WallsDockCompactProportion;
         };
 
         var leftSidebar = new ProportionalDock
@@ -121,7 +124,6 @@ public sealed class AppDockFactory : Factory
         ContextLocator = new Dictionary<string, Func<object?>>
         {
             ["ImportTool"] = () => _session,
-            ["DebugTool"] = () => _session,
             ["WallsTool"] = () => _session,
             ["SettingsTool"] = () => _session,
             ["MapPreview"] = () => _session,

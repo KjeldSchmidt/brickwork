@@ -9,18 +9,21 @@ public static class GitHubIssueReporter
 {
     public const string RepositoryUrl = "https://github.com/KjeldSchmidt/inkarnate-uvtt2-converter";
 
+    /// <summary>Practical cross-browser limit for a pre-filled issues/new URL.</summary>
+    public const int MaxIssueUrlLength = 7000;
+
     public static string BuildIssueUrl(string title, string body) =>
         $"{RepositoryUrl}/issues/new?title={Uri.EscapeDataString(title)}&body={Uri.EscapeDataString(body)}";
 
     public static string BuildCompatibilityIssueBody(
         MapDocument? map,
         CompatibilityReport? report,
-        bool includeSourceFileNote,
-        string? screenshotPath)
+        string? screenshotPath,
+        string issueTitle = "Compatibility issue")
     {
         var builder = new StringBuilder();
         builder.AppendLine("## Summary");
-        builder.AppendLine("Describe what you expected vs what happened.");
+        builder.AppendLine("Feel free to add details here.");
         builder.AppendLine();
         builder.AppendLine("## Environment");
         builder.AppendLine($"- App version: {GetAppVersion()}");
@@ -50,26 +53,6 @@ public static class GitHubIssueReporter
             }
 
             builder.AppendLine("```");
-
-            var sample = FindFirstUnknownTransaction(report);
-            if (sample is not null)
-            {
-                builder.AppendLine();
-                builder.AppendLine("## Sample unknown transaction");
-                builder.AppendLine($"Transaction {sample.TransactionId}: `{sample.CommandType}`");
-                if (!string.IsNullOrWhiteSpace(sample.Detail))
-                {
-                    builder.AppendLine($"Detail: {sample.Detail}");
-                }
-
-                if (!string.IsNullOrWhiteSpace(sample.RawJson))
-                {
-                    builder.AppendLine();
-                    builder.AppendLine("```json");
-                    builder.AppendLine(sample.RawJson);
-                    builder.AppendLine("```");
-                }
-            }
         }
 
         if (!string.IsNullOrWhiteSpace(screenshotPath))
@@ -80,48 +63,129 @@ public static class GitHubIssueReporter
             builder.AppendLine("Please drag and drop the screenshot into this issue.");
         }
 
-        if (includeSourceFileNote && map is not null)
+        builder.AppendLine();
+        builder.AppendLine("## Source file");
+        builder.AppendLine("Optional: attach the source `.ink` file to this issue if you are willing to share it.");
+
+        var fixedBody = builder.ToString().TrimEnd();
+        if (report is null || report.UnknownCount == 0)
         {
-            builder.AppendLine();
-            builder.AppendLine("## Source file");
-            builder.AppendLine("I opted in to sharing the source `.ink` file. Please attach it manually to this issue.");
+            return fixedBody;
+        }
+
+        return AppendUnknownTransactionsWithinUrlBudget(fixedBody, report, issueTitle);
+    }
+
+    private static string AppendUnknownTransactionsWithinUrlBudget(
+        string fixedBody,
+        CompatibilityReport report,
+        string issueTitle)
+    {
+        var unknowns = EnumerateUnknownTransactions(report).ToList();
+        if (unknowns.Count == 0)
+        {
+            return fixedBody;
+        }
+
+        var builder = new StringBuilder(fixedBody);
+        builder.AppendLine();
+        builder.AppendLine();
+        builder.AppendLine("## Unknown transactions");
+
+        var included = 0;
+        foreach (var unknown in unknowns)
+        {
+            var sample = FormatUnknownTransactionSample(unknown, included == 0);
+            var candidate = builder + sample;
+            if (BuildIssueUrl(issueTitle, candidate).Length > MaxIssueUrlLength)
+            {
+                break;
+            }
+
+            builder.Append(sample);
+            included++;
+        }
+
+        var omitted = unknowns.Count - included;
+        if (omitted > 0)
+        {
+            var withNote = builder + FormatOmissionNote(omitted);
+            if (BuildIssueUrl(issueTitle, withNote).Length <= MaxIssueUrlLength)
+            {
+                builder.Append(FormatOmissionNote(omitted));
+            }
+            else if (included == 0)
+            {
+                var fallback = fixedBody + FormatOmissionNote(unknowns.Count);
+                if (BuildIssueUrl(issueTitle, fallback).Length <= MaxIssueUrlLength)
+                {
+                    return fallback.TrimEnd();
+                }
+            }
         }
 
         return builder.ToString().TrimEnd();
     }
 
-    public static TransactionAnalysis? FindFirstUnknownTransaction(CompatibilityReport report)
+    private static string FormatUnknownTransactionSample(TransactionAnalysis sample, bool first)
+    {
+        var builder = new StringBuilder();
+        if (!first)
+        {
+            builder.AppendLine();
+        }
+
+        builder.AppendLine($"### Transaction {sample.TransactionId}: `{sample.CommandType}`");
+        if (!string.IsNullOrWhiteSpace(sample.Detail))
+        {
+            builder.AppendLine($"Detail: {sample.Detail}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(sample.RawJson))
+        {
+            builder.AppendLine();
+            builder.AppendLine("```json");
+            builder.AppendLine(sample.RawJson);
+            builder.AppendLine("```");
+        }
+
+        return builder.ToString();
+    }
+
+    private static string FormatOmissionNote(int omittedCount) =>
+        omittedCount <= 0
+            ? string.Empty
+            : $"\n\n_{omittedCount} more unknown transaction(s) omitted due to URL length; please attach the `.ink` if possible._";
+
+    public static IEnumerable<TransactionAnalysis> EnumerateUnknownTransactions(CompatibilityReport report)
     {
         foreach (var transaction in report.Transactions)
         {
-            var match = FindFirstUnknownTransaction(transaction);
-            if (match is not null)
+            foreach (var match in EnumerateUnknownTransactions(transaction))
             {
-                return match;
+                yield return match;
             }
         }
-
-        return null;
     }
 
-    private static TransactionAnalysis? FindFirstUnknownTransaction(TransactionAnalysis transaction)
+    private static IEnumerable<TransactionAnalysis> EnumerateUnknownTransactions(TransactionAnalysis transaction)
     {
         if (transaction.Understanding == TransactionUnderstanding.Unknown)
         {
-            return transaction;
+            yield return transaction;
         }
 
         foreach (var child in transaction.Children)
         {
-            var match = FindFirstUnknownTransaction(child);
-            if (match is not null)
+            foreach (var match in EnumerateUnknownTransactions(child))
             {
-                return match;
+                yield return match;
             }
         }
-
-        return null;
     }
+
+    public static TransactionAnalysis? FindFirstUnknownTransaction(CompatibilityReport report) =>
+        EnumerateUnknownTransactions(report).FirstOrDefault();
 
     public static string GetAppVersion() =>
         Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
