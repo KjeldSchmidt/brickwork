@@ -14,7 +14,8 @@ down to the more restrictive .uvtt types.
 
 ### Usage
 
-1. Download the Brickwork binary for your OS from the releases
+1. Download the Brickwork binary for your OS from the
+   [releases page](https://github.com/KjeldSchmidt/brickwork/releases)
 2. Save an Inkarnate Backup.
 
    ![In the Inkarnate Editor, click "Save Offline Backup](./resources/images/save-inkarnate-backup.png)
