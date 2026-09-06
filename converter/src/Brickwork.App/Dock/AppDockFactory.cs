@@ -54,6 +54,17 @@ public sealed class AppDockFactory : Factory
             CanClose = false,
         };
 
+        var toolPalette = new ToolPaletteViewModel(_session)
+        {
+            Id = "ToolPalette",
+            Title = "Tools",
+            CanClose = false,
+            CanPin = false,
+            CanFloat = true,
+            MinWidth = 40,
+            MaxWidth = 40,
+        };
+
         var importDock = new ToolDock
         {
             ActiveDockable = importTool,
@@ -87,6 +98,17 @@ public sealed class AppDockFactory : Factory
                 wallsDock),
         };
 
+        var toolsDock = new ToolDock
+        {
+            ActiveDockable = toolPalette,
+            VisibleDockables = CreateList<IDockable>(toolPalette),
+            Alignment = Alignment.Left,
+            GripMode = GripMode.Hidden,
+            MinWidth = 40,
+            MaxWidth = 40,
+            Proportion = 0.02,
+        };
+
         var documentDock = new DocumentDock
         {
             IsCollapsable = false,
@@ -101,10 +123,12 @@ public sealed class AppDockFactory : Factory
             VisibleDockables = CreateList<IDockable>(
                 new ProportionalDock
                 {
-                    Proportion = 0.28,
+                    Proportion = 0.26,
                     Orientation = Orientation.Vertical,
                     VisibleDockables = CreateList<IDockable>(leftSidebar),
                 },
+                new ProportionalDockSplitter { CanResize = true, ResizePreview = true },
+                toolsDock,
                 new ProportionalDockSplitter { CanResize = true, ResizePreview = true },
                 documentDock),
         };
@@ -126,6 +150,7 @@ public sealed class AppDockFactory : Factory
             ["ImportTool"] = () => _session,
             ["WallsTool"] = () => _session,
             ["SettingsTool"] = () => _session,
+            ["ToolPalette"] = () => _session,
             ["MapPreview"] = () => _session,
             ["Root"] = () => layout,
         };

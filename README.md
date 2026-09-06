@@ -60,8 +60,8 @@ something out.
 
 **Q**: Isn't this just AI Slop?
 
-**A**: This project was indeed created with heavy usage of LLM-driven coding tools.
-I am a professional software developer - I could have implemented every
+**A**: This project was indeed created with heavy usage of LLM-driven coding
+tools. I am a professional software developer - I could have implemented every
 individual part of this application myself, but probably never would have found
 the free time to do it without AI coding tools. Even so, I've spent several days
 of full-time work on searching for existing solutions, finding a technical
@@ -75,6 +75,31 @@ truly helps me.
 If you think I should approach this tool, or other work for the PnP-Community,
 with my full professional standards instead of hobbyist standards, I'll be happy
 to talk about doing freelance work for or with you. 😉
+
+----
+
+**Q**: How does this find walls?
+
+**A**: The .ink file is a complete history of edits made in Inkarnate. Brickwork
+makes the simple assumption that every Path - closed or open - might be a wall
+and tracks all of those, recreating them in a lower-resolution approximation.
+
+This makes it different from [Auto Wall](https://autowallvtt.com/), which uses a
+visual approach to wall detection. Auto Wall is a strong general-purpose
+solution when you only have the final map. However, I usually make my own maps
+in Inkarnate, and I believe that Brickwork offers better results in cases where
+the .ink file is available.
+
+----
+
+**Q**: Could this be integrated directly into FoundryVTT?
+
+**A**: In principle, yes. Initial development was much smoother in the
+unconstrained space of a purpose-built tool with, where I could dissect the 
+.ink-file and problems with my parsing/tracking/wall generation independent of
+Foundry APIs. I am still considering the option of taking all the knowledge
+gained until now and translating it into a Foundry Module. Do let me know if
+this is something you want to see.
 
 
 ## For Developers

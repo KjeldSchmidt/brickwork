@@ -14,12 +14,22 @@ public partial class MainWindow : Window
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Escape || DataContext is not MainWindowViewModel viewModel)
+        if (DataContext is not MainWindowViewModel viewModel)
         {
             return;
         }
 
-        viewModel.Session.ClearWallSelection();
-        e.Handled = true;
+        if (e.Key == Key.Escape)
+        {
+            viewModel.Session.ClearWallSelection();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.V)
+        {
+            viewModel.Session.ActiveMapTool = MapToolKind.Pointer;
+            e.Handled = true;
+        }
     }
 }

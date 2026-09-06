@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Brickwork.App.ViewModels"
+             x:Class="Brickwork.App.Views.Panels.ToolPaletteView"
+             x:DataType="vm:ToolPaletteViewModel"
+             Width="40"
+             MinWidth="40"
+             MaxWidth="40"
+             Background="#252830">
+    <ItemsControl ItemsSource="{Binding Tools}"
+                  Margin="0"
+                  HorizontalAlignment="Center">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <StackPanel Orientation="Vertical" Spacing="2" Margin="0,4,0,4" />
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MapToolItemViewModel">
+                <Button Classes="tool-palette-button"
+                        Classes.selected="{Binding IsSelected}"
+                        Width="32"
+                        Height="32"
+                        Padding="4"
+                        Margin="0"
+                        HorizontalAlignment="Center"
+                        Command="{Binding $parent[ItemsControl].((vm:ToolPaletteViewModel)DataContext).SelectToolCommand}"
+                        CommandParameter="{Binding Kind}">
+                    <!-- Optical nudge: arrow glyphs sit left-heavy. Tweak Margin here (e.g. 2–4 left). -->
+                    <Path Width="16"
+                          Height="16"
+                          Margin="7,1,0,0"
+                          Stretch="Uniform"
+                          Fill="{Binding $parent[Button].Foreground}"
+                          Data="{Binding IconGeometry}" />
+                    <ToolTip.Tip>
+                        <StackPanel Spacing="8" MaxWidth="280">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding Name}"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center" />
+                                <Border Classes="tool-tip-code"
+                                        VerticalAlignment="Center"
+                                        IsVisible="{Binding Hotkey, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="{Binding Hotkey}" />
+                                </Border>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding Description}"
+                                       TextWrapping="Wrap"
+                                       Opacity="0.88"
+                                       IsVisible="{Binding HasDescription}" />
+
+                            <ItemsControl ItemsSource="{Binding ButtonHints}"
+                                          IsVisible="{Binding HasButtonHints}"
+                                          Grid.IsSharedSizeScope="True">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="5" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:MapToolButtonHint">
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"
+                                                                  SharedSizeGroup="ToolTipButton" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Classes="tool-tip-code"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Button}" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Description}"
+                                                       TextWrapping="Wrap"
+                                                       Opacity="0.88"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ToolTip.Tip>
+                </Button>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

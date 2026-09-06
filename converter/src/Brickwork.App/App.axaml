@@ -17,6 +17,9 @@
         <DataTemplate DataType="vm:SettingsToolViewModel">
             <panels:SettingsToolView />
         </DataTemplate>
+        <DataTemplate DataType="vm:ToolPaletteViewModel">
+            <panels:ToolPaletteView />
+        </DataTemplate>
         <DataTemplate DataType="vm:MapPreviewDocumentViewModel">
             <map:MapPreviewDocumentView />
         </DataTemplate>
@@ -176,6 +179,58 @@
 
         <Style Selector="Button.muted:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#424957" />
+        </Style>
+
+        <Style Selector="Button.tool-palette-button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#B8C0CC" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+
+        <Style Selector="Button.tool-palette-button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#353945" />
+            <Setter Property="BorderBrush" Value="#4A5364" />
+        </Style>
+
+        <Style Selector="Button.tool-palette-button.selected">
+            <Setter Property="Background" Value="#4A5364" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#3B82F6" />
+        </Style>
+
+        <Style Selector="Button.tool-palette-button.selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#5A6478" />
+            <Setter Property="BorderBrush" Value="#3B82F6" />
+        </Style>
+
+        <Style Selector="ToolTip">
+            <Setter Property="Background" Value="#CC1A1D24" />
+            <Setter Property="Foreground" Value="#E8EEF5" />
+            <Setter Property="BorderBrush" Value="#665A6478" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="MaxWidth" Value="320" />
+        </Style>
+
+        <Style Selector="Border.tool-tip-code">
+            <Setter Property="Background" Value="#2AFFFFFF" />
+            <Setter Property="BorderBrush" Value="#445A6478" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="3" />
+            <!-- Extra top padding optically centers monospace glyphs in the chip. -->
+            <Setter Property="Padding" Value="5,3,5,1" />
+        </Style>
+
+        <Style Selector="Border.tool-tip-code TextBlock">
+            <Setter Property="FontFamily" Value="Consolas, Courier New, monospace" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="#D7DEE8" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
         </Style>
     </Application.Styles>
 </Application>

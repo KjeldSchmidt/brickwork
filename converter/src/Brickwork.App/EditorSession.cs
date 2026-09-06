@@ -39,6 +39,9 @@ public sealed partial class EditorSession : ObservableObject
     [ObservableProperty]
     private double _wallSimplificationTolerance = WallSimplificationSettings.DefaultToleranceSceneUnits;
 
+    [ObservableProperty]
+    private MapToolKind _activeMapTool = MapToolKind.Pointer;
+
     public void NotifyContentChanged()
     {
         ContentRevision++;
