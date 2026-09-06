@@ -65,7 +65,7 @@ public partial class ImportToolViewModel : Tool
         var report = _session.Map?.Compatibility;
         var hasUnknown = report?.UnknownCount > 0;
         CompatibilityWarningMessage = hasUnknown
-            ? $"{report!.UnknownCount} unknown command(s) found during import. See Debug + Settings or report an issue."
+            ? $"{report!.UnknownCount} unknown command(s) found during import. Things are probably fine but it would be great if you reported this on GitHub."
             : string.Empty;
         SetCompatibilityWarningVisible(hasUnknown && !_compatibilityWarningDismissed);
         ReportCompatibilityIssueCommand.NotifyCanExecuteChanged();
