@@ -22,6 +22,7 @@ internal sealed class InkTransactionRegistry
             new LightEntityHandler(),
             new GroupEntityHandler(),
             new KnownIgnoredEntityHandler("stamp"),
+            new KnownIgnoredEntityHandler("text"),
         ];
 
         var handlers = new Dictionary<string, IInkTransactionHandler>(StringComparer.OrdinalIgnoreCase);

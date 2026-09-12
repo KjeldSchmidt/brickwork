@@ -93,7 +93,7 @@ public class InkarnateCompatibilityAnalyzerTests
     }
 
     [Fact]
-    public void EntityAdd_TreatsStampAndGroupAsKnownIgnored()
+    public void EntityAdd_TreatsStampGroupAndTextAsKnownIgnored()
     {
         const string json = """
             {
@@ -128,6 +128,10 @@ public class InkarnateCompatibilityAnalyzerTests
                     {
                       "layerId": "layer-object-1",
                       "entity": { "entityType": "stamp", "entityId": 13 }
+                    },
+                    {
+                      "layerId": "layer-object-3",
+                      "entity": { "entityType": "text", "entityId": 14, "text": "X" }
                     }
                   ]
                 }
