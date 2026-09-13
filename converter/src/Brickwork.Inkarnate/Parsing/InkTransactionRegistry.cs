@@ -41,6 +41,7 @@ internal sealed class InkTransactionRegistry
         Register(new KnownIgnoredCommandHandler("cmd-metadata"));
         Register(new KnownIgnoredCommandHandler("cmd-mask"));
         Register(new KnownIgnoredCommandHandler("cmd-set-base-color"));
+        Register(new KnownIgnoredCommandHandler("cmd-opened-at-resolution"));
         Register(new BrushTransactionHandler());
         Register(new EntityAddTransactionHandler(entityHandlers));
         Register(new EntityUpdateTransactionHandler());
