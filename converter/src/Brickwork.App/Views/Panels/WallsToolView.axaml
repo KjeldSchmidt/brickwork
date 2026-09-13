@@ -29,7 +29,7 @@
     </UserControl.Styles>
     <ScrollViewer Classes="tool-panel-scroll">
         <Grid Margin="12">
-        <TextBlock Text="Open a source map to list walls."
+        <TextBlock Text="{Binding EmptyMessage}"
                    Opacity="0.6"
                    TextWrapping="Wrap"
                    IsVisible="{Binding ShowEmptyMessage}" />

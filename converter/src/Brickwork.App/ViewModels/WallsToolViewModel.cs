@@ -23,6 +23,10 @@ public partial class WallsToolViewModel : Tool
 
     public bool ShowEmptyMessage => !HasLayers;
 
+    public string EmptyMessage => _session.Map is null
+        ? "Open a Source Map to see walls"
+        : "⚠️ It seems your map contains no paths. Note that for inkarnate maps, only paths are understood as walls - stamps that look like walls cannot be parsed.";
+
     public WallsToolViewModel(EditorSession session)
     {
         _session = session;
@@ -243,6 +247,7 @@ public partial class WallsToolViewModel : Tool
         Layers.Clear();
         OnPropertyChanged(nameof(HasLayers));
         OnPropertyChanged(nameof(ShowEmptyMessage));
+        OnPropertyChanged(nameof(EmptyMessage));
 
         if (_session.Map is null)
         {
@@ -294,6 +299,7 @@ public partial class WallsToolViewModel : Tool
 
         OnPropertyChanged(nameof(HasLayers));
         OnPropertyChanged(nameof(ShowEmptyMessage));
+        OnPropertyChanged(nameof(EmptyMessage));
         TreeRevision++;
         ApplyTreeFocusFromSession();
         RefreshHighlightStates();
