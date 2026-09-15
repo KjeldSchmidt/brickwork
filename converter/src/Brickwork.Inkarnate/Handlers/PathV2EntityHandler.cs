@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Brickwork.Core.Geometry;
 using Brickwork.Core.Models;
 using Brickwork.Inkarnate.Parsing;
 
@@ -88,10 +87,8 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
 
         foreach (var point in rawPoints)
         {
-            wall.RawPoints.Add(point);
+            wall.Points.Add(point);
         }
-
-        WallPointSimplifier.Apply(wall, WallSimplificationSettings.DefaultToleranceSceneUnits);
 
         EntityParsing.ApplyPortalsIfPresent(wall, entity);
 

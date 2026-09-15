@@ -27,7 +27,7 @@ internal static class WallDebugFormatter
         builder.AppendLine(CultureInfo.InvariantCulture, $"Line type: {wall.LineType}");
         builder.AppendLine(CultureInfo.InvariantCulture, $"Wall enabled: {FormatBool(wall.WallEnabled)}");
         builder.AppendLine(CultureInfo.InvariantCulture, $"Active: {FormatBool(wall.IsActive)}");
-        builder.AppendLine(CultureInfo.InvariantCulture, $"Vertices: {wall.Points.Count} (raw: {wall.RawPoints.Count})");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"Vertices: {wall.Points.Count}");
         builder.AppendLine(CultureInfo.InvariantCulture, $"Portals: {wall.Portals.Count}");
 
         var totalLength = WallPolylineEdges.TotalLength(wall.Points, wall.IsClosed);

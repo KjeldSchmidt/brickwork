@@ -14,7 +14,7 @@
             <StackPanel Spacing="8">
                 <TextBlock Text="Wall simplification tolerance"
                            FontWeight="SemiBold" />
-                <TextBlock Text="Lower values keep more detail; higher values remove more nodes."
+                <TextBlock Text="Applied when opening a source map. Lower values keep more detail; higher values remove more nodes."
                            TextWrapping="Wrap"
                            Opacity="0.75" />
                 <NumericUpDown Minimum="0"

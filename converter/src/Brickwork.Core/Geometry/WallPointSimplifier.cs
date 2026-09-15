@@ -6,12 +6,12 @@ public static class WallPointSimplifier
 {
     public static void Apply(Wall wall, double tolerance)
     {
-        if (wall.RawPoints.Count < 2)
+        if (wall.Points.Count < 2)
         {
             return;
         }
 
-        var simplified = PolylineSimplifier.DouglasPeucker(wall.RawPoints, tolerance, wall.IsClosed);
+        var simplified = PolylineSimplifier.DouglasPeucker(wall.Points, tolerance, wall.IsClosed);
         wall.Points.Clear();
         foreach (var point in simplified)
         {

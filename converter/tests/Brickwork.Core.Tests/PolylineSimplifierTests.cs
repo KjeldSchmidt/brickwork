@@ -84,19 +84,16 @@ public class WallPointSimplifierTests
         var freehandWall = map.Walls.Single(wall => wall.EntityId == 2);
 
         Assert.Equal(2, straightWall.Points.Count);
-        Assert.Equal(2, straightWall.RawPoints.Count);
 
         // Default tolerance is 20 scene units (more detail than the old 50).
         Assert.InRange(bezierWall.Points.Count, 2, 20);
-        Assert.True(bezierWall.RawPoints.Count > bezierWall.Points.Count);
         Assert.InRange(freehandWall.Points.Count, 4, 40);
-        Assert.True(freehandWall.RawPoints.Count > freehandWall.Points.Count);
     }
 
     [Fact]
     public void Apply_ReducesSampledBezierPoints()
     {
-        var raw = InkSvgPathParser.ParseToScenePoints(
+        var sampled = InkSvgPathParser.ParseToScenePoints(
             "M0,0c50,50 100,0 150,50",
             originX: 0,
             originY: 0,
@@ -105,17 +102,13 @@ public class WallPointSimplifierTests
         var wall = new Wall
         {
             EntityId = 1,
-            RawPoints = raw.ToList(),
+            Points = sampled.ToList(),
         };
-        wall.Points.Clear();
-        foreach (var point in raw)
-        {
-            wall.Points.Add(point);
-        }
+        var beforeCount = wall.Points.Count;
 
         WallPointSimplifier.Apply(wall, tolerance: 25);
 
-        Assert.True(wall.Points.Count < wall.RawPoints.Count);
+        Assert.True(wall.Points.Count < beforeCount);
         Assert.True(wall.Points.Count >= 2);
     }
 }

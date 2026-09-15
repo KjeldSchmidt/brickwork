@@ -122,7 +122,6 @@ public sealed class DocumentContentMemento
         target.Scale = source.Scale;
         target.WallThickness = source.WallThickness;
         target.GroupId = source.GroupId;
-        ReplacePoints(target.RawPoints, source.RawPoints);
         ReplacePoints(target.Points, source.Points);
         SyncPortals(source.Portals, target.Portals);
     }
@@ -213,7 +212,6 @@ public sealed class DocumentContentMemento
             Scale = wall.Scale,
             WallThickness = wall.WallThickness,
             GroupId = wall.GroupId,
-            RawPoints = wall.RawPoints.ToList(),
             Points = wall.Points.ToList(),
             Portals = wall.Portals.Select(ClonePortal).ToList(),
         };
@@ -258,7 +256,6 @@ public sealed class DocumentContentMemento
         a.Scale.Equals(b.Scale) &&
         a.WallThickness.Equals(b.WallThickness) &&
         a.GroupId == b.GroupId &&
-        a.RawPoints.SequenceEqual(b.RawPoints) &&
         a.Points.SequenceEqual(b.Points) &&
         PortalListsEqual(a.Portals, b.Portals);
 

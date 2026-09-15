@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Mvvm.Controls;
 using Brickwork.Composition;
-using Brickwork.Core.Geometry;
 using Brickwork.Core.Services;
 
 namespace Brickwork.App.ViewModels;
@@ -100,9 +99,10 @@ public partial class ImportToolViewModel : Tool
         try
         {
             await using var input = File.OpenRead(path);
-            var importer = ServiceFactory.CreateImporterForPath(path);
+            var importer = ServiceFactory.CreateImporterForPath(
+                path,
+                _session.WallSimplificationTolerance);
             var map = await importer.ImportAsync(input).ConfigureAwait(true);
-            WallPointSimplifier.ApplyAll(map.Walls, _session.WallSimplificationTolerance);
             map.SourceFileName = Path.GetFileName(path);
             _session.SourceFilePath = path;
             _session.Map = map;

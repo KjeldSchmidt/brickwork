@@ -11,7 +11,6 @@ public sealed partial class EditorSession : ObservableObject
     private readonly EditorHistory _history = new();
     private EditGesture? _activeGesture;
     private bool _restoringHistory;
-    private double _toleranceBeforeChange;
 
     [ObservableProperty]
     private MapDocument? _map;
@@ -82,24 +81,15 @@ public sealed partial class EditorSession : ObservableObject
         }
 
         var beforeDocument = DocumentContentMemento.Capture(Map);
-        var beforeTolerance = WallSimplificationTolerance;
         mutate();
         var afterDocument = DocumentContentMemento.Capture(Map);
-        var afterTolerance = WallSimplificationTolerance;
 
-        if (beforeDocument.ContentEquals(afterDocument) &&
-            beforeTolerance.Equals(afterTolerance))
+        if (beforeDocument.ContentEquals(afterDocument))
         {
             return;
         }
 
-        _history.Push(
-            new MementoEditorCommand(
-                name,
-                beforeDocument,
-                afterDocument,
-                beforeTolerance,
-                afterTolerance));
+        _history.Push(new MementoEditorCommand(name, beforeDocument, afterDocument));
         RefreshHistoryState();
         NotifyContentChanged();
     }
@@ -111,7 +101,7 @@ public sealed partial class EditorSession : ObservableObject
             return EmptyDisposable.Instance;
         }
 
-        _activeGesture = new EditGesture(this, name, DocumentContentMemento.Capture(Map), WallSimplificationTolerance);
+        _activeGesture = new EditGesture(this, name, DocumentContentMemento.Capture(Map));
         return _activeGesture;
     }
 
@@ -153,7 +143,7 @@ public sealed partial class EditorSession : ObservableObject
         NotifyContentChanged();
     }
 
-    internal void RestoreContent(DocumentContentMemento document, double wallSimplificationTolerance)
+    internal void RestoreContent(DocumentContentMemento document)
     {
         if (Map is null)
         {
@@ -164,7 +154,6 @@ public sealed partial class EditorSession : ObservableObject
         try
         {
             document.RestoreTo(Map);
-            WallSimplificationTolerance = wallSimplificationTolerance;
         }
         finally
         {
@@ -236,45 +225,6 @@ public sealed partial class EditorSession : ObservableObject
         ClearWallSelection();
     }
 
-    partial void OnWallSimplificationToleranceChanging(double value)
-    {
-        _toleranceBeforeChange = WallSimplificationTolerance;
-    }
-
-    partial void OnWallSimplificationToleranceChanged(double value)
-    {
-        if (Map is null || _restoringHistory)
-        {
-            return;
-        }
-
-        if (_activeGesture is not null)
-        {
-            WallPointSimplifier.ApplyAll(Map.Walls, value);
-            NotifyContentChanged();
-            return;
-        }
-
-        var beforeDocument = DocumentContentMemento.Capture(Map);
-        WallPointSimplifier.ApplyAll(Map.Walls, value);
-        var afterDocument = DocumentContentMemento.Capture(Map);
-        if (beforeDocument.ContentEquals(afterDocument) &&
-            _toleranceBeforeChange.Equals(value))
-        {
-            return;
-        }
-
-        _history.Push(
-            new MementoEditorCommand(
-                "Simplify walls",
-                beforeDocument,
-                afterDocument,
-                _toleranceBeforeChange,
-                value));
-        RefreshHistoryState();
-        NotifyContentChanged();
-    }
-
     private void CompleteGesture(EditGesture gesture)
     {
         if (!ReferenceEquals(_activeGesture, gesture))
@@ -289,20 +239,12 @@ public sealed partial class EditorSession : ObservableObject
         }
 
         var afterDocument = DocumentContentMemento.Capture(Map);
-        var afterTolerance = WallSimplificationTolerance;
-        if (gesture.BeforeDocument.ContentEquals(afterDocument) &&
-            gesture.BeforeTolerance.Equals(afterTolerance))
+        if (gesture.BeforeDocument.ContentEquals(afterDocument))
         {
             return;
         }
 
-        _history.Push(
-            new MementoEditorCommand(
-                gesture.Name,
-                gesture.BeforeDocument,
-                afterDocument,
-                gesture.BeforeTolerance,
-                afterTolerance));
+        _history.Push(new MementoEditorCommand(gesture.Name, gesture.BeforeDocument, afterDocument));
         RefreshHistoryState();
         NotifyContentChanged();
     }
@@ -320,23 +262,16 @@ public sealed partial class EditorSession : ObservableObject
         private readonly EditorSession _session;
         private bool _disposed;
 
-        public EditGesture(
-            EditorSession session,
-            string name,
-            DocumentContentMemento beforeDocument,
-            double beforeTolerance)
+        public EditGesture(EditorSession session, string name, DocumentContentMemento beforeDocument)
         {
             _session = session;
             Name = name;
             BeforeDocument = beforeDocument;
-            BeforeTolerance = beforeTolerance;
         }
 
         public string Name { get; }
 
         public DocumentContentMemento BeforeDocument { get; }
-
-        public double BeforeTolerance { get; }
 
         public bool Cancelled { get; private set; }
 

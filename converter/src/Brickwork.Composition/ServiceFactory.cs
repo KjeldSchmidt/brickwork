@@ -8,12 +8,26 @@ namespace Brickwork.Composition;
 
 public static class ServiceFactory
 {
-    public static IMapImporter CreateInkarnateImporter() => new InkarnateImporter();
+    public static IMapImporter CreateInkarnateImporter(
+        double? wallSimplificationTolerance = null)
+    {
+        var importer = new InkarnateImporter();
+        if (wallSimplificationTolerance is { } tolerance)
+        {
+            importer.WallSimplificationTolerance = tolerance;
+        }
+
+        return importer;
+    }
 
     public static IMapImporter CreateUvttImporter() => new UvttImporter();
 
-    public static IMapImporter CreateImporterForPath(string path) =>
-        UvttImporter.IsUvttPath(path) ? CreateUvttImporter() : CreateInkarnateImporter();
+    public static IMapImporter CreateImporterForPath(
+        string path,
+        double? wallSimplificationTolerance = null) =>
+        UvttImporter.IsUvttPath(path)
+            ? CreateUvttImporter()
+            : CreateInkarnateImporter(wallSimplificationTolerance);
 
     public static IReadOnlyList<IMapImporter> CreateImporters() =>
         [CreateInkarnateImporter(), CreateUvttImporter()];

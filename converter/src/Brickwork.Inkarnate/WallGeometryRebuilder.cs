@@ -22,13 +22,11 @@ internal static class WallGeometryRebuilder
             wall.RotationPivot.X,
             wall.RotationPivot.Y);
 
-        wall.RawPoints.Clear();
+        wall.Points.Clear();
         foreach (var point in points)
         {
-            wall.RawPoints.Add(point);
+            wall.Points.Add(point);
         }
-
-        WallPointSimplifier.Apply(wall, WallSimplificationSettings.DefaultToleranceSceneUnits);
     }
 
     public static void ApplyEntityTransform(
@@ -142,13 +140,11 @@ internal static class WallGeometryRebuilder
         {
             if (context.WallsByEntityId.TryGetValue(memberId, out var wall))
             {
-                MapPointTransforms.RotateAll(wall.RawPoints, pivot, deltaDegrees);
                 MapPointTransforms.RotateAll(wall.Points, pivot, deltaDegrees);
                 wall.Origin = MapPointTransforms.RotateAround(wall.Origin, pivot, deltaDegrees);
                 wall.PathOrigin = MapPointTransforms.RotateAround(wall.PathOrigin, pivot, deltaDegrees);
                 wall.RotationPivot = MapPointTransforms.RotateAround(wall.RotationPivot, pivot, deltaDegrees);
                 wall.Angle += deltaDegrees;
-                WallPointSimplifier.Apply(wall, WallSimplificationSettings.DefaultToleranceSceneUnits);
             }
             else if (context.GroupsById.TryGetValue(memberId, out var childGroup))
             {
@@ -171,7 +167,6 @@ internal static class WallGeometryRebuilder
         {
             if (context.WallsByEntityId.TryGetValue(memberId, out var wall))
             {
-                MapPointTransforms.Translate(wall.RawPoints, dx, dy);
                 MapPointTransforms.Translate(wall.Points, dx, dy);
                 wall.PathOrigin = new MapPoint(wall.PathOrigin.X + dx, wall.PathOrigin.Y + dy);
                 wall.RotationPivot = new MapPoint(wall.RotationPivot.X + dx, wall.RotationPivot.Y + dy);

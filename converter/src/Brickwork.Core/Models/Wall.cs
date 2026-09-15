@@ -39,8 +39,6 @@ public sealed class Wall
 
     public int? GroupId { get; set; }
 
-    public IList<MapPoint> RawPoints { get; init; } = [];
-
     public IList<MapPoint> Points { get; init; } = [];
 
     public IList<WallPortal> Portals { get; init; } = [];
