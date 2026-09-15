@@ -147,4 +147,6 @@ CLI export formats: `foundry`, `uvtt1`
 
 Create a release from GitHub Actions → **Release** → Run workflow, and enter a version such as `0.1.0-beta.1`.
 
+Optional patch notes: add `patch-notes/<version>.md` (same version string as the workflow input). If that file is missing, the GitHub release is created with an empty body.
+
 Builds are published for Windows, Linux, and macOS (x64 and arm64).
