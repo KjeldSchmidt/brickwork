@@ -245,6 +245,29 @@ public static class WallGeometryEditing
         return true;
     }
 
+    /// <summary>
+    /// Adds a door portal snapped to the wall centerline at <paramref name="scenePoint"/>.
+    /// </summary>
+    public static WallPortal? TryAddPortal(Wall wall, MapPoint scenePoint, double defaultWidth)
+    {
+        if (wall.Points.Count < 2 || defaultWidth <= Epsilon)
+        {
+            return null;
+        }
+
+        var snapped = SnapToCenterline(wall, scenePoint);
+        var portal = new WallPortal
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Anchor = MapPointTransforms.SceneToLocal(wall, snapped),
+            Width = defaultWidth,
+            IsActive = true,
+            LineType = WallLineType.Door,
+        };
+        wall.Portals.Add(portal);
+        return portal;
+    }
+
     private static double FindArcLengthAtClosestPoint(
         IList<MapPoint> points,
         bool isClosed,

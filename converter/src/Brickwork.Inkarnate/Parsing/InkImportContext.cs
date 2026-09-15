@@ -173,7 +173,7 @@ internal sealed class InkImportContext
 
     private static void SetWallActive(Wall wall, bool isActive)
     {
-        wall.IsActive = isActive;
+        WallLineEditing.SetWallEnabled(wall, isActive);
         foreach (var portal in wall.Portals)
         {
             portal.IsActive = isActive;

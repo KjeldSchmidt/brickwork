@@ -8,7 +8,7 @@ public static class WallLineColors
     private static readonly SKColor InactiveColor = new(0x88, 0x88, 0x88, 0x88);
 
     public static SKColor ForLine(WallLineType lineType, bool isActive) =>
-        !isActive
+        !isActive || lineType == WallLineType.Disabled
             ? InactiveColor
             : lineType switch
             {
@@ -19,6 +19,7 @@ public static class WallLineColors
                 WallLineType.Door => new SKColor(0x66, 0x66, 0xEE, 0xCC),
                 WallLineType.SecretDoor => new SKColor(0xA6, 0x12, 0xD4, 0xCC),
                 WallLineType.Window => new SKColor(0xC7, 0xD8, 0xFF, 0xCC),
+                WallLineType.Disabled => InactiveColor,
                 _ => new SKColor(0xFF, 0xFF, 0xBB, 0xCC),
             };
 

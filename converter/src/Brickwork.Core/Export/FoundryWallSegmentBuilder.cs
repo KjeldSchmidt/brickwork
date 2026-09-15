@@ -29,14 +29,14 @@ public static class FoundryWallSegmentBuilder
 
         foreach (var wall in map.Walls.Where(wall => wall.WallEnabled))
         {
-            if (wall.IsActive && TryBuildTerrainPolygonSegments(wall, transform, segments))
+            if (!IsWallBodySuppressed(wall) && TryBuildTerrainPolygonSegments(wall, transform, segments))
             {
                 continue;
             }
 
             foreach (var run in WallPathSegmentBuilder.BuildExportRuns(wall))
             {
-                if (!wall.IsActive && !run.IsPortal)
+                if (IsWallBodySuppressed(wall) && !run.IsPortal)
                 {
                     continue;
                 }
@@ -52,14 +52,14 @@ public static class FoundryWallSegmentBuilder
     {
         var segments = new List<FoundryWallSegment>();
 
-        if (wall.IsActive && TryBuildTerrainPolygonSegments(wall, transform, segments))
+        if (!IsWallBodySuppressed(wall) && TryBuildTerrainPolygonSegments(wall, transform, segments))
         {
             return segments;
         }
 
         foreach (var run in WallPathSegmentBuilder.BuildExportRuns(wall))
         {
-            if (!wall.IsActive && !run.IsPortal)
+            if (IsWallBodySuppressed(wall) && !run.IsPortal)
             {
                 continue;
             }
@@ -69,6 +69,9 @@ public static class FoundryWallSegmentBuilder
 
         return segments;
     }
+
+    private static bool IsWallBodySuppressed(Wall wall) =>
+        !wall.IsActive || wall.LineType == WallLineType.Disabled;
 
     private static bool TryBuildTerrainPolygonSegments(
         Wall wall,

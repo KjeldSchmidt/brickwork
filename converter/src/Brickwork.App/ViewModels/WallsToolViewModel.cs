@@ -1022,19 +1022,21 @@ public partial class WallItemViewModel : ObservableObject
 
     public bool IsActive
     {
-        get => Wall.IsActive;
+        get => Wall.IsActive && Wall.LineType != WallLineType.Disabled;
         set
         {
-            if (Wall.IsActive == value)
+            var enabled = Wall.IsActive && Wall.LineType != WallLineType.Disabled;
+            if (enabled == value)
             {
                 return;
             }
 
-            _session.Execute("Set wall active", () =>
+            _session.Execute(value ? "Enable wall" : "Disable wall", () =>
             {
-                Wall.IsActive = value;
+                WallLineEditing.SetWallEnabled(Wall, value);
             });
             OnPropertyChanged();
+            OnPropertyChanged(nameof(LineType));
         }
     }
 
@@ -1051,8 +1053,10 @@ public partial class WallItemViewModel : ObservableObject
             _session.Execute("Change wall type", () =>
             {
                 Wall.LineType = value;
+                Wall.IsActive = value != WallLineType.Disabled;
             });
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsActive));
         }
     }
 
@@ -1061,11 +1065,36 @@ public partial class WallItemViewModel : ObservableObject
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(LineType));
         OnPropertyChanged(nameof(DisplayName));
+        SyncPortalsFromWall();
         RefreshHighlightState();
+    }
 
-        foreach (var portal in Portals)
+    private void SyncPortalsFromWall()
+    {
+        for (var index = Portals.Count - 1; index >= 0; index--)
         {
-            portal.RefreshFromModel();
+            if (!Wall.Portals.Contains(Portals[index].Portal))
+            {
+                Portals.RemoveAt(index);
+            }
+        }
+
+        var nextNumber = Portals.Count == 0
+            ? 1
+            : Portals.Max(item => item.PortalNumber) + 1;
+
+        foreach (var portal in Wall.Portals)
+        {
+            var existing = Portals.FirstOrDefault(item => ReferenceEquals(item.Portal, portal));
+            if (existing is null)
+            {
+                Portals.Add(new WallPortalItemViewModel(_session, Wall.EntityId, portal, nextNumber));
+                nextNumber++;
+            }
+            else
+            {
+                existing.RefreshFromModel();
+            }
         }
     }
 
@@ -1199,7 +1228,7 @@ internal static class WallTreeActiveState
                     Apply(group.Children, enabled);
                     break;
                 case WallItemViewModel wall:
-                    wall.Wall.IsActive = enabled;
+                    WallLineEditing.SetWallEnabled(wall.Wall, enabled);
                     foreach (var portal in wall.Wall.Portals)
                     {
                         portal.IsActive = enabled;
@@ -1224,7 +1253,7 @@ internal static class WallTreeActiveState
 
                     break;
                 case WallItemViewModel wall:
-                    yield return wall.Wall.IsActive;
+                    yield return wall.Wall.IsActive && wall.Wall.LineType != WallLineType.Disabled;
                     foreach (var portal in wall.Wall.Portals)
                     {
                         yield return portal.IsActive;

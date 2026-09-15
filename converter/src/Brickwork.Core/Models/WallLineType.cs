@@ -9,4 +9,5 @@ public enum WallLineType
     Door,
     SecretDoor,
     Window,
+    Disabled,
 }

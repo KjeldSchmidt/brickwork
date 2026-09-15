@@ -2,7 +2,17 @@ namespace Brickwork.Core.Models;
 
 public static class WallLineEditing
 {
-    private static readonly WallLineType[] CycleOrder = Enum.GetValues<WallLineType>();
+    private static readonly WallLineType[] CycleOrder =
+    [
+        WallLineType.Solid,
+        WallLineType.Terrain,
+        WallLineType.Invisible,
+        WallLineType.Ethereal,
+        WallLineType.Door,
+        WallLineType.SecretDoor,
+        WallLineType.Window,
+        WallLineType.Disabled,
+    ];
 
     public static WallLineType CycleType(WallLineType current)
     {
@@ -20,17 +30,35 @@ public static class WallLineEditing
         if (portal is null)
         {
             wall.LineType = CycleType(wall.LineType);
+            wall.IsActive = wall.LineType != WallLineType.Disabled;
             return;
         }
 
         portal.LineType = CycleType(portal.LineType);
     }
 
+    public static void SetWallEnabled(Wall wall, bool enabled)
+    {
+        if (enabled)
+        {
+            wall.IsActive = true;
+            if (wall.LineType == WallLineType.Disabled)
+            {
+                wall.LineType = WallLineType.Solid;
+            }
+
+            return;
+        }
+
+        wall.IsActive = false;
+        wall.LineType = WallLineType.Disabled;
+    }
+
     public static void ToggleActive(Wall wall, WallPortal? portal)
     {
         if (portal is null)
         {
-            wall.IsActive = !wall.IsActive;
+            SetWallEnabled(wall, !wall.IsActive || wall.LineType == WallLineType.Disabled);
             return;
         }
 

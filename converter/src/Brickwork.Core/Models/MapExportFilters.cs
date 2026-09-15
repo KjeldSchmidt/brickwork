@@ -3,7 +3,10 @@ namespace Brickwork.Core.Models;
 public static class MapExportFilters
 {
     public static IEnumerable<Wall> ExportableWalls(this MapDocument map) =>
-        map.Walls.Where(wall => wall.IsActive && wall.WallEnabled);
+        map.Walls.Where(wall =>
+            wall.WallEnabled &&
+            wall.IsActive &&
+            wall.LineType != WallLineType.Disabled);
 
     public static IEnumerable<WallPortal> ActivePortals(this Wall wall) =>
         wall.Portals.Where(portal => portal.IsActive);

@@ -44,7 +44,7 @@ public sealed class UvttExporter : IMapExporter
         {
             foreach (var run in WallPathSegmentBuilder.BuildExportRuns(wall))
             {
-                if (!wall.IsActive && !run.IsPortal)
+                if ((!wall.IsActive || wall.LineType == WallLineType.Disabled) && !run.IsPortal)
                 {
                     continue;
                 }

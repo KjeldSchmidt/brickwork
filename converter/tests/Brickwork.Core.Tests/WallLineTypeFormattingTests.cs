@@ -16,6 +16,7 @@ public class WallLineTypeFormattingTests
     [InlineData(WallLineType.Ethereal, "Ethereal")]
     [InlineData(WallLineType.Door, "Door")]
     [InlineData(WallLineType.Window, "Window")]
+    [InlineData(WallLineType.Disabled, "Disabled")]
     public void ToDisplayName_OtherTypes_UseEnumName(WallLineType lineType, string expected) =>
         Assert.Equal(expected, lineType.ToDisplayName());
 }

@@ -77,4 +77,22 @@ public class WallGeometryEditingRemoveVertexTests
         Assert.True(WallGeometryEditing.TryRemovePortal(wall, portal));
         Assert.Empty(wall.Portals);
     }
+
+    [Fact]
+    public void TryAddPortal_SnapsDoorOntoCenterline()
+    {
+        var wall = new Wall
+        {
+            EntityId = 1,
+            Points = { new MapPoint(0, 0), new MapPoint(100, 0) },
+        };
+
+        var portal = WallGeometryEditing.TryAddPortal(wall, new MapPoint(40, 8), defaultWidth: 20);
+
+        Assert.NotNull(portal);
+        Assert.Single(wall.Portals);
+        Assert.Equal(WallLineType.Door, portal!.LineType);
+        Assert.Equal(20, portal.Width);
+        Assert.Equal(new MapPoint(40, 0), MapPointTransforms.LocalToScene(wall, portal.Anchor));
+    }
 }

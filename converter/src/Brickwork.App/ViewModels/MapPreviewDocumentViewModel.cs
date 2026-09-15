@@ -201,9 +201,9 @@ public partial class MapPreviewDocumentViewModel : Document
         gesture?.Dispose();
     }
 
-    public void EditWallAt(MapPoint previewPoint, bool cycleType, bool toggleActive)
+    public void EditWallAt(MapPoint previewPoint, bool cycleType)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || !cycleType)
         {
             return;
         }
@@ -214,26 +214,57 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        var name = cycleType
-            ? "Change wall type"
-            : toggleActive
-                ? "Toggle wall active"
-                : "Edit wall";
-
-        _session.Execute(name, () =>
+        _session.Execute("Change wall type", () =>
         {
-            if (cycleType)
-            {
-                WallLineEditing.CycleType(hit.Wall, hit.Portal);
-            }
-
-            if (toggleActive)
-            {
-                WallLineEditing.ToggleActive(hit.Wall, hit.Portal);
-            }
+            WallLineEditing.CycleType(hit.Wall, hit.Portal);
         });
 
         _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
+    }
+
+    public bool TryAddPortalAt(MapPoint previewPoint)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
+        {
+            return false;
+        }
+
+        var hit = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
+            ?? (WallVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is { } vertex
+                ? new WallPickTarget(vertex.Wall, null)
+                : null);
+        if (hit is null)
+        {
+            return false;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return false;
+        }
+
+        var defaultWidth = ResolveDefaultPortalWidth(Map);
+        var scenePoint = transform.PreviewToScene(previewPoint);
+        WallPortal? portal = null;
+        _session.Execute("Add portal", () =>
+        {
+            portal = WallGeometryEditing.TryAddPortal(hit.Wall, scenePoint, defaultWidth);
+        });
+
+        if (portal is null)
+        {
+            return false;
+        }
+
+        _session.RequestWallTreeFocus(hit.Wall, portal);
+        return true;
+    }
+
+    private static double ResolveDefaultPortalWidth(MapDocument map)
+    {
+        var cell = map.Grid.CellSize > 0 ? map.Grid.CellSize : 1d;
+        return Math.Max(cell, 2d);
     }
 
     public bool TryRemoveVertexAt(MapPoint previewPoint)
@@ -434,7 +465,7 @@ public partial class MapPreviewDocumentViewModel : Document
                 }
                 else
                 {
-                    EditWallAt(previewPoint, cycleType: true, toggleActive: false);
+                    EditWallAt(previewPoint, cycleType: true);
                 }
 
                 break;

@@ -19,12 +19,20 @@ public class WallLineEditingTests
                      WallLineType.Door,
                      WallLineType.SecretDoor,
                      WallLineType.Window,
+                     WallLineType.Disabled,
                      WallLineType.Solid,
                  })
         {
             current = WallLineEditing.CycleType(current);
             Assert.Equal(expected, current);
         }
+    }
+
+    [Fact]
+    public void CycleType_PortalIncludesDisabled()
+    {
+        Assert.Equal(WallLineType.Disabled, WallLineEditing.CycleType(WallLineType.Window));
+        Assert.Equal(WallLineType.Solid, WallLineEditing.CycleType(WallLineType.Disabled));
     }
 
     [Fact]

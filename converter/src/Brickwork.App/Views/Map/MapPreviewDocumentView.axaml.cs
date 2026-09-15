@@ -146,7 +146,7 @@ public partial class MapPreviewDocumentView : UserControl
         if (properties.IsMiddleButtonPressed)
         {
             var previewPoint = ToPreviewPoint(e.GetPosition(MapViewport));
-            viewModel.EditWallAt(previewPoint, cycleType: false, toggleActive: true);
+            viewModel.TryAddPortalAt(previewPoint);
             e.Handled = true;
         }
     }
