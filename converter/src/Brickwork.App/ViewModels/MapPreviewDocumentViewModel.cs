@@ -9,6 +9,7 @@ public partial class MapPreviewDocumentViewModel : Document
 {
     private readonly EditorSession _session;
     private WallVertexPickTarget? _vertexDragTarget;
+    private IDisposable? _vertexDragGesture;
 
     [ObservableProperty]
     private MapDocument? _map;
@@ -144,6 +145,7 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         _vertexDragTarget = hit;
+        _vertexDragGesture = _session.BeginGesture("Move wall geometry");
         _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
         return true;
     }
@@ -186,6 +188,9 @@ public partial class MapPreviewDocumentViewModel : Document
     public void EndVertexDrag()
     {
         _vertexDragTarget = null;
+        var gesture = _vertexDragGesture;
+        _vertexDragGesture = null;
+        gesture?.Dispose();
     }
 
     public void EditWallAt(MapPoint previewPoint, bool cycleType, bool toggleActive)
@@ -201,18 +206,26 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        if (cycleType)
-        {
-            WallLineEditing.CycleType(hit.Wall, hit.Portal);
-        }
+        var name = cycleType
+            ? "Change wall type"
+            : toggleActive
+                ? "Toggle wall active"
+                : "Edit wall";
 
-        if (toggleActive)
+        _session.Execute(name, () =>
         {
-            WallLineEditing.ToggleActive(hit.Wall, hit.Portal);
-        }
+            if (cycleType)
+            {
+                WallLineEditing.CycleType(hit.Wall, hit.Portal);
+            }
+
+            if (toggleActive)
+            {
+                WallLineEditing.ToggleActive(hit.Wall, hit.Portal);
+            }
+        });
 
         _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
-        _session.NotifyContentChanged();
     }
 
     public bool TryEraseWallAt(MapPoint previewPoint)
@@ -239,13 +252,18 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        if (!WallLineEditing.RemoveFromMap(Map, wall))
+        var removed = false;
+        _session.Execute("Delete wall", () =>
+        {
+            removed = WallLineEditing.RemoveFromMap(Map, wall);
+        });
+
+        if (!removed)
         {
             return false;
         }
 
         _session.ClearWallSelection();
-        _session.NotifyContentChanged();
         return true;
     }
 

@@ -26,6 +26,27 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Z)
+        {
+            viewModel.Session.Undo();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Y)
+        {
+            viewModel.Session.Redo();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift) && e.Key == Key.Z)
+        {
+            viewModel.Session.Redo();
+            e.Handled = true;
+            return;
+        }
+
         if (e.KeyModifiers != KeyModifiers.None)
         {
             return;

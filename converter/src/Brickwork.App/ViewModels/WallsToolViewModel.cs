@@ -210,7 +210,154 @@ public partial class WallsToolViewModel : Tool
             return;
         }
 
+        // Additions only: insert matching nodes instead of rebuilding.
+        if (treeWallIds.IsSubsetOf(mapWallIds))
+        {
+            foreach (var wall in _session.Map.Walls.OrderBy(candidate => candidate.EntityId))
+            {
+                if (!treeWallIds.Contains(wall.EntityId))
+                {
+                    InsertWallNode(wall);
+                }
+            }
+
+            OnPropertyChanged(nameof(HasLayers));
+            OnPropertyChanged(nameof(ShowEmptyMessage));
+            OnPropertyChanged(nameof(EmptyMessage));
+            return;
+        }
+
         RebuildLayers();
+    }
+
+    private void InsertWallNode(Wall wall)
+    {
+        if (_session.Map is null)
+        {
+            return;
+        }
+
+        var layerNode = EnsureLayerNode(wall.LayerId ?? "(no layer)");
+        var wallItem = new WallItemViewModel(_session, wall);
+
+        if (wall.GroupId is not int groupId ||
+            _session.Map.Groups.All(group => group.GroupId != groupId))
+        {
+            InsertWallItemSorted(layerNode.Children, wallItem);
+            layerNode.RefreshActiveState();
+            return;
+        }
+
+        var groupNode = EnsureGroupPath(layerNode, groupId);
+        InsertWallItemSorted(groupNode.Children, wallItem);
+        groupNode.RefreshActiveState();
+        layerNode.RefreshActiveState();
+    }
+
+    private WallLayerNodeViewModel EnsureLayerNode(string layerId)
+    {
+        var existing = Layers.FirstOrDefault(
+            layer => string.Equals(layer.LayerId, layerId, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var displayName = _session.Map?.Layers
+            .FirstOrDefault(layer => string.Equals(layer.Id, layerId, StringComparison.OrdinalIgnoreCase))
+            ?.DisplayName ?? layerId;
+        var layerNode = new WallLayerNodeViewModel(_session, layerId, displayName);
+        InsertLayerSorted(layerNode);
+        return layerNode;
+    }
+
+    private void InsertLayerSorted(WallLayerNodeViewModel layerNode)
+    {
+        if (_session.Map is null)
+        {
+            Layers.Add(layerNode);
+            return;
+        }
+
+        var orderedIds = OrderLayerIds(
+                Layers.Select(layer => layer.LayerId).Append(layerNode.LayerId),
+                _session.Map.Layers)
+            .ToList();
+        var insertAt = orderedIds.IndexOf(layerNode.LayerId);
+        if (insertAt < 0 || insertAt >= Layers.Count)
+        {
+            Layers.Add(layerNode);
+            return;
+        }
+
+        Layers.Insert(insertAt, layerNode);
+    }
+
+    private WallGroupNodeViewModel EnsureGroupPath(WallLayerNodeViewModel layerNode, int groupId)
+    {
+        var groupsById = _session.Map!.Groups.ToDictionary(group => group.GroupId);
+        var chain = new List<EntityGroup>();
+        var current = groupsById[groupId];
+        while (true)
+        {
+            chain.Add(current);
+            if (current.ParentGroupId is not int parentId ||
+                !groupsById.TryGetValue(parentId, out current))
+            {
+                break;
+            }
+        }
+
+        chain.Reverse();
+
+        var children = layerNode.Children;
+        WallGroupNodeViewModel? node = null;
+        foreach (var group in chain)
+        {
+            node = children
+                .OfType<WallGroupNodeViewModel>()
+                .FirstOrDefault(candidate => candidate.Group.GroupId == group.GroupId);
+            if (node is null)
+            {
+                node = new WallGroupNodeViewModel(_session, group);
+                InsertGroupSorted(children, node);
+            }
+
+            children = node.Children;
+        }
+
+        return node!;
+    }
+
+    private static void InsertGroupSorted(ObservableCollection<object> children, WallGroupNodeViewModel groupNode)
+    {
+        var insertAt = 0;
+        while (insertAt < children.Count &&
+               children[insertAt] is WallGroupNodeViewModel existing &&
+               existing.Group.GroupId < groupNode.Group.GroupId)
+        {
+            insertAt++;
+        }
+
+        children.Insert(insertAt, groupNode);
+    }
+
+    private static void InsertWallItemSorted(ObservableCollection<object> children, WallItemViewModel wallItem)
+    {
+        var insertAt = 0;
+        while (insertAt < children.Count && children[insertAt] is WallGroupNodeViewModel)
+        {
+            insertAt++;
+        }
+
+        while (insertAt < children.Count &&
+               children[insertAt] is WallItemViewModel existing &&
+               existing.Wall.EntityId < wallItem.Wall.EntityId)
+        {
+            insertAt++;
+        }
+
+        children.Insert(insertAt, wallItem);
     }
 
     private void RemoveWallNode(int wallEntityId)
@@ -594,9 +741,11 @@ public partial class WallLayerNodeViewModel : ObservableObject
         set
         {
             var enabled = ResolveCascadeTarget(value, IsActive);
-            WallTreeActiveState.Apply(Children, enabled);
+            _session.Execute("Set layer active", () =>
+            {
+                WallTreeActiveState.Apply(Children, enabled);
+            });
             OnPropertyChanged();
-            _session.NotifyContentChanged();
         }
     }
 
@@ -646,9 +795,11 @@ public partial class WallGroupNodeViewModel : ObservableObject
         set
         {
             var enabled = ResolveCascadeTarget(value, IsActive);
-            WallTreeActiveState.Apply(Children, enabled);
+            _session.Execute("Set group active", () =>
+            {
+                WallTreeActiveState.Apply(Children, enabled);
+            });
             OnPropertyChanged();
-            _session.NotifyContentChanged();
         }
     }
 
@@ -719,9 +870,11 @@ public partial class WallItemViewModel : ObservableObject
                 return;
             }
 
-            Wall.IsActive = value;
+            _session.Execute("Set wall active", () =>
+            {
+                Wall.IsActive = value;
+            });
             OnPropertyChanged();
-            _session.NotifyContentChanged();
         }
     }
 
@@ -735,9 +888,11 @@ public partial class WallItemViewModel : ObservableObject
                 return;
             }
 
-            Wall.LineType = value;
+            _session.Execute("Change wall type", () =>
+            {
+                Wall.LineType = value;
+            });
             OnPropertyChanged();
-            _session.NotifyContentChanged();
         }
     }
 
@@ -809,9 +964,11 @@ public partial class WallPortalItemViewModel : ObservableObject
                 return;
             }
 
-            Portal.IsActive = value;
+            _session.Execute("Set portal active", () =>
+            {
+                Portal.IsActive = value;
+            });
             OnPropertyChanged();
-            _session.NotifyContentChanged();
         }
     }
 
@@ -825,9 +982,11 @@ public partial class WallPortalItemViewModel : ObservableObject
                 return;
             }
 
-            Portal.LineType = value;
+            _session.Execute("Change portal type", () =>
+            {
+                Portal.LineType = value;
+            });
             OnPropertyChanged();
-            _session.NotifyContentChanged();
         }
     }
 
