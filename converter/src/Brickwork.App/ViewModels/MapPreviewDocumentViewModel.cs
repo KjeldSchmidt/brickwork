@@ -10,6 +10,8 @@ public partial class MapPreviewDocumentViewModel : Document
     private readonly EditorSession _session;
     private WallVertexPickTarget? _vertexDragTarget;
     private IDisposable? _vertexDragGesture;
+    private Wall? _drawingWall;
+    private IDisposable? _drawingGesture;
 
     [ObservableProperty]
     private MapDocument? _map;
@@ -54,6 +56,10 @@ public partial class MapPreviewDocumentViewModel : Document
         {
             if (args.PropertyName is nameof(EditorSession.Map))
             {
+                _drawingWall = null;
+                _drawingGesture = null;
+                _vertexDragTarget = null;
+                _vertexDragGesture = null;
                 UpdateFromSession();
             }
 
@@ -124,6 +130,8 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public bool IsWallEditingToolActive => _session.ActiveMapTool == MapToolKind.WallEditing;
 
+    public bool IsDrawingWall => _drawingWall is not null;
+
     public void ClearWallSelection() => _session.ClearWallSelection();
 
     public bool DeleteSelectedWalls() => _session.DeleteSelectedWalls();
@@ -141,7 +149,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public bool TryBeginVertexDrag(MapPoint previewPoint)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || IsDrawingWall)
         {
             return false;
         }
@@ -201,9 +209,203 @@ public partial class MapPreviewDocumentViewModel : Document
         gesture?.Dispose();
     }
 
+    public bool TryBeginPortalCreateDrag(MapPoint previewPoint)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || IsDrawingWall)
+        {
+            return false;
+        }
+
+        var hit = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (hit is null)
+        {
+            return false;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return false;
+        }
+
+        var scenePoint = transform.PreviewToScene(previewPoint);
+        _vertexDragGesture = _session.BeginGesture("Add portal");
+        WallPortal? portal = null;
+        _session.Execute("Add portal", () =>
+        {
+            portal = WallGeometryEditing.TryAddPortal(hit.Wall, scenePoint, defaultWidth: 2d);
+        });
+
+        if (portal is null)
+        {
+            _vertexDragGesture = null;
+            _session.CancelActiveGesture();
+            return false;
+        }
+
+        _vertexDragTarget = new WallVertexPickTarget(hit.Wall, null, portal, PortalWidthEndpoint.End);
+        _session.RequestWallTreeFocus(hit.Wall, portal);
+        return true;
+    }
+
+    public bool TryStartDrawingWall(MapPoint previewPoint)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || IsDrawingWall)
+        {
+            return false;
+        }
+
+        if (HasWallAt(previewPoint))
+        {
+            return false;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return false;
+        }
+
+        var scenePoint = transform.PreviewToScene(previewPoint);
+        var entityId = Map.Walls.Count == 0
+            ? 1
+            : Map.Walls.Max(wall => wall.EntityId) + 1;
+        var layerId = Map.Layers.OrderBy(layer => layer.Order).FirstOrDefault()?.Id;
+
+        var wall = new Wall
+        {
+            EntityId = entityId,
+            LayerId = layerId,
+            LineType = WallLineType.Solid,
+            IsActive = true,
+            WallEnabled = true,
+            Points = { scenePoint, scenePoint },
+        };
+
+        _drawingGesture = _session.BeginGesture("Add wall");
+        _session.Execute("Add wall", () =>
+        {
+            Map.Walls.Add(wall);
+        });
+
+        _drawingWall = wall;
+        _session.RequestWallTreeFocus(wall);
+        return true;
+    }
+
+    public void UpdateDrawingWallPreview(MapPoint previewPoint)
+    {
+        if (Map is null || _drawingWall is null || _drawingWall.Points.Count == 0)
+        {
+            return;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return;
+        }
+
+        _drawingWall.Points[^1] = transform.PreviewToScene(previewPoint);
+        _session.NotifyContentChanged();
+    }
+
+    public void CommitDrawingWallVertex(MapPoint previewPoint)
+    {
+        if (Map is null || _drawingWall is null)
+        {
+            return;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return;
+        }
+
+        var scenePoint = transform.PreviewToScene(previewPoint);
+        _drawingWall.Points[^1] = scenePoint;
+        _drawingWall.Points.Add(scenePoint);
+        _session.NotifyContentChanged();
+        _session.RequestWallTreeFocus(_drawingWall);
+    }
+
+    public bool TryFinishDrawingWall()
+    {
+        if (Map is null || _drawingWall is null || _drawingWall.Points.Count == 0)
+        {
+            return false;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return false;
+        }
+
+        return TryFinishDrawingWall(transform.SceneToPreview(_drawingWall.Points[^1]));
+    }
+
+    public bool TryFinishDrawingWall(MapPoint previewPoint)
+    {
+        if (Map is null || _drawingWall is null)
+        {
+            return false;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return false;
+        }
+
+        var scenePoint = transform.PreviewToScene(previewPoint);
+        var firstPreview = transform.SceneToPreview(_drawingWall.Points[0]);
+        var close =
+            DistanceSquared(firstPreview, previewPoint) <= 8d * 8d &&
+            _drawingWall.Points.Count >= 4;
+
+        if (close)
+        {
+            _drawingWall.Points.RemoveAt(_drawingWall.Points.Count - 1);
+            _drawingWall.IsClosed = true;
+        }
+        else
+        {
+            _drawingWall.Points[^1] = scenePoint;
+        }
+
+        if (_drawingWall.Points.Count < 2)
+        {
+            CancelDrawingWall();
+            return true;
+        }
+
+        var wall = _drawingWall;
+        _drawingWall = null;
+        var gesture = _drawingGesture;
+        _drawingGesture = null;
+        gesture?.Dispose();
+        _session.RequestWallTreeFocus(wall);
+        return true;
+    }
+
+    public void CancelDrawingWall()
+    {
+        if (_drawingWall is null && _drawingGesture is null)
+        {
+            return;
+        }
+
+        _drawingWall = null;
+        _drawingGesture = null;
+        _session.CancelActiveGesture();
+        ClearWallSelection();
+    }
+
     public void EditWallAt(MapPoint previewPoint, bool cycleType)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || !cycleType)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || !cycleType || IsDrawingWall)
         {
             return;
         }
@@ -224,7 +426,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public bool TryAddPortalAt(MapPoint previewPoint)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || IsDrawingWall)
         {
             return false;
         }
@@ -265,6 +467,13 @@ public partial class MapPreviewDocumentViewModel : Document
     {
         var cell = map.Grid.CellSize > 0 ? map.Grid.CellSize : 1d;
         return Math.Max(cell, 2d);
+    }
+
+    private static double DistanceSquared(MapPoint a, MapPoint b)
+    {
+        var dx = a.X - b.X;
+        var dy = a.Y - b.Y;
+        return dx * dx + dy * dy;
     }
 
     public bool TryRemoveVertexAt(MapPoint previewPoint)
@@ -453,6 +662,12 @@ public partial class MapPreviewDocumentViewModel : Document
                 TryEraseWallAt(previewPoint);
                 break;
             case MapToolKind.WallEditing:
+                if (IsDrawingWall)
+                {
+                    CommitDrawingWallVertex(previewPoint);
+                    break;
+                }
+
                 if (shiftSelect)
                 {
                     HandleShiftSelectClick(previewPoint);

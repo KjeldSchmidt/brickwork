@@ -21,6 +21,13 @@ public partial class MapPreviewDocumentView : UserControl
     private bool _marqueeAddToSelection;
     private bool _marqueeArmed;
 
+    private Point? _middlePressPosition;
+    private bool _middleDragMoved;
+    private bool _middleArmedForWall;
+    private bool _middleArmedForPortal;
+    private bool _portalResizeFromMiddle;
+    private bool _middleStartedWallThisPress;
+
     public MapPreviewDocumentView()
     {
         InitializeComponent();
@@ -43,8 +50,26 @@ public partial class MapPreviewDocumentView : UserControl
         if (e.Key == Key.Escape)
         {
             CancelMarquee();
-            viewModel.ClearWallSelection();
+            if (viewModel.IsDrawingWall)
+            {
+                viewModel.CancelDrawingWall();
+            }
+            else
+            {
+                viewModel.ClearWallSelection();
+            }
+
             e.Handled = true;
+            return;
+        }
+
+        if ((e.Key is Key.Enter or Key.Return) && e.KeyModifiers == KeyModifiers.None)
+        {
+            if (viewModel.IsDrawingWall && viewModel.TryFinishDrawingWall())
+            {
+                e.Handled = true;
+            }
+
             return;
         }
 
@@ -71,6 +96,7 @@ public partial class MapPreviewDocumentView : UserControl
 
         _lastFittedMap = null;
         CancelMarquee();
+        ResetMiddleState();
         ScheduleInitialFit();
     }
 
@@ -83,6 +109,7 @@ public partial class MapPreviewDocumentView : UserControl
             _rightPressScreenPosition = null;
             _rightDragMoved = false;
             CancelMarquee();
+            ResetMiddleState();
 
             if (sender is MapPreviewDocumentViewModel { HasMap: false })
             {
@@ -114,6 +141,15 @@ public partial class MapPreviewDocumentView : UserControl
             _marqueeActive = false;
             _marqueeAddToSelection = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
+            if (viewModel.IsDrawingWall)
+            {
+                viewModel.CommitDrawingWallVertex(ToPreviewPoint(pressPosition));
+                _leftPressPosition = null;
+                e.Pointer.Capture(MapViewport);
+                e.Handled = true;
+                return;
+            }
+
             _vertexDragActive = viewModel.TryBeginVertexDrag(ToPreviewPoint(pressPosition));
             if (_vertexDragActive)
             {
@@ -122,7 +158,6 @@ public partial class MapPreviewDocumentView : UserControl
                 return;
             }
 
-            // Marquee only from empty canvas (not on a wall/node).
             _marqueeArmed = viewModel.IsWallEditingToolActive
                 && !viewModel.HasWallAt(ToPreviewPoint(pressPosition));
             if (_marqueeArmed)
@@ -136,8 +171,6 @@ public partial class MapPreviewDocumentView : UserControl
 
         if (properties.IsRightButtonPressed)
         {
-            // Track in ZoomBorder space: pan keeps MapViewport-local coords almost fixed.
-            // Do not mark Handled — ZoomBorder still needs the event for right-drag pan.
             _rightPressScreenPosition = e.GetPosition(MapZoom);
             _rightDragMoved = false;
             return;
@@ -145,8 +178,39 @@ public partial class MapPreviewDocumentView : UserControl
 
         if (properties.IsMiddleButtonPressed)
         {
-            var previewPoint = ToPreviewPoint(e.GetPosition(MapViewport));
-            viewModel.TryAddPortalAt(previewPoint);
+            if (!viewModel.IsWallEditingToolActive)
+            {
+                return;
+            }
+
+            var pressPosition = e.GetPosition(MapViewport);
+            _middlePressPosition = pressPosition;
+            _middleDragMoved = false;
+            _portalResizeFromMiddle = false;
+            _middleStartedWallThisPress = false;
+            _middleArmedForWall = false;
+            _middleArmedForPortal = false;
+
+            if (viewModel.IsDrawingWall)
+            {
+                viewModel.TryFinishDrawingWall(ToPreviewPoint(pressPosition));
+                ResetMiddleState();
+                e.Pointer.Capture(MapViewport);
+                e.Handled = true;
+                return;
+            }
+
+            var previewPoint = ToPreviewPoint(pressPosition);
+            if (viewModel.HasWallAt(previewPoint))
+            {
+                _middleArmedForPortal = true;
+            }
+            else
+            {
+                _middleArmedForWall = true;
+            }
+
+            e.Pointer.Capture(MapViewport);
             e.Handled = true;
         }
     }
@@ -155,6 +219,18 @@ public partial class MapPreviewDocumentView : UserControl
     {
         if (DataContext is not MapPreviewDocumentViewModel { HasMap: true } viewModel)
         {
+            return;
+        }
+
+        if (_portalResizeFromMiddle)
+        {
+            if (!e.GetCurrentPoint(MapViewport).Properties.IsMiddleButtonPressed)
+            {
+                return;
+            }
+
+            viewModel.DragVertexTo(ToPreviewPoint(e.GetPosition(MapViewport)));
+            e.Handled = true;
             return;
         }
 
@@ -168,6 +244,46 @@ public partial class MapPreviewDocumentView : UserControl
             viewModel.DragVertexTo(ToPreviewPoint(e.GetPosition(MapViewport)));
             e.Handled = true;
             return;
+        }
+
+        if (_middlePressPosition is { } middlePress &&
+            e.GetCurrentPoint(MapViewport).Properties.IsMiddleButtonPressed)
+        {
+            var current = e.GetPosition(MapViewport);
+            var delta = current - middlePress;
+            if (!_middleDragMoved &&
+                (Math.Abs(delta.X) > ClickMoveThreshold || Math.Abs(delta.Y) > ClickMoveThreshold))
+            {
+                _middleDragMoved = true;
+                if (_middleArmedForPortal)
+                {
+                    _portalResizeFromMiddle = viewModel.TryBeginPortalCreateDrag(ToPreviewPoint(middlePress));
+                    _middleArmedForPortal = false;
+                    if (_portalResizeFromMiddle)
+                    {
+                        viewModel.DragVertexTo(ToPreviewPoint(current));
+                        e.Handled = true;
+                        return;
+                    }
+                }
+                else if (_middleArmedForWall)
+                {
+                    _middleStartedWallThisPress = viewModel.TryStartDrawingWall(ToPreviewPoint(middlePress));
+                    _middleArmedForWall = false;
+                }
+            }
+
+            if (viewModel.IsDrawingWall)
+            {
+                viewModel.UpdateDrawingWallPreview(ToPreviewPoint(current));
+                e.Handled = true;
+                return;
+            }
+        }
+
+        if (viewModel.IsDrawingWall && _middlePressPosition is null)
+        {
+            viewModel.UpdateDrawingWallPreview(ToPreviewPoint(e.GetPosition(MapViewport)));
         }
 
         if (_marqueeArmed &&
@@ -225,6 +341,54 @@ public partial class MapPreviewDocumentView : UserControl
             return;
         }
 
+        if (e.InitialPressMouseButton == MouseButton.Middle)
+        {
+            var releasePosition = e.GetPosition(MapViewport);
+            if (_portalResizeFromMiddle)
+            {
+                viewModel.EndVertexDrag();
+                ResetMiddleState();
+                if (e.Pointer.Captured == MapViewport)
+                {
+                    e.Pointer.Capture(null);
+                }
+
+                e.Handled = true;
+                return;
+            }
+
+            if (viewModel.IsDrawingWall)
+            {
+                if (_middleStartedWallThisPress)
+                {
+                    viewModel.UpdateDrawingWallPreview(ToPreviewPoint(releasePosition));
+                }
+
+                ResetMiddleState();
+                if (e.Pointer.Captured == MapViewport)
+                {
+                    e.Pointer.Capture(null);
+                }
+
+                e.Handled = true;
+                return;
+            }
+
+            if (_middleArmedForPortal && !_middleDragMoved)
+            {
+                viewModel.TryAddPortalAt(ToPreviewPoint(releasePosition));
+            }
+
+            ResetMiddleState();
+            if (e.Pointer.Captured == MapViewport)
+            {
+                e.Pointer.Capture(null);
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         if (e.InitialPressMouseButton == MouseButton.Right)
         {
             if (_rightPressScreenPosition is { } rightPress)
@@ -237,7 +401,7 @@ public partial class MapPreviewDocumentView : UserControl
                 }
             }
 
-            if (_rightPressScreenPosition is not null && !_rightDragMoved)
+            if (_rightPressScreenPosition is not null && !_rightDragMoved && !viewModel.IsDrawingWall)
             {
                 var previewPoint = ToPreviewPoint(e.GetPosition(MapViewport));
                 if (!viewModel.TryRemoveVertexAt(previewPoint))
@@ -306,6 +470,16 @@ public partial class MapPreviewDocumentView : UserControl
         }
 
         _leftPressPosition = null;
+    }
+
+    private void ResetMiddleState()
+    {
+        _middlePressPosition = null;
+        _middleDragMoved = false;
+        _middleArmedForWall = false;
+        _middleArmedForPortal = false;
+        _portalResizeFromMiddle = false;
+        _middleStartedWallThisPress = false;
     }
 
     private void UpdateMarqueeRect(Point origin, Point current)

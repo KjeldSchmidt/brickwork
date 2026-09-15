@@ -64,19 +64,11 @@ public static class WallGeometryEditing
             snappedScene,
             center,
             endpointHint,
-            endpoint,
             totalLength);
 
-        var halfWidth = endpoint switch
-        {
-            PortalWidthEndpoint.End when wall.IsClosed =>
-                WallCircularIntervals.ForwardArcDistance(center, draggedArc, totalLength),
-            PortalWidthEndpoint.Start when wall.IsClosed =>
-                WallCircularIntervals.ForwardArcDistance(draggedArc, center, totalLength),
-            PortalWidthEndpoint.End => Math.Max(0d, draggedArc - center),
-            PortalWidthEndpoint.Start => Math.Max(0d, center - draggedArc),
-            _ => 0d,
-        };
+        var halfWidth = wall.IsClosed
+            ? ShortestArcDistance(center, draggedArc, totalLength)
+            : Math.Abs(draggedArc - center);
 
         const double minWidth = 2d;
         halfWidth = Math.Max(halfWidth, minWidth / 2d);
@@ -87,13 +79,19 @@ public static class WallGeometryEditing
         portal.Width = halfWidth * 2d;
     }
 
+    private static double ShortestArcDistance(double from, double to, double totalLength)
+    {
+        var forward = WallCircularIntervals.ForwardArcDistance(from, to, totalLength);
+        var backward = WallCircularIntervals.ForwardArcDistance(to, from, totalLength);
+        return Math.Min(forward, backward);
+    }
+
     private static double FindDraggedArcLength(
         Wall wall,
         double[] arcLengths,
         MapPoint snappedScene,
         double center,
         double endpointHint,
-        PortalWidthEndpoint endpoint,
         double totalLength)
     {
         var baseArc = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, snappedScene);
@@ -109,14 +107,7 @@ public static class WallGeometryEditing
         for (var branch = -1; branch <= 1; branch++)
         {
             var candidate = baseArc + branch * totalLength;
-            var halfWidth = endpoint switch
-            {
-                PortalWidthEndpoint.End =>
-                    WallCircularIntervals.ForwardArcDistance(center, candidate, totalLength),
-                PortalWidthEndpoint.Start =>
-                    WallCircularIntervals.ForwardArcDistance(candidate, center, totalLength),
-                _ => 0d,
-            };
+            var halfWidth = ShortestArcDistance(center, candidate, totalLength);
 
             if (halfWidth > maxHalfWidth + Epsilon)
             {

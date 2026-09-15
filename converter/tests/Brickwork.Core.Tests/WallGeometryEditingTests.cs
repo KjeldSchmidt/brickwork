@@ -130,6 +130,25 @@ public class WallGeometryEditingTests
     }
 
     [Fact]
+    public void SetPortalEndpointFromScene_EndHandlePastCenter_ExpandsUsingAbsoluteDistance()
+    {
+        var wall = new Wall
+        {
+            EntityId = 1,
+            Points = [new MapPoint(0, 0), new MapPoint(100, 0)],
+            Portals = [new WallPortal { Anchor = new MapPoint(50, 0), Width = 2 }],
+        };
+
+        WallGeometryEditing.SetPortalEndpointFromScene(
+            wall,
+            wall.Portals[0],
+            PortalWidthEndpoint.End,
+            new MapPoint(30, 0));
+
+        Assert.Equal(40, wall.Portals[0].Width, precision: 1);
+    }
+
+    [Fact]
     public void SetPortalEndpointFromScene_ClosedPathNearVertex_DoesNotSnapToMinimumWidth()
     {
         var wall = new Wall

@@ -360,8 +360,15 @@ public sealed partial class EditorSession : ObservableObject
         }
 
         _activeGesture = null;
-        if (Map is null || gesture.Cancelled)
+        if (Map is null)
         {
+            return;
+        }
+
+        if (gesture.Cancelled)
+        {
+            RestoreContent(gesture.BeforeDocument);
+            NotifyContentChanged();
             return;
         }
 
@@ -374,6 +381,17 @@ public sealed partial class EditorSession : ObservableObject
         _history.Push(new MementoEditorCommand(gesture.Name, gesture.BeforeDocument, afterDocument));
         RefreshHistoryState();
         NotifyContentChanged();
+    }
+
+    public void CancelActiveGesture()
+    {
+        if (_activeGesture is null)
+        {
+            return;
+        }
+
+        _activeGesture.Cancel();
+        _activeGesture.Dispose();
     }
 
     private void RefreshHistoryState()

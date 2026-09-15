@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Brickwork.App.ViewModels;
+using Dock.Model.Core;
 
 namespace Brickwork.App.Views;
 
@@ -28,6 +29,16 @@ public partial class MainWindow : Window
         {
             viewModel.Session.ClearWallSelection();
             e.Handled = true;
+            return;
+        }
+
+        if ((e.Key is Key.Enter or Key.Return) && e.KeyModifiers == KeyModifiers.None)
+        {
+            if (TryFinishDrawingWall(viewModel))
+            {
+                e.Handled = true;
+            }
+
             return;
         }
 
@@ -84,5 +95,29 @@ public partial class MainWindow : Window
     {
         var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
         return focused is TextBox or NumericUpDown or ComboBox;
+    }
+
+    private static bool TryFinishDrawingWall(MainWindowViewModel viewModel) =>
+        viewModel.Layout is not null && TryFinishDrawingWallInDockable(viewModel.Layout);
+
+    private static bool TryFinishDrawingWallInDockable(IDockable dockable)
+    {
+        if (dockable is MapPreviewDocumentViewModel mapPreview)
+        {
+            return mapPreview.IsDrawingWall && mapPreview.TryFinishDrawingWall();
+        }
+
+        if (dockable is IDock { VisibleDockables: { } children })
+        {
+            foreach (var child in children)
+            {
+                if (child is not null && TryFinishDrawingWallInDockable(child))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }
