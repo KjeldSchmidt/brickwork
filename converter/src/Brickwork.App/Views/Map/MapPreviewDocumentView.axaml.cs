@@ -27,6 +27,7 @@ public partial class MapPreviewDocumentView : UserControl
     private bool _middleArmedForPortal;
     private bool _portalResizeFromMiddle;
     private bool _middleStartedWallThisPress;
+    private bool _eraserStrokeActive;
 
     public MapPreviewDocumentView()
     {
@@ -97,6 +98,7 @@ public partial class MapPreviewDocumentView : UserControl
         _lastFittedMap = null;
         CancelMarquee();
         ResetMiddleState();
+        _eraserStrokeActive = false;
         ScheduleInitialFit();
     }
 
@@ -110,6 +112,7 @@ public partial class MapPreviewDocumentView : UserControl
             _rightDragMoved = false;
             CancelMarquee();
             ResetMiddleState();
+            _eraserStrokeActive = false;
 
             if (sender is MapPreviewDocumentViewModel { HasMap: false })
             {
@@ -147,6 +150,19 @@ public partial class MapPreviewDocumentView : UserControl
                 _leftPressPosition = null;
                 e.Pointer.Capture(MapViewport);
                 e.Handled = true;
+                return;
+            }
+
+            if (viewModel.IsEraserToolActive)
+            {
+                _eraserStrokeActive = viewModel.TryBeginEraserStroke(ToPreviewPoint(pressPosition));
+                if (_eraserStrokeActive)
+                {
+                    _leftPressPosition = null;
+                    e.Pointer.Capture(MapViewport);
+                    e.Handled = true;
+                }
+
                 return;
             }
 
@@ -242,6 +258,18 @@ public partial class MapPreviewDocumentView : UserControl
             }
 
             viewModel.DragVertexTo(ToPreviewPoint(e.GetPosition(MapViewport)));
+            e.Handled = true;
+            return;
+        }
+
+        if (_eraserStrokeActive)
+        {
+            if (!e.GetCurrentPoint(MapViewport).Properties.IsLeftButtonPressed)
+            {
+                return;
+            }
+
+            viewModel.ContinueEraserStroke(ToPreviewPoint(e.GetPosition(MapViewport)));
             e.Handled = true;
             return;
         }
@@ -424,6 +452,20 @@ public partial class MapPreviewDocumentView : UserControl
         {
             viewModel.EndVertexDrag();
             _vertexDragActive = false;
+            _leftPressPosition = null;
+            if (e.Pointer.Captured == MapViewport)
+            {
+                e.Pointer.Capture(null);
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        if (_eraserStrokeActive)
+        {
+            viewModel.EndEraserStroke();
+            _eraserStrokeActive = false;
             _leftPressPosition = null;
             if (e.Pointer.Captured == MapViewport)
             {

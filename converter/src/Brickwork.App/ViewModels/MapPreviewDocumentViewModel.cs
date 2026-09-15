@@ -12,6 +12,8 @@ public partial class MapPreviewDocumentViewModel : Document
     private IDisposable? _vertexDragGesture;
     private Wall? _drawingWall;
     private IDisposable? _drawingGesture;
+    private IDisposable? _eraserGesture;
+    private MapPoint? _lastErasePreviewPoint;
 
     [ObservableProperty]
     private MapDocument? _map;
@@ -60,6 +62,7 @@ public partial class MapPreviewDocumentViewModel : Document
                 _drawingGesture = null;
                 _vertexDragTarget = null;
                 _vertexDragGesture = null;
+                EndEraserStroke();
                 UpdateFromSession();
             }
 
@@ -129,6 +132,8 @@ public partial class MapPreviewDocumentViewModel : Document
     public void ClearHover() => _session.ClearHoveredWall();
 
     public bool IsWallEditingToolActive => _session.ActiveMapTool == MapToolKind.WallEditing;
+
+    public bool IsEraserToolActive => _session.ActiveMapTool == MapToolKind.Eraser;
 
     public bool IsDrawingWall => _drawingWall is not null;
 
@@ -597,6 +602,54 @@ public partial class MapPreviewDocumentViewModel : Document
 
         _session.ClearWallSelection();
         return true;
+    }
+
+    public bool TryBeginEraserStroke(MapPoint previewPoint)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.Eraser)
+        {
+            return false;
+        }
+
+        _eraserGesture = _session.BeginGesture("Erase walls");
+        _lastErasePreviewPoint = previewPoint;
+        TryEraseWallAt(previewPoint);
+        return true;
+    }
+
+    public void ContinueEraserStroke(MapPoint previewPoint)
+    {
+        if (_eraserGesture is null || Map is null || _session.ActiveMapTool != MapToolKind.Eraser)
+        {
+            return;
+        }
+
+        if (_lastErasePreviewPoint is { } last)
+        {
+            var dx = previewPoint.X - last.X;
+            var dy = previewPoint.Y - last.Y;
+            var distance = Math.Sqrt((dx * dx) + (dy * dy));
+            var steps = Math.Max(1, (int)Math.Ceiling(distance / 4d));
+            for (var i = 1; i <= steps; i++)
+            {
+                var t = i / (double)steps;
+                TryEraseWallAt(new MapPoint(last.X + (dx * t), last.Y + (dy * t)));
+            }
+        }
+        else
+        {
+            TryEraseWallAt(previewPoint);
+        }
+
+        _lastErasePreviewPoint = previewPoint;
+    }
+
+    public void EndEraserStroke()
+    {
+        var gesture = _eraserGesture;
+        _eraserGesture = null;
+        _lastErasePreviewPoint = null;
+        gesture?.Dispose();
     }
 
     public void HandleShiftSelectClick(MapPoint previewPoint)
