@@ -14,6 +14,8 @@ public partial class MapPreviewDocumentView : UserControl
 
     private MapDocument? _lastFittedMap;
     private Point? _leftPressPosition;
+    private Point? _rightPressScreenPosition;
+    private bool _rightDragMoved;
     private bool _vertexDragActive;
 
     public MapPreviewDocumentView()
@@ -61,6 +63,8 @@ public partial class MapPreviewDocumentView : UserControl
         {
             _vertexDragActive = false;
             _leftPressPosition = null;
+            _rightPressScreenPosition = null;
+            _rightDragMoved = false;
 
             if (sender is MapPreviewDocumentViewModel { HasMap: false })
             {
@@ -87,6 +91,8 @@ public partial class MapPreviewDocumentView : UserControl
         {
             var pressPosition = e.GetPosition(MapViewport);
             _leftPressPosition = pressPosition;
+            _rightPressScreenPosition = null;
+            _rightDragMoved = false;
             _vertexDragActive = viewModel.TryBeginVertexDrag(ToPreviewPoint(pressPosition));
             if (_vertexDragActive)
             {
@@ -94,6 +100,15 @@ public partial class MapPreviewDocumentView : UserControl
                 e.Handled = true;
             }
 
+            return;
+        }
+
+        if (properties.IsRightButtonPressed)
+        {
+            // Track in ZoomBorder space: pan keeps MapViewport-local coords almost fixed.
+            // Do not mark Handled — ZoomBorder still needs the event for right-drag pan.
+            _rightPressScreenPosition = e.GetPosition(MapZoom);
+            _rightDragMoved = false;
             return;
         }
 
@@ -124,6 +139,18 @@ public partial class MapPreviewDocumentView : UserControl
             return;
         }
 
+        if (_rightPressScreenPosition is { } rightPress &&
+            e.GetCurrentPoint(MapViewport).Properties.IsRightButtonPressed &&
+            !_rightDragMoved)
+        {
+            var current = e.GetPosition(MapZoom);
+            var delta = current - rightPress;
+            if (Math.Abs(delta.X) > ClickMoveThreshold || Math.Abs(delta.Y) > ClickMoveThreshold)
+            {
+                _rightDragMoved = true;
+            }
+        }
+
         viewModel.UpdateHoverAt(ToPreviewPoint(e.GetPosition(MapViewport)));
         MapViewport.Cursor = viewModel.HoveredWallEntityId is not null
             ? new Cursor(StandardCursorType.Hand)
@@ -147,6 +174,28 @@ public partial class MapPreviewDocumentView : UserControl
             return;
         }
 
+        if (e.InitialPressMouseButton == MouseButton.Right)
+        {
+            if (_rightPressScreenPosition is { } rightPress)
+            {
+                var releaseScreen = e.GetPosition(MapZoom);
+                var delta = releaseScreen - rightPress;
+                if (Math.Abs(delta.X) > ClickMoveThreshold || Math.Abs(delta.Y) > ClickMoveThreshold)
+                {
+                    _rightDragMoved = true;
+                }
+            }
+
+            if (_rightPressScreenPosition is not null && !_rightDragMoved)
+            {
+                viewModel.TryInsertVertexAt(ToPreviewPoint(e.GetPosition(MapViewport)));
+            }
+
+            _rightPressScreenPosition = null;
+            _rightDragMoved = false;
+            return;
+        }
+
         if (e.InitialPressMouseButton != MouseButton.Left)
         {
             return;
@@ -166,13 +215,13 @@ public partial class MapPreviewDocumentView : UserControl
             return;
         }
 
-        var releasePosition = e.GetPosition(MapViewport);
+        var leftReleasePosition = e.GetPosition(MapViewport);
         if (_leftPressPosition is { } pressPosition)
         {
-            var delta = releasePosition - pressPosition;
+            var delta = leftReleasePosition - pressPosition;
             if (Math.Abs(delta.X) <= ClickMoveThreshold && Math.Abs(delta.Y) <= ClickMoveThreshold)
             {
-                viewModel.HandlePrimaryClick(ToPreviewPoint(releasePosition));
+                viewModel.HandlePrimaryClick(ToPreviewPoint(leftReleasePosition));
                 e.Handled = true;
             }
         }

@@ -24,6 +24,7 @@
                     Padding="4"
                     Margin="0"
                     HorizontalAlignment="Center"
+                    IsEnabled="{Binding CanUndo}"
                     Command="{Binding UndoCommand}"
                     ToolTip.Tip="{Binding UndoToolTip}">
                 <Path Width="16"
@@ -38,6 +39,7 @@
                     Padding="4"
                     Margin="0"
                     HorizontalAlignment="Center"
+                    IsEnabled="{Binding CanRedo}"
                     Command="{Binding RedoCommand}"
                     ToolTip.Tip="{Binding RedoToolTip}">
                 <Path Width="16"

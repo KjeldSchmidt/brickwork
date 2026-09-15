@@ -38,6 +38,7 @@ public partial class ToolPaletteViewModel : Tool
                 [
                     new("Click Wall", "Change Wall Type"),
                     new("Drag Node", "Move Node, Resize Gap"),
+                    new("Right-Click Wall", "Add Node"),
                     new("Middle-Click", "Toggle Wall Active"),
                     new("Right-Drag", "Pan Map"),
                 ],

@@ -14,6 +14,25 @@ public static class WallGeometryEditing
         }
 
         wall.Points[vertexIndex] = scenePoint;
+        ResnapPortalAnchors(wall);
+    }
+
+    /// <summary>
+    /// Keeps portal anchors on the wall centerline after polyline edits so handles stay with segments.
+    /// </summary>
+    public static void ResnapPortalAnchors(Wall wall)
+    {
+        if (wall.Portals.Count == 0 || wall.Points.Count < 2)
+        {
+            return;
+        }
+
+        foreach (var portal in wall.Portals)
+        {
+            var scene = WallPathSegmentBuilder.PortalAnchorToScene(wall, portal);
+            var snapped = SnapToCenterline(wall, scene);
+            portal.Anchor = MapPointTransforms.SceneToLocal(wall, snapped);
+        }
     }
 
     public static void SetPortalAnchorFromScene(Wall wall, WallPortal portal, MapPoint scenePoint)
@@ -125,6 +144,66 @@ public static class WallGeometryEditing
         var arcLengths = WallPolylineEdges.ComputeArcLengths(wall.Points, wall.IsClosed);
         var arcLength = FindArcLengthAtClosestPoint(wall.Points, wall.IsClosed, arcLengths, scenePoint);
         return InterpolateAtLength(wall.Points, wall.IsClosed, arcLength);
+    }
+
+    /// <summary>
+    /// Inserts a vertex on the closest wall edge at the projection of <paramref name="scenePoint"/>.
+    /// Returns the new vertex index, or null if the click is too close to an existing vertex.
+    /// </summary>
+    public static int? TryInsertVertex(Wall wall, MapPoint scenePoint, double minDistanceFromExisting = 1d)
+    {
+        if (wall.Points.Count < 2)
+        {
+            return null;
+        }
+
+        var bestDistanceSquared = double.MaxValue;
+        var bestStartIndex = -1;
+        var bestPoint = scenePoint;
+        var bestT = 0d;
+
+        foreach (var (start, end, startIndex) in WallPolylineEdges.EnumerateEdges(wall.Points, wall.IsClosed))
+        {
+            var closest = ProjectOntoSegment(scenePoint, start, end, out var t);
+            var dx = scenePoint.X - closest.X;
+            var dy = scenePoint.Y - closest.Y;
+            var distanceSquared = dx * dx + dy * dy;
+            if (distanceSquared + Epsilon >= bestDistanceSquared)
+            {
+                continue;
+            }
+
+            bestDistanceSquared = distanceSquared;
+            bestStartIndex = startIndex;
+            bestPoint = closest;
+            bestT = t;
+        }
+
+        if (bestStartIndex < 0)
+        {
+            return null;
+        }
+
+        // Too close to an endpoint — that vertex already exists.
+        if (bestT <= Epsilon || bestT >= 1d - Epsilon)
+        {
+            return null;
+        }
+
+        var minDistanceSquared = minDistanceFromExisting * minDistanceFromExisting;
+        foreach (var existing in wall.Points)
+        {
+            var dx = existing.X - bestPoint.X;
+            var dy = existing.Y - bestPoint.Y;
+            if (dx * dx + dy * dy <= minDistanceSquared)
+            {
+                return null;
+            }
+        }
+
+        var insertIndex = bestStartIndex + 1;
+        wall.Points.Insert(insertIndex, bestPoint);
+        return insertIndex;
     }
 
     private static double FindArcLengthAtClosestPoint(

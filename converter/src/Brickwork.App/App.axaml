@@ -205,6 +205,16 @@
             <Setter Property="BorderBrush" Value="#3B82F6" />
         </Style>
 
+        <Style Selector="Button.tool-palette-button:disabled">
+            <Setter Property="Foreground" Value="#5A6478" />
+            <Setter Property="Opacity" Value="0.35" />
+        </Style>
+
+        <Style Selector="Button.tool-palette-button:disabled:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+
         <Style Selector="ToolTip">
             <Setter Property="Background" Value="#CC1A1D24" />
             <Setter Property="Foreground" Value="#E8EEF5" />
