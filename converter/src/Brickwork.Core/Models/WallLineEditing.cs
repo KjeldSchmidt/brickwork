@@ -36,4 +36,23 @@ public static class WallLineEditing
 
         portal.IsActive = !portal.IsActive;
     }
+
+    public static bool RemoveFromMap(MapDocument map, Wall wall)
+    {
+        if (!map.Walls.Remove(wall))
+        {
+            var match = map.Walls.FirstOrDefault(candidate => candidate.EntityId == wall.EntityId);
+            if (match is null || !map.Walls.Remove(match))
+            {
+                return false;
+            }
+        }
+
+        foreach (var group in map.Groups)
+        {
+            group.MemberIds.Remove(wall.EntityId);
+        }
+
+        return true;
+    }
 }

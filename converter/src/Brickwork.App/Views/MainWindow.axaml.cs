@@ -26,10 +26,21 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (e.KeyModifiers == KeyModifiers.None && e.Key == Key.V)
+        if (e.KeyModifiers != KeyModifiers.None)
         {
-            viewModel.Session.ActiveMapTool = MapToolKind.Pointer;
-            e.Handled = true;
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.V:
+                viewModel.Session.ActiveMapTool = MapToolKind.Pointer;
+                e.Handled = true;
+                break;
+            case Key.E:
+                viewModel.Session.ActiveMapTool = MapToolKind.Eraser;
+                e.Handled = true;
+                break;
         }
     }
 }

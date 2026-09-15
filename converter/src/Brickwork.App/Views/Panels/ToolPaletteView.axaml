@@ -26,10 +26,9 @@
                         HorizontalAlignment="Center"
                         Command="{Binding $parent[ItemsControl].((vm:ToolPaletteViewModel)DataContext).SelectToolCommand}"
                         CommandParameter="{Binding Kind}">
-                    <!-- Optical nudge: arrow glyphs sit left-heavy. Tweak Margin here (e.g. 2–4 left). -->
                     <Path Width="16"
                           Height="16"
-                          Margin="7,1,0,0"
+                          Margin="{Binding IconMargin}"
                           Stretch="Uniform"
                           Fill="{Binding $parent[Button].Foreground}"
                           Data="{Binding IconGeometry}" />

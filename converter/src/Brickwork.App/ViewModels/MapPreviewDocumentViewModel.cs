@@ -132,7 +132,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public bool TryBeginVertexDrag(MapPoint previewPoint)
     {
-        if (Map is null)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.Pointer)
         {
             return false;
         }
@@ -190,7 +190,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public void EditWallAt(MapPoint previewPoint, bool cycleType, bool toggleActive)
     {
-        if (Map is null)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.Pointer)
         {
             return;
         }
@@ -213,5 +213,60 @@ public partial class MapPreviewDocumentViewModel : Document
 
         _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
         _session.NotifyContentChanged();
+    }
+
+    public bool TryEraseWallAt(MapPoint previewPoint)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.Eraser)
+        {
+            return false;
+        }
+
+        Wall? wall = null;
+        var vertexHit = WallVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (vertexHit is not null)
+        {
+            wall = vertexHit.Wall;
+        }
+        else
+        {
+            wall = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)?.Wall;
+        }
+
+        if (wall is null)
+        {
+            _session.ClearWallSelection();
+            return false;
+        }
+
+        if (!WallLineEditing.RemoveFromMap(Map, wall))
+        {
+            return false;
+        }
+
+        _session.ClearWallSelection();
+        _session.NotifyContentChanged();
+        return true;
+    }
+
+    public void HandlePrimaryClick(MapPoint previewPoint)
+    {
+        switch (_session.ActiveMapTool)
+        {
+            case MapToolKind.Eraser:
+                TryEraseWallAt(previewPoint);
+                break;
+            case MapToolKind.Pointer:
+                if (!HasWallAt(previewPoint))
+                {
+                    ClearWallSelection();
+                }
+                else
+                {
+                    EditWallAt(previewPoint, cycleType: true, toggleActive: false);
+                }
+
+                break;
+        }
     }
 }

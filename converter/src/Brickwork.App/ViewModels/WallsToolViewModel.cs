@@ -39,7 +39,7 @@ public partial class WallsToolViewModel : Tool
 
             if (args.PropertyName is nameof(EditorSession.ContentRevision))
             {
-                RefreshBoundValues();
+                SyncTreeWithWallSet();
             }
 
             if (args.PropertyName is nameof(EditorSession.TreeFocusGeneration))
@@ -170,6 +170,146 @@ public partial class WallsToolViewModel : Tool
         foreach (var layer in Layers)
         {
             layer.RefreshFromModel();
+        }
+    }
+
+    private void SyncTreeWithWallSet()
+    {
+        if (_session.Map is null)
+        {
+            if (Layers.Count > 0)
+            {
+                RebuildLayers();
+            }
+
+            return;
+        }
+
+        var mapWallIds = _session.Map.Walls.Select(wall => wall.EntityId).ToHashSet();
+        var treeWallIds = EnumerateTreeWallIds().ToHashSet();
+        if (mapWallIds.SetEquals(treeWallIds))
+        {
+            RefreshBoundValues();
+            return;
+        }
+
+        // Removals only: drop matching nodes instead of rebuilding (avoids expand-all).
+        if (mapWallIds.IsSubsetOf(treeWallIds))
+        {
+            foreach (var removedId in treeWallIds)
+            {
+                if (!mapWallIds.Contains(removedId))
+                {
+                    RemoveWallNode(removedId);
+                }
+            }
+
+            OnPropertyChanged(nameof(HasLayers));
+            OnPropertyChanged(nameof(ShowEmptyMessage));
+            OnPropertyChanged(nameof(EmptyMessage));
+            return;
+        }
+
+        RebuildLayers();
+    }
+
+    private void RemoveWallNode(int wallEntityId)
+    {
+        if (SelectedTreeItem is WallItemViewModel selectedWall &&
+            selectedWall.Wall.EntityId == wallEntityId)
+        {
+            _syncingSelection = true;
+            SelectedTreeItem = null;
+            _syncingSelection = false;
+        }
+        else if (SelectedTreeItem is WallPortalItemViewModel selectedPortal &&
+                 selectedPortal.WallEntityId == wallEntityId)
+        {
+            _syncingSelection = true;
+            SelectedTreeItem = null;
+            _syncingSelection = false;
+        }
+
+        for (var layerIndex = Layers.Count - 1; layerIndex >= 0; layerIndex--)
+        {
+            var layer = Layers[layerIndex];
+            if (!TryRemoveWallFromChildren(layer.Children, wallEntityId))
+            {
+                continue;
+            }
+
+            if (layer.Children.Count == 0)
+            {
+                Layers.RemoveAt(layerIndex);
+            }
+            else
+            {
+                layer.RefreshActiveState();
+            }
+
+            return;
+        }
+    }
+
+    private static bool TryRemoveWallFromChildren(ObservableCollection<object> children, int wallEntityId)
+    {
+        for (var index = 0; index < children.Count; index++)
+        {
+            switch (children[index])
+            {
+                case WallItemViewModel wall when wall.Wall.EntityId == wallEntityId:
+                    children.RemoveAt(index);
+                    return true;
+                case WallGroupNodeViewModel group:
+                    if (!TryRemoveWallFromChildren(group.Children, wallEntityId))
+                    {
+                        break;
+                    }
+
+                    if (group.Children.Count == 0)
+                    {
+                        children.RemoveAt(index);
+                    }
+                    else
+                    {
+                        group.RefreshActiveState();
+                    }
+
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private IEnumerable<int> EnumerateTreeWallIds()
+    {
+        foreach (var layer in Layers)
+        {
+            foreach (var wallId in EnumerateTreeWallIds(layer.Children))
+            {
+                yield return wallId;
+            }
+        }
+    }
+
+    private static IEnumerable<int> EnumerateTreeWallIds(IEnumerable<object> children)
+    {
+        foreach (var child in children)
+        {
+            switch (child)
+            {
+                case WallGroupNodeViewModel group:
+                    foreach (var wallId in EnumerateTreeWallIds(group.Children))
+                    {
+                        yield return wallId;
+                    }
+
+                    break;
+                case WallItemViewModel wall:
+                    yield return wall.Wall.EntityId;
+                    break;
+            }
         }
     }
 
@@ -478,6 +618,8 @@ public partial class WallLayerNodeViewModel : ObservableObject
         }
     }
 
+    public void RefreshActiveState() => OnPropertyChanged(nameof(IsActive));
+
     private static bool ResolveCascadeTarget(bool? requested, bool? current) =>
         requested ?? current != true;
 }
@@ -526,6 +668,8 @@ public partial class WallGroupNodeViewModel : ObservableObject
             }
         }
     }
+
+    public void RefreshActiveState() => OnPropertyChanged(nameof(IsActive));
 
     private static bool ResolveCascadeTarget(bool? requested, bool? current) =>
         requested ?? current != true;

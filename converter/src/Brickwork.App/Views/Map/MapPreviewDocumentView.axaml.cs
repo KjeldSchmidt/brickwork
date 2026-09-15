@@ -172,17 +172,8 @@ public partial class MapPreviewDocumentView : UserControl
             var delta = releasePosition - pressPosition;
             if (Math.Abs(delta.X) <= ClickMoveThreshold && Math.Abs(delta.Y) <= ClickMoveThreshold)
             {
-                var previewPoint = ToPreviewPoint(releasePosition);
-                if (!viewModel.HasWallAt(previewPoint))
-                {
-                    viewModel.ClearWallSelection();
-                    e.Handled = true;
-                }
-                else
-                {
-                    viewModel.EditWallAt(previewPoint, cycleType: true, toggleActive: false);
-                    e.Handled = true;
-                }
+                viewModel.HandlePrimaryClick(ToPreviewPoint(releasePosition));
+                e.Handled = true;
             }
         }
 
