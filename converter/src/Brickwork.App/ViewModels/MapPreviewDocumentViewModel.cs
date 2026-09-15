@@ -236,6 +236,56 @@ public partial class MapPreviewDocumentViewModel : Document
         _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
     }
 
+    public bool TryRemoveVertexAt(MapPoint previewPoint)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
+        {
+            return false;
+        }
+
+        var hit = WallVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (hit is null)
+        {
+            return false;
+        }
+
+        if (hit.VertexIndex is int vertexIndex)
+        {
+            var removedVertex = false;
+            _session.Execute("Remove wall vertex", () =>
+            {
+                removedVertex = WallGeometryEditing.TryRemoveVertex(hit.Wall, vertexIndex);
+            });
+
+            if (!removedVertex)
+            {
+                return false;
+            }
+
+            _session.RequestWallTreeFocus(hit.Wall);
+            return true;
+        }
+
+        if (hit.Portal is { } portal)
+        {
+            var removedPortal = false;
+            _session.Execute("Remove portal", () =>
+            {
+                removedPortal = WallGeometryEditing.TryRemovePortal(hit.Wall, portal);
+            });
+
+            if (!removedPortal)
+            {
+                return false;
+            }
+
+            _session.RequestWallTreeFocus(hit.Wall);
+            return true;
+        }
+
+        return false;
+    }
+
     public bool TryInsertVertexAt(MapPoint previewPoint)
     {
         if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)

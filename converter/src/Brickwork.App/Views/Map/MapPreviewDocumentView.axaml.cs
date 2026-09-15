@@ -239,7 +239,11 @@ public partial class MapPreviewDocumentView : UserControl
 
             if (_rightPressScreenPosition is not null && !_rightDragMoved)
             {
-                viewModel.TryInsertVertexAt(ToPreviewPoint(e.GetPosition(MapViewport)));
+                var previewPoint = ToPreviewPoint(e.GetPosition(MapViewport));
+                if (!viewModel.TryRemoveVertexAt(previewPoint))
+                {
+                    viewModel.TryInsertVertexAt(previewPoint);
+                }
             }
 
             _rightPressScreenPosition = null;

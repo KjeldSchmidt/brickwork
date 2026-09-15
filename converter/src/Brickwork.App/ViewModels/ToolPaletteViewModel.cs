@@ -40,6 +40,7 @@ public partial class ToolPaletteViewModel : Tool
                     new("Drag Empty", "Marquee Select"),
                     new("Drag Node", "Move Node, Resize Gap"),
                     new("Right-Click Wall", "Add Node"),
+                    new("Right-Click Node", "Remove Node or Portal"),
                     new("Middle-Click", "Toggle Wall Active"),
                     new("Delete", "Delete Selection"),
                     new("Right-Drag", "Pan Map"),

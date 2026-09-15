@@ -203,7 +203,46 @@ public static class WallGeometryEditing
 
         var insertIndex = bestStartIndex + 1;
         wall.Points.Insert(insertIndex, bestPoint);
+        ResnapPortalAnchors(wall);
         return insertIndex;
+    }
+
+    /// <summary>
+    /// Removes a wall polyline vertex. Returns false if the index is invalid or the wall
+    /// would drop below the minimum vertex count (2 open / 3 closed).
+    /// </summary>
+    public static bool TryRemoveVertex(Wall wall, int vertexIndex)
+    {
+        if (vertexIndex < 0 || vertexIndex >= wall.Points.Count)
+        {
+            return false;
+        }
+
+        var minimumCount = wall.IsClosed ? 3 : 2;
+        if (wall.Points.Count <= minimumCount)
+        {
+            return false;
+        }
+
+        wall.Points.RemoveAt(vertexIndex);
+        ResnapPortalAnchors(wall);
+        return true;
+    }
+
+    public static bool TryRemovePortal(Wall wall, WallPortal portal)
+    {
+        if (!wall.Portals.Remove(portal))
+        {
+            var match = wall.Portals.FirstOrDefault(candidate => ReferenceEquals(candidate, portal))
+                ?? wall.Portals.FirstOrDefault(candidate =>
+                    !string.IsNullOrEmpty(portal.Id) && candidate.Id == portal.Id);
+            if (match is null || !wall.Portals.Remove(match))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static double FindArcLengthAtClosestPoint(
