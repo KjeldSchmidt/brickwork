@@ -23,16 +23,28 @@
                         EnablePan="True"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch">
-            <controls:MapViewportControl x:Name="MapViewport"
-                                         Map="{Binding Map}"
-                                         ContentRevision="{Binding ContentRevision}"
-                                         HighlightRevision="{Binding HighlightRevision}"
-                                         FocusedWallEntityId="{Binding FocusedWallEntityId}"
-                                         FocusedPortal="{Binding FocusedPortal}"
-                                         HoveredWallEntityId="{Binding HoveredWallEntityId}"
-                                         HoveredPortal="{Binding HoveredPortal}"
-                                         Width="{Binding PreviewWidth}"
-                                         Height="{Binding PreviewHeight}" />
+            <Grid Width="{Binding PreviewWidth}"
+                  Height="{Binding PreviewHeight}">
+                <controls:MapViewportControl x:Name="MapViewport"
+                                             Map="{Binding Map}"
+                                             ContentRevision="{Binding ContentRevision}"
+                                             HighlightRevision="{Binding HighlightRevision}"
+                                             SelectedWallEntityIds="{Binding SelectedWallEntityIds}"
+                                             FocusedWallEntityId="{Binding FocusedWallEntityId}"
+                                             FocusedPortal="{Binding FocusedPortal}"
+                                             HoveredWallEntityId="{Binding HoveredWallEntityId}"
+                                             HoveredPortal="{Binding HoveredPortal}"
+                                             Width="{Binding PreviewWidth}"
+                                             Height="{Binding PreviewHeight}" />
+                <Canvas x:Name="MarqueeLayer"
+                        IsHitTestVisible="False">
+                    <Rectangle x:Name="MarqueeRect"
+                               Stroke="#3B82F6"
+                               StrokeThickness="1"
+                               Fill="#403B82F6"
+                               IsVisible="False" />
+                </Canvas>
+            </Grid>
         </paz:ZoomBorder>
     </Grid>
 </UserControl>

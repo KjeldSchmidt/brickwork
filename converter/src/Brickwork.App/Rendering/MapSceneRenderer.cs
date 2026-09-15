@@ -64,12 +64,29 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             DrawWallNodes(canvas, transform, wall);
         }
 
-        if (highlight?.ActiveTarget is not { } target)
+        if (highlight is null)
         {
             return;
         }
 
-        DrawWallHighlight(canvas, map, transform, target.WallEntityId, target.Portal);
+        foreach (var selectedId in highlight.SelectedWallEntityIds)
+        {
+            var portal = highlight.FocusedWallEntityId == selectedId
+                ? highlight.FocusedPortal
+                : null;
+            DrawWallHighlight(canvas, map, transform, selectedId, portal);
+        }
+
+        if (highlight.HoverTarget is { } hover &&
+            !highlight.SelectedWallEntityIds.Contains(hover.WallEntityId))
+        {
+            DrawWallHighlight(canvas, map, transform, hover.WallEntityId, hover.Portal);
+        }
+        else if (highlight.HoverTarget is { } hoveredSelected)
+        {
+            // Re-draw hover on top of selection for portal-specific emphasis.
+            DrawWallHighlight(canvas, map, transform, hoveredSelected.WallEntityId, hoveredSelected.Portal);
+        }
     }
 
     public void ReleaseMap(MapDocument map) => _imageCache.Remove(map);

@@ -17,6 +17,9 @@ public partial class MapPreviewDocumentView : UserControl
     private Point? _rightPressScreenPosition;
     private bool _rightDragMoved;
     private bool _vertexDragActive;
+    private bool _marqueeActive;
+    private bool _marqueeAddToSelection;
+    private bool _marqueeArmed;
 
     public MapPreviewDocumentView()
     {
@@ -32,13 +35,26 @@ public partial class MapPreviewDocumentView : UserControl
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Escape || DataContext is not MapPreviewDocumentViewModel viewModel)
+        if (DataContext is not MapPreviewDocumentViewModel viewModel)
         {
             return;
         }
 
-        viewModel.ClearWallSelection();
-        e.Handled = true;
+        if (e.Key == Key.Escape)
+        {
+            CancelMarquee();
+            viewModel.ClearWallSelection();
+            e.Handled = true;
+            return;
+        }
+
+        if ((e.Key is Key.Delete or Key.Back) && e.KeyModifiers == KeyModifiers.None)
+        {
+            if (viewModel.DeleteSelectedWalls())
+            {
+                e.Handled = true;
+            }
+        }
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -54,6 +70,7 @@ public partial class MapPreviewDocumentView : UserControl
         }
 
         _lastFittedMap = null;
+        CancelMarquee();
         ScheduleInitialFit();
     }
 
@@ -65,6 +82,7 @@ public partial class MapPreviewDocumentView : UserControl
             _leftPressPosition = null;
             _rightPressScreenPosition = null;
             _rightDragMoved = false;
+            CancelMarquee();
 
             if (sender is MapPreviewDocumentViewModel { HasMap: false })
             {
@@ -93,8 +111,21 @@ public partial class MapPreviewDocumentView : UserControl
             _leftPressPosition = pressPosition;
             _rightPressScreenPosition = null;
             _rightDragMoved = false;
+            _marqueeActive = false;
+            _marqueeAddToSelection = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+
             _vertexDragActive = viewModel.TryBeginVertexDrag(ToPreviewPoint(pressPosition));
             if (_vertexDragActive)
+            {
+                e.Pointer.Capture(MapViewport);
+                e.Handled = true;
+                return;
+            }
+
+            // Marquee only from empty canvas (not on a wall/node).
+            _marqueeArmed = viewModel.IsWallEditingToolActive
+                && !viewModel.HasWallAt(ToPreviewPoint(pressPosition));
+            if (_marqueeArmed)
             {
                 e.Pointer.Capture(MapViewport);
                 e.Handled = true;
@@ -137,6 +168,26 @@ public partial class MapPreviewDocumentView : UserControl
             viewModel.DragVertexTo(ToPreviewPoint(e.GetPosition(MapViewport)));
             e.Handled = true;
             return;
+        }
+
+        if (_marqueeArmed &&
+            _leftPressPosition is { } press &&
+            e.GetCurrentPoint(MapViewport).Properties.IsLeftButtonPressed)
+        {
+            var current = e.GetPosition(MapViewport);
+            var delta = current - press;
+            if (!_marqueeActive &&
+                (Math.Abs(delta.X) > ClickMoveThreshold || Math.Abs(delta.Y) > ClickMoveThreshold))
+            {
+                _marqueeActive = true;
+            }
+
+            if (_marqueeActive)
+            {
+                UpdateMarqueeRect(press, current);
+                e.Handled = true;
+                return;
+            }
         }
 
         if (_rightPressScreenPosition is { } rightPress &&
@@ -216,17 +267,64 @@ public partial class MapPreviewDocumentView : UserControl
         }
 
         var leftReleasePosition = e.GetPosition(MapViewport);
+        if (_marqueeActive && _leftPressPosition is { } marqueePress)
+        {
+            viewModel.ApplyMarqueeSelection(
+                ToPreviewPoint(marqueePress),
+                ToPreviewPoint(leftReleasePosition),
+                _marqueeAddToSelection);
+            CancelMarquee();
+            if (e.Pointer.Captured == MapViewport)
+            {
+                e.Pointer.Capture(null);
+            }
+
+            e.Handled = true;
+            _leftPressPosition = null;
+            return;
+        }
+
         if (_leftPressPosition is { } pressPosition)
         {
             var delta = leftReleasePosition - pressPosition;
             if (Math.Abs(delta.X) <= ClickMoveThreshold && Math.Abs(delta.Y) <= ClickMoveThreshold)
             {
-                viewModel.HandlePrimaryClick(ToPreviewPoint(leftReleasePosition));
+                var shiftToggle = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+                viewModel.HandlePrimaryClick(ToPreviewPoint(leftReleasePosition), shiftToggle);
                 e.Handled = true;
             }
         }
 
+        CancelMarquee();
+        if (e.Pointer.Captured == MapViewport)
+        {
+            e.Pointer.Capture(null);
+        }
+
         _leftPressPosition = null;
+    }
+
+    private void UpdateMarqueeRect(Point origin, Point current)
+    {
+        var left = Math.Min(origin.X, current.X);
+        var top = Math.Min(origin.Y, current.Y);
+        var width = Math.Abs(current.X - origin.X);
+        var height = Math.Abs(current.Y - origin.Y);
+        Canvas.SetLeft(MarqueeRect, left);
+        Canvas.SetTop(MarqueeRect, top);
+        MarqueeRect.Width = width;
+        MarqueeRect.Height = height;
+        MarqueeRect.IsVisible = true;
+    }
+
+    private void CancelMarquee()
+    {
+        _marqueeActive = false;
+        _marqueeArmed = false;
+        _marqueeAddToSelection = false;
+        MarqueeRect.IsVisible = false;
+        MarqueeRect.Width = 0;
+        MarqueeRect.Height = 0;
     }
 
     private static MapPoint ToPreviewPoint(Point viewportPoint) =>

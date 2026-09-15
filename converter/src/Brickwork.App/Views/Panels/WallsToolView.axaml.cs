@@ -2,6 +2,7 @@ using System.Collections;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -26,13 +27,25 @@ public partial class WallsToolView : UserControl
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Escape || DataContext is not WallsToolViewModel viewModel)
+        if (DataContext is not WallsToolViewModel viewModel)
         {
             return;
         }
 
-        viewModel.ClearSelection();
-        e.Handled = true;
+        if (e.Key == Key.Escape)
+        {
+            viewModel.ClearSelection();
+            e.Handled = true;
+            return;
+        }
+
+        if ((e.Key is Key.Delete or Key.Back) && e.KeyModifiers == KeyModifiers.None)
+        {
+            if (viewModel.DeleteSelectedWalls())
+            {
+                e.Handled = true;
+            }
+        }
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -102,19 +115,16 @@ public partial class WallsToolView : UserControl
             return;
         }
 
-        var treeItem = ResolveTreeViewItem(WallsTree, e.GetPosition(WallsTree));
-        switch (treeItem?.DataContext)
+        // Let checkboxes, type editors, and expanders handle their own clicks.
+        if (e.Source is CheckBox or ComboBox or ToggleButton ||
+            (e.Source as Control)?.GetVisualAncestors().Any(ancestor => ancestor is CheckBox or ComboBox or ToggleButton) == true)
         {
-            case WallItemViewModel wallItem:
-                viewModel.ActivateTreeItem(wallItem);
-                break;
-            case WallPortalItemViewModel portalItem:
-                viewModel.ActivateTreeItem(portalItem);
-                break;
-            default:
-                viewModel.ClearSelection();
-                break;
+            return;
         }
+
+        var treeItem = ResolveTreeViewItem(WallsTree, e.GetPosition(WallsTree));
+        viewModel.HandleTreeActivation(treeItem?.DataContext, e.KeyModifiers);
+        e.Handled = true;
     }
 
     private static TreeViewItem? ResolveTreeViewItem(TreeView tree, Point position)

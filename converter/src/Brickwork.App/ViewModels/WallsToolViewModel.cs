@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Mvvm.Controls;
 using Brickwork.Core.Models;
@@ -9,6 +10,7 @@ public partial class WallsToolViewModel : Tool
 {
     private readonly EditorSession _session;
     private bool _syncingSelection;
+    private int? _selectionAnchorWallId;
 
     [ObservableProperty]
     private ObservableCollection<WallLayerNodeViewModel> _layers = [];
@@ -60,6 +62,7 @@ public partial class WallsToolViewModel : Tool
                     _syncingSelection = true;
                     SelectedTreeItem = null;
                     _syncingSelection = false;
+                    _selectionAnchorWallId = null;
                 }
 
                 RefreshHighlightStates();
@@ -101,27 +104,120 @@ public partial class WallsToolViewModel : Tool
             _syncingSelection = false;
         }
 
+        _selectionAnchorWallId = null;
         _session.ClearWallSelection();
     }
 
-    public void ActivateTreeItem(object item) => SelectedTreeItem = item;
+    public bool DeleteSelectedWalls() => _session.DeleteSelectedWalls();
 
-    private void ApplyTreeFocus(object? item)
+    public void HandleTreeActivation(object? item, KeyModifiers modifiers)
     {
         switch (item)
         {
             case WallItemViewModel wallItem:
-                _session.SetFocusedWall(wallItem.Wall);
+                HandleWallTreeClick(wallItem.Wall.EntityId, portal: null, modifiers);
                 break;
             case WallPortalItemViewModel portalItem:
-                var wall = _session.Map?.Walls.FirstOrDefault(
-                    candidate => candidate.Portals.Contains(portalItem.Portal));
-                if (wall is not null)
-                {
-                    _session.SetFocusedWall(wall, portalItem.Portal);
-                }
-
+                HandleWallTreeClick(portalItem.WallEntityId, portalItem.Portal, modifiers);
                 break;
+            case WallGroupNodeViewModel group:
+                HandleGroupTreeClick(EnumerateDescendantWallIds(group.Children), modifiers);
+                break;
+            case WallLayerNodeViewModel layer:
+                HandleGroupTreeClick(EnumerateDescendantWallIds(layer.Children), modifiers);
+                break;
+            default:
+                ClearSelection();
+                break;
+        }
+    }
+
+    private void HandleWallTreeClick(int wallId, WallPortal? portal, KeyModifiers modifiers)
+    {
+        if (modifiers.HasFlag(KeyModifiers.Control))
+        {
+            _session.ToggleWallInSelection(wallId);
+            _selectionAnchorWallId = wallId;
+            SyncSelectedTreeItemFromPrimary(portal);
+            return;
+        }
+
+        if (modifiers.HasFlag(KeyModifiers.Shift) && _selectionAnchorWallId is int anchorId)
+        {
+            var ordered = EnumerateWallsInTreeOrder().ToList();
+            var anchorIndex = ordered.FindIndex(id => id == anchorId);
+            var clickIndex = ordered.FindIndex(id => id == wallId);
+            if (anchorIndex >= 0 && clickIndex >= 0)
+            {
+                var start = Math.Min(anchorIndex, clickIndex);
+                var end = Math.Max(anchorIndex, clickIndex);
+                var range = ordered.Skip(start).Take(end - start + 1);
+                _session.SetSelection(range, wallId, portal);
+                SyncSelectedTreeItemFromPrimary(portal);
+                return;
+            }
+        }
+
+        _session.SetSelection([wallId], wallId, portal);
+        _selectionAnchorWallId = wallId;
+        SyncSelectedTreeItemFromPrimary(portal);
+    }
+
+    private void HandleGroupTreeClick(IReadOnlyList<int> wallIds, KeyModifiers modifiers)
+    {
+        if (wallIds.Count == 0)
+        {
+            return;
+        }
+
+        if (modifiers.HasFlag(KeyModifiers.Control))
+        {
+            var anyMissing = wallIds.Any(id => !_session.SelectedWallEntityIds.Contains(id));
+            if (anyMissing)
+            {
+                _session.AddWallsToSelection(wallIds);
+            }
+            else
+            {
+                _session.RemoveWallsFromSelection(wallIds);
+            }
+
+            _selectionAnchorWallId = wallIds[0];
+            SyncSelectedTreeItemFromPrimary(portal: null);
+            return;
+        }
+
+        _session.SetSelection(wallIds, wallIds[0]);
+        _selectionAnchorWallId = wallIds[0];
+        SyncSelectedTreeItemFromPrimary(portal: null);
+    }
+
+    private void SyncSelectedTreeItemFromPrimary(WallPortal? portal)
+    {
+        if (_session.FocusedWallEntityId is not int wallId)
+        {
+            _syncingSelection = true;
+            SelectedTreeItem = null;
+            _syncingSelection = false;
+            return;
+        }
+
+        _syncingSelection = true;
+        SelectedTreeItem = FindTreeItem(wallId, portal ?? _session.FocusedPortal);
+        _syncingSelection = false;
+    }
+
+    private IReadOnlyList<int> EnumerateDescendantWallIds(IEnumerable<object> children) =>
+        EnumerateTreeWallIds(children).ToList();
+
+    private IEnumerable<int> EnumerateWallsInTreeOrder()
+    {
+        foreach (var layer in Layers)
+        {
+            foreach (var wallId in EnumerateTreeWallIds(layer.Children))
+            {
+                yield return wallId;
+            }
         }
     }
 
@@ -129,6 +225,7 @@ public partial class WallsToolViewModel : Tool
     {
         foreach (var layer in Layers)
         {
+            layer.RefreshHighlightState();
             RefreshHighlightStates(layer.Children);
         }
     }
@@ -140,6 +237,7 @@ public partial class WallsToolViewModel : Tool
             switch (child)
             {
                 case WallGroupNodeViewModel group:
+                    group.RefreshHighlightState();
                     RefreshHighlightStates(group.Children);
                     break;
                 case WallItemViewModel wall:
@@ -151,18 +249,13 @@ public partial class WallsToolViewModel : Tool
 
     partial void OnSelectedTreeItemChanged(object? value)
     {
+        // Session selection is owned by HandleTreeActivation / ApplyTreeFocusFromSession.
         if (_syncingSelection)
         {
             return;
         }
 
-        if (value is null)
-        {
-            _session.ClearWallSelection();
-            return;
-        }
-
-        ApplyTreeFocus(value);
+        _ = value;
     }
 
     private void RefreshBoundValues()
@@ -467,7 +560,10 @@ public partial class WallsToolViewModel : Tool
             return;
         }
 
+        _selectionAnchorWallId = wallId;
+        _syncingSelection = true;
         SelectedTreeItem = FindTreeItem(wallId, _session.FocusedPortal);
+        _syncingSelection = false;
     }
 
     private object? FindTreeItem(int wallEntityId, WallPortal? portal)
@@ -735,6 +831,15 @@ public partial class WallLayerNodeViewModel : ObservableObject
 
     public ObservableCollection<object> Children { get; } = [];
 
+    public bool IsTreeHighlighted
+    {
+        get
+        {
+            var wallIds = EnumerateDescendantWallIds(Children).ToList();
+            return wallIds.Count > 0 && wallIds.Any(id => _session.SelectedWallEntityIds.Contains(id));
+        }
+    }
+
     public bool? IsActive
     {
         get => WallTreeActiveState.Compute(Children);
@@ -769,8 +874,30 @@ public partial class WallLayerNodeViewModel : ObservableObject
 
     public void RefreshActiveState() => OnPropertyChanged(nameof(IsActive));
 
+    public void RefreshHighlightState() => OnPropertyChanged(nameof(IsTreeHighlighted));
+
     private static bool ResolveCascadeTarget(bool? requested, bool? current) =>
         requested ?? current != true;
+
+    private static IEnumerable<int> EnumerateDescendantWallIds(IEnumerable<object> children)
+    {
+        foreach (var child in children)
+        {
+            switch (child)
+            {
+                case WallGroupNodeViewModel group:
+                    foreach (var id in EnumerateDescendantWallIds(group.Children))
+                    {
+                        yield return id;
+                    }
+
+                    break;
+                case WallItemViewModel wall:
+                    yield return wall.Wall.EntityId;
+                    break;
+            }
+        }
+    }
 }
 
 public partial class WallGroupNodeViewModel : ObservableObject
@@ -788,6 +915,15 @@ public partial class WallGroupNodeViewModel : ObservableObject
     public ObservableCollection<object> Children { get; } = [];
 
     public string DisplayName => Group.DisplayName;
+
+    public bool IsTreeHighlighted
+    {
+        get
+        {
+            var wallIds = EnumerateDescendantWallIds(Children).ToList();
+            return wallIds.Count > 0 && wallIds.Any(id => _session.SelectedWallEntityIds.Contains(id));
+        }
+    }
 
     public bool? IsActive
     {
@@ -822,8 +958,30 @@ public partial class WallGroupNodeViewModel : ObservableObject
 
     public void RefreshActiveState() => OnPropertyChanged(nameof(IsActive));
 
+    public void RefreshHighlightState() => OnPropertyChanged(nameof(IsTreeHighlighted));
+
     private static bool ResolveCascadeTarget(bool? requested, bool? current) =>
         requested ?? current != true;
+
+    private static IEnumerable<int> EnumerateDescendantWallIds(IEnumerable<object> children)
+    {
+        foreach (var child in children)
+        {
+            switch (child)
+            {
+                case WallGroupNodeViewModel group:
+                    foreach (var id in EnumerateDescendantWallIds(group.Children))
+                    {
+                        yield return id;
+                    }
+
+                    break;
+                case WallItemViewModel wall:
+                    yield return wall.Wall.EntityId;
+                    break;
+            }
+        }
+    }
 }
 
 public partial class WallItemViewModel : ObservableObject
@@ -855,10 +1013,12 @@ public partial class WallItemViewModel : ObservableObject
     public bool IsFocused =>
         _session.FocusedWallEntityId == Wall.EntityId && _session.FocusedPortal is null;
 
+    public bool IsSelected => _session.SelectedWallEntityIds.Contains(Wall.EntityId);
+
     public bool IsHovered =>
         _session.HoveredWallEntityId == Wall.EntityId && _session.HoveredPortal is null;
 
-    public bool IsTreeHighlighted => IsFocused || IsHovered;
+    public bool IsTreeHighlighted => IsSelected || IsHovered;
 
     public bool IsActive
     {
@@ -912,6 +1072,7 @@ public partial class WallItemViewModel : ObservableObject
     public void RefreshHighlightState()
     {
         OnPropertyChanged(nameof(IsFocused));
+        OnPropertyChanged(nameof(IsSelected));
         OnPropertyChanged(nameof(IsHovered));
         OnPropertyChanged(nameof(IsTreeHighlighted));
         foreach (var portal in Portals)

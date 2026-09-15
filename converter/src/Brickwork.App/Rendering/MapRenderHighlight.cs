@@ -3,26 +3,26 @@ using Brickwork.Core.Models;
 namespace Brickwork.App.Rendering;
 
 public sealed record MapRenderHighlight(
+    IReadOnlySet<int> SelectedWallEntityIds,
     int? FocusedWallEntityId,
     WallPortal? FocusedPortal,
     int? HoveredWallEntityId,
     WallPortal? HoveredPortal)
 {
-    /// <summary>
-    /// The wall/portals to draw with highlight styling. Hover takes precedence over focus.
-    /// </summary>
-    public WallHighlightTarget? ActiveTarget
+    public static MapRenderHighlight Empty { get; } = new(
+        new HashSet<int>(),
+        null,
+        null,
+        null,
+        null);
+
+    public WallHighlightTarget? HoverTarget
     {
         get
         {
             if (HoveredWallEntityId is int hoveredId)
             {
                 return new WallHighlightTarget(hoveredId, HoveredPortal);
-            }
-
-            if (FocusedWallEntityId is int focusedId)
-            {
-                return new WallHighlightTarget(focusedId, FocusedPortal);
             }
 
             return null;

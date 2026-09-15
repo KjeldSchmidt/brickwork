@@ -19,10 +19,25 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
         if (e.Key == Key.Escape)
         {
             viewModel.Session.ClearWallSelection();
             e.Handled = true;
+            return;
+        }
+
+        if ((e.Key is Key.Delete or Key.Back) && e.KeyModifiers == KeyModifiers.None)
+        {
+            if (viewModel.Session.DeleteSelectedWalls())
+            {
+                e.Handled = true;
+            }
+
             return;
         }
 
@@ -55,7 +70,7 @@ public partial class MainWindow : Window
         switch (e.Key)
         {
             case Key.V:
-                viewModel.Session.ActiveMapTool = MapToolKind.Pointer;
+                viewModel.Session.ActiveMapTool = MapToolKind.WallEditing;
                 e.Handled = true;
                 break;
             case Key.E:
@@ -63,5 +78,11 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 break;
         }
+    }
+
+    private bool IsTextInputFocused()
+    {
+        var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+        return focused is TextBox or NumericUpDown or ComboBox;
     }
 }

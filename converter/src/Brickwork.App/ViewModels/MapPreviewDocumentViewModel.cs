@@ -44,6 +44,9 @@ public partial class MapPreviewDocumentViewModel : Document
     [ObservableProperty]
     private WallPortal? _hoveredPortal;
 
+    [ObservableProperty]
+    private IReadOnlySet<int> _selectedWallEntityIds = new HashSet<int>();
+
     public MapPreviewDocumentViewModel(EditorSession session)
     {
         _session = session;
@@ -89,6 +92,7 @@ public partial class MapPreviewDocumentViewModel : Document
         FocusedPortal = _session.FocusedPortal;
         HoveredWallEntityId = _session.HoveredWallEntityId;
         HoveredPortal = _session.HoveredPortal;
+        SelectedWallEntityIds = _session.SelectedWallEntityIds.ToHashSet();
     }
 
     public void UpdateHoverAt(MapPoint previewPoint)
@@ -118,7 +122,11 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public void ClearHover() => _session.ClearHoveredWall();
 
+    public bool IsWallEditingToolActive => _session.ActiveMapTool == MapToolKind.WallEditing;
+
     public void ClearWallSelection() => _session.ClearWallSelection();
+
+    public bool DeleteSelectedWalls() => _session.DeleteSelectedWalls();
 
     public bool HasWallAt(MapPoint previewPoint)
     {
@@ -133,7 +141,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public bool TryBeginVertexDrag(MapPoint previewPoint)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.Pointer)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
         {
             return false;
         }
@@ -195,7 +203,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public void EditWallAt(MapPoint previewPoint, bool cycleType, bool toggleActive)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.Pointer)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
         {
             return;
         }
@@ -230,7 +238,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public bool TryInsertVertexAt(MapPoint previewPoint)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.Pointer)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
         {
             return false;
         }
@@ -283,7 +291,6 @@ public partial class MapPreviewDocumentViewModel : Document
 
         if (wall is null)
         {
-            _session.ClearWallSelection();
             return false;
         }
 
@@ -302,14 +309,75 @@ public partial class MapPreviewDocumentViewModel : Document
         return true;
     }
 
-    public void HandlePrimaryClick(MapPoint previewPoint)
+    public void HandleShiftSelectClick(MapPoint previewPoint)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
+        {
+            return;
+        }
+
+        var hit = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
+            ?? (WallVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is { } vertex
+                ? new WallPickTarget(vertex.Wall, vertex.Portal)
+                : null);
+
+        if (hit is null)
+        {
+            return;
+        }
+
+        _session.ToggleWallInSelection(hit.Wall.EntityId);
+        _session.TreeFocusGeneration++;
+    }
+
+    public void ApplyMarqueeSelection(MapPoint previewMin, MapPoint previewMax, bool addToSelection)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
+        {
+            return;
+        }
+
+        var left = Math.Min(previewMin.X, previewMax.X);
+        var top = Math.Min(previewMin.Y, previewMax.Y);
+        var right = Math.Max(previewMin.X, previewMax.X);
+        var bottom = Math.Max(previewMin.Y, previewMax.Y);
+        var ids = WallMarqueePicker.PickWallIds(Map, left, top, right, bottom);
+        if (ids.Count == 0)
+        {
+            if (!addToSelection)
+            {
+                ClearWallSelection();
+            }
+
+            return;
+        }
+
+        if (addToSelection)
+        {
+            _session.AddWallsToSelection(ids);
+        }
+        else
+        {
+            _session.SetSelection(ids);
+        }
+
+        _session.TreeFocusGeneration++;
+    }
+
+    public void HandlePrimaryClick(MapPoint previewPoint, bool shiftSelect = false)
     {
         switch (_session.ActiveMapTool)
         {
             case MapToolKind.Eraser:
                 TryEraseWallAt(previewPoint);
                 break;
-            case MapToolKind.Pointer:
+            case MapToolKind.WallEditing:
+                if (shiftSelect)
+                {
+                    HandleShiftSelectClick(previewPoint);
+                    break;
+                }
+
                 if (!HasWallAt(previewPoint))
                 {
                     ClearWallSelection();

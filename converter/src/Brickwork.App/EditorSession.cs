@@ -11,6 +11,7 @@ public sealed partial class EditorSession : ObservableObject
     private readonly EditorHistory _history = new();
     private EditGesture? _activeGesture;
     private bool _restoringHistory;
+    private readonly HashSet<int> _selectedWallEntityIds = [];
 
     [ObservableProperty]
     private MapDocument? _map;
@@ -46,7 +47,7 @@ public sealed partial class EditorSession : ObservableObject
     private double _wallSimplificationTolerance = WallSimplificationSettings.DefaultToleranceSceneUnits;
 
     [ObservableProperty]
-    private MapToolKind _activeMapTool = MapToolKind.Pointer;
+    private MapToolKind _activeMapTool = MapToolKind.WallEditing;
 
     [ObservableProperty]
     private bool _canUndo;
@@ -59,6 +60,8 @@ public sealed partial class EditorSession : ObservableObject
 
     [ObservableProperty]
     private string? _redoActionName;
+
+    public IReadOnlySet<int> SelectedWallEntityIds => _selectedWallEntityIds;
 
     public void NotifyContentChanged()
     {
@@ -161,11 +164,113 @@ public sealed partial class EditorSession : ObservableObject
         }
     }
 
-    public void SetFocusedWall(Wall wall, WallPortal? portal = null)
+    public void SetSelection(
+        IEnumerable<int> wallIds,
+        int? primaryId = null,
+        WallPortal? portal = null)
     {
-        FocusedWallEntityId = wall.EntityId;
+        var next = wallIds.ToHashSet();
+        int? primary = primaryId;
+        if (next.Count == 0)
+        {
+            primary = null;
+            portal = null;
+        }
+        else
+        {
+            primary ??= next.OrderBy(id => id).First();
+            if (primary is int id && !next.Contains(id))
+            {
+                primary = next.OrderBy(candidate => candidate).First();
+                portal = null;
+            }
+        }
+
+        var selectionChanged = !_selectedWallEntityIds.SetEquals(next);
+        var focusChanged = FocusedWallEntityId != primary || !ReferenceEquals(FocusedPortal, portal);
+
+        if (!selectionChanged && !focusChanged)
+        {
+            return;
+        }
+
+        if (selectionChanged)
+        {
+            _selectedWallEntityIds.Clear();
+            foreach (var id in next)
+            {
+                _selectedWallEntityIds.Add(id);
+            }
+        }
+
+        FocusedWallEntityId = primary;
         FocusedPortal = portal;
         HighlightRevision++;
+    }
+
+    public void ToggleWallInSelection(int wallId)
+    {
+        if (_selectedWallEntityIds.Contains(wallId))
+        {
+            _selectedWallEntityIds.Remove(wallId);
+            if (FocusedWallEntityId == wallId)
+            {
+                FocusedWallEntityId = _selectedWallEntityIds.OrderBy(id => id).Cast<int?>().FirstOrDefault();
+                FocusedPortal = null;
+            }
+        }
+        else
+        {
+            _selectedWallEntityIds.Add(wallId);
+            FocusedWallEntityId = wallId;
+            FocusedPortal = null;
+        }
+
+        HighlightRevision++;
+    }
+
+    public void AddWallsToSelection(IEnumerable<int> wallIds)
+    {
+        var added = false;
+        foreach (var id in wallIds)
+        {
+            added |= _selectedWallEntityIds.Add(id);
+        }
+
+        if (!added)
+        {
+            return;
+        }
+
+        FocusedWallEntityId ??= _selectedWallEntityIds.OrderBy(id => id).First();
+        HighlightRevision++;
+    }
+
+    public void RemoveWallsFromSelection(IEnumerable<int> wallIds)
+    {
+        var removed = false;
+        foreach (var id in wallIds)
+        {
+            removed |= _selectedWallEntityIds.Remove(id);
+        }
+
+        if (!removed)
+        {
+            return;
+        }
+
+        if (FocusedWallEntityId is int focusedId && !_selectedWallEntityIds.Contains(focusedId))
+        {
+            FocusedWallEntityId = _selectedWallEntityIds.OrderBy(id => id).Cast<int?>().FirstOrDefault();
+            FocusedPortal = null;
+        }
+
+        HighlightRevision++;
+    }
+
+    public void SetFocusedWall(Wall wall, WallPortal? portal = null)
+    {
+        SetSelection([wall.EntityId], wall.EntityId, portal);
     }
 
     public void RequestWallTreeFocus(Wall wall, WallPortal? portal = null)
@@ -201,7 +306,8 @@ public sealed partial class EditorSession : ObservableObject
 
     public void ClearWallSelection()
     {
-        if (FocusedWallEntityId is null &&
+        if (_selectedWallEntityIds.Count == 0 &&
+            FocusedWallEntityId is null &&
             FocusedPortal is null &&
             HoveredWallEntityId is null &&
             HoveredPortal is null)
@@ -209,11 +315,32 @@ public sealed partial class EditorSession : ObservableObject
             return;
         }
 
+        _selectedWallEntityIds.Clear();
         FocusedWallEntityId = null;
         FocusedPortal = null;
         HoveredWallEntityId = null;
         HoveredPortal = null;
         HighlightRevision++;
+    }
+
+    public bool DeleteSelectedWalls()
+    {
+        if (Map is null || _selectedWallEntityIds.Count == 0)
+        {
+            return false;
+        }
+
+        var ids = _selectedWallEntityIds.ToHashSet();
+        Execute("Delete walls", () =>
+        {
+            foreach (var wall in Map.Walls.Where(candidate => ids.Contains(candidate.EntityId)).ToList())
+            {
+                WallLineEditing.RemoveFromMap(Map, wall);
+            }
+        });
+
+        ClearWallSelection();
+        return true;
     }
 
     partial void OnMapChanged(MapDocument? value)

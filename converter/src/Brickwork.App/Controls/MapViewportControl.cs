@@ -20,6 +20,11 @@ public class MapViewportControl : Control
     public static readonly StyledProperty<int> HighlightRevisionProperty =
         AvaloniaProperty.Register<MapViewportControl, int>(nameof(HighlightRevision));
 
+    public static readonly StyledProperty<IReadOnlySet<int>> SelectedWallEntityIdsProperty =
+        AvaloniaProperty.Register<MapViewportControl, IReadOnlySet<int>>(
+            nameof(SelectedWallEntityIds),
+            defaultValue: new HashSet<int>());
+
     public static readonly StyledProperty<int?> FocusedWallEntityIdProperty =
         AvaloniaProperty.Register<MapViewportControl, int?>(nameof(FocusedWallEntityId));
 
@@ -40,6 +45,7 @@ public class MapViewportControl : Control
             MapProperty,
             ContentRevisionProperty,
             HighlightRevisionProperty,
+            SelectedWallEntityIdsProperty,
             FocusedWallEntityIdProperty,
             FocusedPortalProperty,
             HoveredWallEntityIdProperty,
@@ -64,6 +70,12 @@ public class MapViewportControl : Control
     {
         get => GetValue(HighlightRevisionProperty);
         set => SetValue(HighlightRevisionProperty, value);
+    }
+
+    public IReadOnlySet<int> SelectedWallEntityIds
+    {
+        get => GetValue(SelectedWallEntityIdsProperty);
+        set => SetValue(SelectedWallEntityIdsProperty, value);
     }
 
     public int? FocusedWallEntityId
@@ -106,6 +118,7 @@ public class MapViewportControl : Control
 
         var bounds = new Rect(Bounds.Size);
         var highlight = new MapRenderHighlight(
+            SelectedWallEntityIds,
             FocusedWallEntityId,
             FocusedPortal,
             HoveredWallEntityId,
