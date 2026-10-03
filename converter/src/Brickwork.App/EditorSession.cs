@@ -273,6 +273,22 @@ public sealed partial class EditorSession : ObservableObject
         SetSelection([wall.EntityId], wall.EntityId, portal);
     }
 
+    /// <summary>
+    /// Updates focus/hover primary without changing the wall multi-selection set.
+    /// Used when multi-selecting portals in the tree.
+    /// </summary>
+    public void SetPrimaryFocus(int wallEntityId, WallPortal? portal = null)
+    {
+        if (FocusedWallEntityId == wallEntityId && ReferenceEquals(FocusedPortal, portal))
+        {
+            return;
+        }
+
+        FocusedWallEntityId = wallEntityId;
+        FocusedPortal = portal;
+        HighlightRevision++;
+    }
+
     public void RequestWallTreeFocus(Wall wall, WallPortal? portal = null)
     {
         SetFocusedWall(wall, portal);

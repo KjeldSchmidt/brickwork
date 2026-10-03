@@ -566,22 +566,44 @@ public partial class WallsToolViewModel : Tool
         {
             case WallItemViewModel wallItem:
                 HandleWallTreeClick(wallItem.Wall.EntityId, portal: null, modifiers);
+                UpdateTreeNodeSelection(item, modifiers);
                 break;
             case WallPortalItemViewModel portalItem:
-                HandleWallTreeClick(portalItem.WallEntityId, portalItem.Portal, modifiers);
+                HandlePortalTreeClick(portalItem, modifiers);
                 break;
             case WallGroupNodeViewModel group:
                 HandleGroupTreeClick(EnumerateDescendantWallIds(group.Children), modifiers);
+                UpdateTreeNodeSelection(item, modifiers);
                 break;
             case WallLayerNodeViewModel layer:
                 HandleGroupTreeClick(EnumerateDescendantWallIds(layer.Children), modifiers);
+                UpdateTreeNodeSelection(item, modifiers);
                 break;
             default:
                 ClearSelection();
                 return;
         }
+    }
 
-        UpdateTreeNodeSelection(item, modifiers);
+    private void HandlePortalTreeClick(WallPortalItemViewModel portalItem, KeyModifiers modifiers)
+    {
+        // Ctrl/Shift: portal multi-select in the tree only — do not toggle parent walls.
+        if (HasMultiSelectModifier(modifiers) ||
+            (modifiers.HasFlag(KeyModifiers.Shift) && _treeSelectionAnchor is not null))
+        {
+            UpdateTreeNodeSelection(portalItem, modifiers);
+            _session.SetPrimaryFocus(portalItem.WallEntityId, portalItem.Portal);
+            RefreshHighlightStates();
+            return;
+        }
+
+        _session.SetSelection(
+            [portalItem.WallEntityId],
+            portalItem.WallEntityId,
+            portalItem.Portal);
+        _selectionAnchorWallId = portalItem.WallEntityId;
+        UpdateTreeNodeSelection(portalItem, modifiers);
+        RefreshHighlightStates();
     }
 
     private void UpdateTreeNodeSelection(object? item, KeyModifiers modifiers)
@@ -884,7 +906,7 @@ public partial class WallsToolViewModel : Tool
         }
 
         var layerNode = EnsureLayerNode(wall.LayerId ?? "(no layer)");
-        var wallItem = new WallItemViewModel(_session, wall);
+        var wallItem = new WallItemViewModel(this, _session, wall);
 
         if (wall.GroupId is not int groupId ||
             _session.Map.Groups.All(group => group.GroupId != groupId))
@@ -1227,7 +1249,7 @@ public partial class WallsToolViewModel : Tool
 
             foreach (var wall in layerWalls.Where(wall => wall.GroupId is null).OrderBy(wall => wall.EntityId))
             {
-                layerNode.Children.Add(new WallItemViewModel(_session, wall));
+                layerNode.Children.Add(new WallItemViewModel(this, _session, wall));
             }
 
             if (layerNode.Children.Count > 0)
@@ -1288,7 +1310,7 @@ public partial class WallsToolViewModel : Tool
 
         foreach (var wall in GetChildWalls(group, wallsById, layerWallIds).OrderBy(wall => wall.EntityId))
         {
-            node.Children.Add(new WallItemViewModel(_session, wall));
+            node.Children.Add(new WallItemViewModel(this, _session, wall));
         }
 
         return node.Children.Count > 0 ? node : null;
@@ -1609,6 +1631,7 @@ public partial class WallGroupNodeViewModel : ObservableObject
 
 public partial class WallItemViewModel : ObservableObject
 {
+    private readonly WallsToolViewModel _tree;
     private readonly EditorSession _session;
     private bool _suppressLineTypeBinding;
 
@@ -1618,15 +1641,16 @@ public partial class WallItemViewModel : ObservableObject
     [ObservableProperty]
     private string _renameText = string.Empty;
 
-    public WallItemViewModel(EditorSession session, Wall wall)
+    public WallItemViewModel(WallsToolViewModel tree, EditorSession session, Wall wall)
     {
+        _tree = tree;
         _session = session;
         Wall = wall;
 
         var portalNumber = 1;
         foreach (var portal in wall.Portals)
         {
-            Portals.Add(new WallPortalItemViewModel(session, wall.EntityId, portal, portalNumber));
+            Portals.Add(new WallPortalItemViewModel(tree, session, wall.EntityId, portal, portalNumber));
             portalNumber++;
         }
     }
@@ -1756,7 +1780,7 @@ public partial class WallItemViewModel : ObservableObject
             var existing = Portals.FirstOrDefault(item => ReferenceEquals(item.Portal, portal));
             if (existing is null)
             {
-                Portals.Add(new WallPortalItemViewModel(_session, Wall.EntityId, portal, nextNumber));
+                Portals.Add(new WallPortalItemViewModel(_tree, _session, Wall.EntityId, portal, nextNumber));
                 nextNumber++;
             }
             else
@@ -1781,7 +1805,9 @@ public partial class WallItemViewModel : ObservableObject
 
 public partial class WallPortalItemViewModel : ObservableObject
 {
+    private readonly WallsToolViewModel _tree;
     private readonly EditorSession _session;
+    private bool _suppressLineTypeBinding;
 
     [ObservableProperty]
     private bool _isRenaming;
@@ -1789,8 +1815,14 @@ public partial class WallPortalItemViewModel : ObservableObject
     [ObservableProperty]
     private string _renameText = string.Empty;
 
-    public WallPortalItemViewModel(EditorSession session, int wallEntityId, WallPortal portal, int portalNumber)
+    public WallPortalItemViewModel(
+        WallsToolViewModel tree,
+        EditorSession session,
+        int wallEntityId,
+        WallPortal portal,
+        int portalNumber)
     {
+        _tree = tree;
         _session = session;
         WallEntityId = wallEntityId;
         Portal = portal;
@@ -1836,11 +1868,13 @@ public partial class WallPortalItemViewModel : ObservableObject
         _session.FocusedWallEntityId == WallEntityId &&
         ReferenceEquals(_session.FocusedPortal, Portal);
 
+    public bool IsSelected => _tree.IsTreeNodeSelected(this);
+
     public bool IsHovered =>
         _session.HoveredWallEntityId == WallEntityId &&
         ReferenceEquals(_session.HoveredPortal, Portal);
 
-    public bool IsTreeHighlighted => IsFocused || IsHovered;
+    public bool IsTreeHighlighted => IsSelected || IsFocused || IsHovered;
 
     public bool IsActive
     {
@@ -1860,35 +1894,54 @@ public partial class WallPortalItemViewModel : ObservableObject
         }
     }
 
-    public WallLineType LineType
+    // Nullable so Avalonia ComboBox null pushes during refresh are ignored.
+    public WallLineType? LineType
     {
         get => Portal.LineType;
         set
         {
-            if (Portal.LineType == value)
+            if (_suppressLineTypeBinding || value is null || Portal.LineType == value)
             {
                 return;
             }
 
-            _session.Execute("Change portal type", () =>
+            var targets = _tree.GetEditTargets(this)
+                .OfType<WallPortalItemViewModel>()
+                .ToList();
+            if (targets.Count == 0)
             {
-                Portal.LineType = value;
-            });
+                targets = [this];
+            }
+
+            _session.Execute(
+                targets.Count > 1 ? "Change portal types" : "Change portal type",
+                () =>
+                {
+                    foreach (var portalItem in targets)
+                    {
+                        portalItem.Portal.LineType = value.Value;
+                    }
+                });
             OnPropertyChanged();
         }
     }
 
     public void RefreshFromModel()
     {
+        _suppressLineTypeBinding = true;
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(LineType));
         OnPropertyChanged(nameof(DisplayName));
         RefreshHighlightState();
+        Dispatcher.UIThread.Post(
+            () => _suppressLineTypeBinding = false,
+            DispatcherPriority.Input);
     }
 
     public void RefreshHighlightState()
     {
         OnPropertyChanged(nameof(IsFocused));
+        OnPropertyChanged(nameof(IsSelected));
         OnPropertyChanged(nameof(IsHovered));
         OnPropertyChanged(nameof(IsTreeHighlighted));
     }
