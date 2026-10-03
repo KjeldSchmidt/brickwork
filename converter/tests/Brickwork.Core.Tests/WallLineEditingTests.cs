@@ -81,6 +81,31 @@ public class WallLineEditingTests
 
         Assert.Equal(100, wall.WallThickness);
     }
+
+    [Fact]
+    public void SetLineType_DisablesWallAndSeedsTerrainThickness()
+    {
+        var disabled = new Wall
+        {
+            EntityId = 1,
+            LineType = WallLineType.Solid,
+            IsActive = true,
+        };
+        var terrain = new Wall
+        {
+            EntityId = 2,
+            LineType = WallLineType.Solid,
+            WallThickness = 0,
+        };
+
+        WallLineEditing.SetLineType(disabled, WallLineType.Disabled);
+        WallLineEditing.SetLineType(terrain, WallLineType.Terrain);
+
+        Assert.False(disabled.IsActive);
+        Assert.Equal(WallLineType.Disabled, disabled.LineType);
+        Assert.Equal(WallLineType.Terrain, terrain.LineType);
+        Assert.Equal(WallLineEditing.DefaultTerrainWallThickness, terrain.WallThickness);
+    }
 }
 
 public class WallHitTesterTests

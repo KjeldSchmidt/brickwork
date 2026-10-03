@@ -31,13 +31,18 @@ public static class WallLineEditing
     {
         if (portal is null)
         {
-            wall.LineType = CycleType(wall.LineType);
-            wall.IsActive = wall.LineType != WallLineType.Disabled;
-            EnsureDefaultTerrainThickness(wall);
+            SetLineType(wall, CycleType(wall.LineType));
             return;
         }
 
         portal.LineType = CycleType(portal.LineType);
+    }
+
+    public static void SetLineType(Wall wall, WallLineType lineType)
+    {
+        wall.LineType = lineType;
+        wall.IsActive = lineType != WallLineType.Disabled;
+        EnsureDefaultTerrainThickness(wall);
     }
 
     /// <summary>

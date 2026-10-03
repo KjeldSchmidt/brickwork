@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia.Input;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Mvvm.Controls;
 using Brickwork.Core.Geometry;
@@ -1609,6 +1610,7 @@ public partial class WallGroupNodeViewModel : ObservableObject
 public partial class WallItemViewModel : ObservableObject
 {
     private readonly EditorSession _session;
+    private bool _suppressLineTypeBinding;
 
     [ObservableProperty]
     private bool _isRenaming;
@@ -1691,22 +1693,31 @@ public partial class WallItemViewModel : ObservableObject
         }
     }
 
-    public WallLineType LineType
+    // Nullable so Avalonia ComboBox null pushes during refresh are ignored.
+    public WallLineType? LineType
     {
         get => Wall.LineType;
         set
         {
-            if (Wall.LineType == value)
+            if (_suppressLineTypeBinding || value is null || Wall.LineType == value)
             {
                 return;
             }
 
-            _session.Execute("Change wall type", () =>
-            {
-                Wall.LineType = value;
-                Wall.IsActive = value != WallLineType.Disabled;
-                WallLineEditing.EnsureDefaultTerrainThickness(Wall);
-            });
+            var selectedIds = _session.SelectedWallEntityIds.ToHashSet();
+            var targets = _session.Map is not null && selectedIds.Contains(Wall.EntityId)
+                ? _session.Map.Walls.Where(wall => selectedIds.Contains(wall.EntityId)).ToList()
+                : [Wall];
+
+            _session.Execute(
+                targets.Count > 1 ? "Change wall types" : "Change wall type",
+                () =>
+                {
+                    foreach (var wall in targets)
+                    {
+                        WallLineEditing.SetLineType(wall, value.Value);
+                    }
+                });
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsActive));
         }
@@ -1714,11 +1725,16 @@ public partial class WallItemViewModel : ObservableObject
 
     public void RefreshFromModel()
     {
+        _suppressLineTypeBinding = true;
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(LineType));
         OnPropertyChanged(nameof(DisplayName));
         SyncPortalsFromWall();
         RefreshHighlightState();
+        // ComboBox can push null/stale SelectedItem while templates settle after a mass update.
+        Dispatcher.UIThread.Post(
+            () => _suppressLineTypeBinding = false,
+            DispatcherPriority.Input);
     }
 
     private void SyncPortalsFromWall()

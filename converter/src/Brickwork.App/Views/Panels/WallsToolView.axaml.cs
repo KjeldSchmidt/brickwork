@@ -27,6 +27,9 @@ public partial class WallsToolView : UserControl
     private object? _contextMenuTarget;
     private TopLevel? _topLevel;
     private int _expandedForTreeRevision = -1;
+    // ComboBox popups sit above the tree; the closing click often falls through and
+    // would otherwise select/hover whichever row is under the dropdown.
+    private bool _suppressTreePointerInput;
 
     public WallsToolView()
     {
@@ -136,9 +139,7 @@ public partial class WallsToolView : UserControl
             return;
         }
 
-        if (e.Source is CheckBox or ComboBox or TextBox or ToggleButton ||
-            (e.Source as Control)?.GetVisualAncestors().Any(ancestor =>
-                ancestor is CheckBox or ComboBox or TextBox or ToggleButton) == true)
+        if (_suppressTreePointerInput || IsTreeEditorInteraction(e.Source))
         {
             return;
         }
@@ -268,9 +269,29 @@ public partial class WallsToolView : UserControl
         }
     }
 
+    private void OnWallTypeDropDownOpened(object? sender, EventArgs e)
+    {
+        _suppressTreePointerInput = true;
+        if (DataContext is WallsToolViewModel viewModel)
+        {
+            viewModel.ClearTreeHover();
+        }
+    }
+
+    private void OnWallTypeDropDownClosed(object? sender, EventArgs e)
+    {
+        // Keep suppression through the click that closed the popup (it often hits the tree).
+        _suppressTreePointerInput = true;
+        Dispatcher.UIThread.Post(
+            () => _suppressTreePointerInput = false,
+            DispatcherPriority.Input);
+    }
+
     private void OnTreePointerMoved(object? sender, PointerEventArgs e)
     {
-        if (DataContext is not WallsToolViewModel viewModel)
+        if (DataContext is not WallsToolViewModel viewModel ||
+            _suppressTreePointerInput ||
+            IsTreeEditorInteraction(e.Source))
         {
             return;
         }
@@ -308,10 +329,16 @@ public partial class WallsToolView : UserControl
             return;
         }
 
+        // Swallow fall-through clicks from a just-closed type dropdown so the TreeView
+        // cannot replace the multi-selection with the row under the popup.
+        if (_suppressTreePointerInput)
+        {
+            e.Handled = true;
+            return;
+        }
+
         // Let checkboxes, type editors, rename boxes, and expanders handle their own clicks.
-        if (e.Source is CheckBox or ComboBox or TextBox or ToggleButton ||
-            (e.Source as Control)?.GetVisualAncestors().Any(ancestor =>
-                ancestor is CheckBox or ComboBox or TextBox or ToggleButton) == true)
+        if (IsTreeEditorInteraction(e.Source))
         {
             return;
         }
@@ -321,12 +348,21 @@ public partial class WallsToolView : UserControl
         e.Handled = true;
     }
 
+    private static bool IsTreeEditorInteraction(object? source)
+    {
+        if (source is CheckBox or ComboBox or TextBox or ToggleButton or Popup or PopupRoot)
+        {
+            return true;
+        }
+
+        return (source as Control)?.GetVisualAncestors().Any(ancestor =>
+            ancestor is CheckBox or ComboBox or TextBox or ToggleButton or Popup or PopupRoot) == true;
+    }
+
     private void TryOpenTreeContextMenu(PointerPressedEventArgs e, WallsToolViewModel viewModel)
     {
         // Let editors keep their own context menus / text selection.
-        if (e.Source is CheckBox or ComboBox or TextBox or ToggleButton ||
-            (e.Source as Control)?.GetVisualAncestors().Any(ancestor =>
-                ancestor is CheckBox or ComboBox or TextBox or ToggleButton) == true)
+        if (_suppressTreePointerInput || IsTreeEditorInteraction(e.Source))
         {
             return;
         }

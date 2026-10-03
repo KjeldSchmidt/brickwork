@@ -121,7 +121,9 @@
                                       Classes="wall-tree-type"
                                       Width="118"
                                       ItemsSource="{Binding LineTypeOptions}"
-                                      SelectedItem="{Binding LineType}">
+                                      SelectedItem="{Binding LineType, Mode=TwoWay}"
+                                      DropDownOpened="OnWallTypeDropDownOpened"
+                                      DropDownClosed="OnWallTypeDropDownClosed">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate DataType="models:WallLineType">
                                         <TextBlock Text="{Binding Converter={StaticResource WallLineTypeDisplayConverter}}" />
@@ -158,7 +160,9 @@
                                       Classes="wall-tree-type"
                                       Width="118"
                                       ItemsSource="{Binding LineTypeOptions}"
-                                      SelectedItem="{Binding LineType}">
+                                      SelectedItem="{Binding LineType, Mode=TwoWay}"
+                                      DropDownOpened="OnWallTypeDropDownOpened"
+                                      DropDownClosed="OnWallTypeDropDownClosed">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate DataType="models:WallLineType">
                                         <TextBlock Text="{Binding Converter={StaticResource WallLineTypeDisplayConverter}}" />

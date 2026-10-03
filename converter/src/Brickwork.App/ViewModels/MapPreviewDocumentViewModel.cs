@@ -426,12 +426,40 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        _session.Execute("Change wall type", () =>
+        if (hit.Portal is not null)
         {
-            WallLineEditing.CycleType(hit.Wall, hit.Portal);
-        });
+            _session.Execute("Change wall type", () =>
+            {
+                WallLineEditing.CycleType(hit.Wall, hit.Portal);
+            });
+            _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
+            return;
+        }
 
-        _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
+        var selectedIds = _session.SelectedWallEntityIds;
+        var nextType = WallLineEditing.CycleType(hit.Wall.LineType);
+        var targets = selectedIds.Contains(hit.Wall.EntityId)
+            ? Map.Walls.Where(wall => selectedIds.Contains(wall.EntityId)).ToList()
+            : [hit.Wall];
+
+        _session.Execute(
+            targets.Count > 1 ? "Change wall types" : "Change wall type",
+            () =>
+            {
+                foreach (var wall in targets)
+                {
+                    WallLineEditing.SetLineType(wall, nextType);
+                }
+            });
+
+        // Keep multi-selection when cycling a wall that is already selected.
+        if (selectedIds.Contains(hit.Wall.EntityId) && selectedIds.Count > 1)
+        {
+            _session.SetSelection(selectedIds, hit.Wall.EntityId);
+            return;
+        }
+
+        _session.RequestWallTreeFocus(hit.Wall);
     }
 
     public bool TryAddPortalAt(MapPoint previewPoint)
