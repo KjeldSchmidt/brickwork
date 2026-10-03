@@ -440,6 +440,13 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
                 overrideBorderWidth);
         }
 
+        DrawTerrainThicknessHandle(
+            canvas,
+            transform,
+            wall,
+            overrideColor,
+            overrideBorderWidth);
+
         foreach (var portal in wall.Portals)
         {
             if (WallPathSegmentBuilder.TryGetPortalArcInterval(wall, portal, out var start, out var end))
@@ -477,6 +484,48 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         }
     }
 
+    private static void DrawTerrainThicknessHandle(
+        SKCanvas canvas,
+        SceneTransform transform,
+        Wall wall,
+        SKColor? overrideColor = null,
+        float? overrideBorderWidth = null)
+    {
+        if (!TerrainThicknessHandleGeometry.TryGetEndpoints(
+                wall,
+                out _,
+                out var negative,
+                out var positive,
+                out var tangent))
+        {
+            return;
+        }
+
+        var color = overrideColor ?? WallLineColors.ForTerrainThicknessHandle(wall.IsActive);
+        DrawPolyline(
+            canvas,
+            transform,
+            [negative, positive],
+            color,
+            isClosed: false,
+            overrideBorderWidth ?? LineStrokeWidth);
+
+        DrawOrientedTick(
+            canvas,
+            TerrainThicknessHandleGeometry.GetEndpointTickPose(negative, tangent, transform),
+            wall.LineType,
+            wall.IsActive,
+            color,
+            overrideBorderWidth);
+        DrawOrientedTick(
+            canvas,
+            TerrainThicknessHandleGeometry.GetEndpointTickPose(positive, tangent, transform),
+            wall.LineType,
+            wall.IsActive,
+            color,
+            overrideBorderWidth);
+    }
+
     private static void DrawPortalWidthTick(
         SKCanvas canvas,
         SceneTransform transform,
@@ -487,11 +536,27 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         SKColor? overrideColor = null,
         float? overrideBorderWidth = null)
     {
-        var (center, angleRadians) = PortalWidthHandleGeometry.GetPreviewTickPose(wall, arcLength, transform);
-        var degrees = (float)(angleRadians * 180d / Math.PI);
+        DrawOrientedTick(
+            canvas,
+            PortalWidthHandleGeometry.GetPreviewTickPose(wall, arcLength, transform),
+            lineType,
+            isActive,
+            overrideColor,
+            overrideBorderWidth);
+    }
+
+    private static void DrawOrientedTick(
+        SKCanvas canvas,
+        (MapPoint Center, double AngleRadians) pose,
+        WallLineType lineType,
+        bool isActive,
+        SKColor? overrideColor = null,
+        float? overrideBorderWidth = null)
+    {
+        var degrees = (float)(pose.AngleRadians * 180d / Math.PI);
 
         canvas.Save();
-        canvas.Translate((float)center.X, (float)center.Y);
+        canvas.Translate((float)pose.Center.X, (float)pose.Center.Y);
         canvas.RotateDegrees(degrees);
 
         var rect = new SKRect(

@@ -12,7 +12,8 @@ public sealed record WallVertexPickTarget(
     Wall Wall,
     int? VertexIndex,
     WallPortal? Portal,
-    PortalWidthEndpoint? PortalWidthEndpoint = null);
+    PortalWidthEndpoint? PortalWidthEndpoint = null,
+    TerrainThicknessEndpoint? TerrainThicknessEndpoint = null);
 
 public static class WallVertexHitTester
 {
@@ -83,9 +84,66 @@ public static class WallVertexHitTester
                     bestTarget = new WallVertexPickTarget(wall, null, portal);
                 }
             }
+
+            if (TerrainThicknessHandleGeometry.TryGetEndpoints(
+                    wall,
+                    out _,
+                    out var negative,
+                    out var positive,
+                    out var tangent))
+            {
+                TryPickTerrainThicknessEndpoint(
+                    wall,
+                    TerrainThicknessEndpoint.Negative,
+                    negative,
+                    tangent,
+                    transform,
+                    previewPoint,
+                    ref bestTarget,
+                    ref bestDistanceSquared);
+                TryPickTerrainThicknessEndpoint(
+                    wall,
+                    TerrainThicknessEndpoint.Positive,
+                    positive,
+                    tangent,
+                    transform,
+                    previewPoint,
+                    ref bestTarget,
+                    ref bestDistanceSquared);
+            }
         }
 
         return bestTarget;
+    }
+
+    private static void TryPickTerrainThicknessEndpoint(
+        Wall wall,
+        TerrainThicknessEndpoint endpoint,
+        MapPoint endpointScene,
+        MapPoint wallTangentScene,
+        SceneTransform transform,
+        MapPoint previewPoint,
+        ref WallVertexPickTarget? bestTarget,
+        ref double bestDistanceSquared)
+    {
+        var (center, angleRadians) = TerrainThicknessHandleGeometry.GetEndpointTickPose(
+            endpointScene,
+            wallTangentScene,
+            transform);
+        if (!TryPickOrientedRect(
+                previewPoint,
+                center,
+                angleRadians,
+                TickHalfLength + TickPickPadding,
+                TickHalfThickness + TickPickPadding,
+                out var distanceSquared) ||
+            distanceSquared > bestDistanceSquared)
+        {
+            return;
+        }
+
+        bestDistanceSquared = distanceSquared;
+        bestTarget = new WallVertexPickTarget(wall, null, null, TerrainThicknessEndpoint: endpoint);
     }
 
     private static void TryPickPortalWidthTick(

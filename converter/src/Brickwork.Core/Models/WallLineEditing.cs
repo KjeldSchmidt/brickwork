@@ -2,6 +2,8 @@ namespace Brickwork.Core.Models;
 
 public static class WallLineEditing
 {
+    public const double DefaultTerrainWallThickness = 50d;
+
     private static readonly WallLineType[] CycleOrder =
     [
         WallLineType.Solid,
@@ -31,10 +33,23 @@ public static class WallLineEditing
         {
             wall.LineType = CycleType(wall.LineType);
             wall.IsActive = wall.LineType != WallLineType.Disabled;
+            EnsureDefaultTerrainThickness(wall);
             return;
         }
 
         portal.LineType = CycleType(portal.LineType);
+    }
+
+    /// <summary>
+    /// Seeds a usable thickness when a wall first becomes Terrain with no thickness set.
+    /// Does not overwrite imported or previously edited non-zero values.
+    /// </summary>
+    public static void EnsureDefaultTerrainThickness(Wall wall)
+    {
+        if (wall.LineType == WallLineType.Terrain && wall.WallThickness <= 0)
+        {
+            wall.WallThickness = DefaultTerrainWallThickness;
+        }
     }
 
     public static void SetWallEnabled(Wall wall, bool enabled)

@@ -191,6 +191,10 @@ public partial class MapPreviewDocumentViewModel : Document
         {
             WallGeometryEditing.SetVertexPosition(target.Wall, vertexIndex, scenePoint);
         }
+        else if (target.TerrainThicknessEndpoint is not null)
+        {
+            WallGeometryEditing.SetTerrainThicknessFromScene(target.Wall, scenePoint);
+        }
         else if (target.Portal is { } portal)
         {
             if (target.PortalWidthEndpoint is { } endpoint)
@@ -284,6 +288,7 @@ public partial class MapPreviewDocumentViewModel : Document
             LineType = WallLineType.Solid,
             IsActive = true,
             WallEnabled = true,
+            WallThickness = WallLineEditing.DefaultTerrainWallThickness,
             Points = { scenePoint, scenePoint },
         };
 

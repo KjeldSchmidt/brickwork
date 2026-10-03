@@ -1054,6 +1054,7 @@ public partial class WallItemViewModel : ObservableObject
             {
                 Wall.LineType = value;
                 Wall.IsActive = value != WallLineType.Disabled;
+                WallLineEditing.EnsureDefaultTerrainThickness(Wall);
             });
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsActive));

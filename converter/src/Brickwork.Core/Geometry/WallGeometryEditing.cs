@@ -41,6 +41,184 @@ public static class WallGeometryEditing
         portal.Anchor = MapPointTransforms.SceneToLocal(wall, snappedScene);
     }
 
+    /// <summary>
+    /// Sets wall thickness from the perpendicular scene distance of
+    /// <paramref name="scenePoint"/> to the terrain thickness handle centerline.
+    /// Stored as entity-local <see cref="Wall.WallThickness"/> (scene = value × scale).
+    /// </summary>
+    public static void SetTerrainThicknessFromScene(Wall wall, MapPoint scenePoint)
+    {
+        if (!TryGetTerrainThicknessHandleArcLength(wall, out var arcLength))
+        {
+            return;
+        }
+
+        var center = WallPathSegmentBuilder.GetScenePointAtArcLength(wall, arcLength);
+        var tangent = WallPathSegmentBuilder.GetTangentAtArcLength(wall, arcLength);
+        var dx = scenePoint.X - center.X;
+        var dy = scenePoint.Y - center.Y;
+        // Perpendicular distance to the centerline (normal = rotate tangent 90°).
+        var halfSceneThickness = Math.Abs(dx * (-tangent.Y) + dy * tangent.X);
+        var scale = wall.Scale > Epsilon ? wall.Scale : 1d;
+        const double minThickness = 2d;
+        wall.WallThickness = Math.Max(minThickness, (halfSceneThickness * 2d) / scale);
+    }
+
+    /// <summary>
+    /// Picks an arc length for the terrain thickness handle: midpoint of the longest
+    /// non-portal span between points of interest (wall ends + portal ends).
+    /// Falls back to the wall start when the path is fully covered by portals.
+    /// </summary>
+    public static bool TryGetTerrainThicknessHandleArcLength(Wall wall, out double arcLength)
+    {
+        arcLength = 0d;
+        if (wall.LineType != WallLineType.Terrain || wall.Points.Count < 2)
+        {
+            return false;
+        }
+
+        var totalLength = WallPolylineEdges.TotalLength(wall.Points, wall.IsClosed);
+        if (totalLength <= Epsilon)
+        {
+            return false;
+        }
+
+        var pointsOfInterest = CollectThicknessHandlePointsOfInterest(wall, totalLength);
+        var bestGapLength = -1d;
+        var bestMid = 0d;
+        var foundNonPortalGap = false;
+
+        for (var index = 0; index < pointsOfInterest.Count; index++)
+        {
+            double gapStart;
+            double gapEnd;
+            if (index + 1 < pointsOfInterest.Count)
+            {
+                gapStart = pointsOfInterest[index];
+                gapEnd = pointsOfInterest[index + 1];
+            }
+            else if (wall.IsClosed)
+            {
+                gapStart = pointsOfInterest[index];
+                gapEnd = pointsOfInterest[0] + totalLength;
+            }
+            else
+            {
+                break;
+            }
+
+            var gapLength = gapEnd - gapStart;
+            if (gapLength <= Epsilon)
+            {
+                continue;
+            }
+
+            var mid = wall.IsClosed
+                ? WallCircularIntervals.NormalizeArcLength((gapStart + gapEnd) / 2d, totalLength)
+                : (gapStart + gapEnd) / 2d;
+
+            if (IsArcLengthInsideAnyPortal(wall, mid, totalLength))
+            {
+                continue;
+            }
+
+            if (gapLength > bestGapLength + Epsilon)
+            {
+                bestGapLength = gapLength;
+                bestMid = mid;
+                foundNonPortalGap = true;
+            }
+        }
+
+        arcLength = foundNonPortalGap ? bestMid : 0d;
+        return true;
+    }
+
+    private static List<double> CollectThicknessHandlePointsOfInterest(Wall wall, double totalLength)
+    {
+        var points = new List<double>();
+        var portalBoundaryCount = 0;
+
+        foreach (var portal in wall.Portals)
+        {
+            if (!WallPathSegmentBuilder.TryGetPortalArcInterval(wall, portal, out var start, out var end))
+            {
+                continue;
+            }
+
+            var center = (start + end) / 2d;
+            var halfWidth = (end - start) / 2d;
+            foreach (var (gapStart, gapEnd) in WallCircularIntervals.ExpandPortalGap(
+                         center,
+                         halfWidth,
+                         totalLength,
+                         wall.IsClosed))
+            {
+                points.Add(gapStart);
+                points.Add(gapEnd);
+                portalBoundaryCount += 2;
+            }
+        }
+
+        // Closed loops already wrap; the seam is not a real endpoint. Including it when portals
+        // exist splits one continuous non-portal span into two (portal-end / seam / portal-end)
+        // and makes the handle jump as portals move. Only use the seam when there are no portals.
+        if (!wall.IsClosed)
+        {
+            points.Add(0d);
+            points.Add(totalLength);
+        }
+        else if (portalBoundaryCount == 0)
+        {
+            points.Add(0d);
+        }
+
+        var normalized = new List<double>(points.Count);
+        foreach (var point in points)
+        {
+            var value = wall.IsClosed
+                ? WallCircularIntervals.NormalizeArcLength(point, totalLength)
+                : Math.Clamp(point, 0d, totalLength);
+
+            if (normalized.Any(existing => Math.Abs(existing - value) <= Epsilon))
+            {
+                continue;
+            }
+
+            normalized.Add(value);
+        }
+
+        normalized.Sort();
+        return normalized;
+    }
+
+    private static bool IsArcLengthInsideAnyPortal(Wall wall, double arcLength, double totalLength)
+    {
+        foreach (var portal in wall.Portals)
+        {
+            if (!WallPathSegmentBuilder.TryGetPortalArcInterval(wall, portal, out var start, out var end))
+            {
+                continue;
+            }
+
+            var center = (start + end) / 2d;
+            var halfWidth = (end - start) / 2d;
+            foreach (var (gapStart, gapEnd) in WallCircularIntervals.ExpandPortalGap(
+                         center,
+                         halfWidth,
+                         totalLength,
+                         wall.IsClosed))
+            {
+                if (arcLength + Epsilon >= gapStart && arcLength <= gapEnd + Epsilon)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     public static void SetPortalEndpointFromScene(
         Wall wall,
         WallPortal portal,

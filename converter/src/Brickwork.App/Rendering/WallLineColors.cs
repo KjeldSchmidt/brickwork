@@ -25,6 +25,14 @@ public static class WallLineColors
 
     public static SKColor ForHighlight() => new SKColor(0xAA, 0xDD, 0xFF, 0xCC);
 
+    /// <summary>
+    /// Brighter chartreuse cousin of terrain green so the thickness handle pops on the fill.
+    /// </summary>
+    public static SKColor ForTerrainThicknessHandle(bool isActive) =>
+        !isActive
+            ? InactiveColor
+            : new SKColor(0xE8, 0xFF, 0x4A, 0xFF);
+
     public static SKColor FillForLine(WallLineType lineType, bool isActive)
     {
         var stroke = ForLine(lineType, isActive);

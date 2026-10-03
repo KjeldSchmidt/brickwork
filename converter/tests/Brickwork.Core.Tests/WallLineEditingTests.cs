@@ -50,6 +50,37 @@ public class WallLineEditingTests
         Assert.Equal(WallLineType.Solid, wall.LineType);
         Assert.Equal(WallLineType.Terrain, wall.Portals[0].LineType);
     }
+
+    [Fact]
+    public void CycleType_WallToTerrain_SeedsDefaultThicknessWhenUnset()
+    {
+        var wall = new Wall
+        {
+            EntityId = 5,
+            LineType = WallLineType.Solid,
+            WallThickness = 0,
+        };
+
+        WallLineEditing.CycleType(wall, portal: null);
+
+        Assert.Equal(WallLineType.Terrain, wall.LineType);
+        Assert.Equal(WallLineEditing.DefaultTerrainWallThickness, wall.WallThickness);
+    }
+
+    [Fact]
+    public void EnsureDefaultTerrainThickness_DoesNotOverwriteExistingThickness()
+    {
+        var wall = new Wall
+        {
+            EntityId = 5,
+            LineType = WallLineType.Terrain,
+            WallThickness = 100,
+        };
+
+        WallLineEditing.EnsureDefaultTerrainThickness(wall);
+
+        Assert.Equal(100, wall.WallThickness);
+    }
 }
 
 public class WallHitTesterTests
