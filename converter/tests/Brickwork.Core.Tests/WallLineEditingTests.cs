@@ -7,7 +7,7 @@ namespace Brickwork.Core.Tests;
 public class WallLineEditingTests
 {
     [Fact]
-    public void CycleType_AdvancesThroughAllFoundryWallTypes()
+    public void CycleWallType_SkipsDoorTypes()
     {
         var current = WallLineType.Solid;
 
@@ -16,23 +16,39 @@ public class WallLineEditingTests
                      WallLineType.Terrain,
                      WallLineType.Invisible,
                      WallLineType.Ethereal,
-                     WallLineType.Door,
-                     WallLineType.SecretDoor,
                      WallLineType.Window,
                      WallLineType.Disabled,
                      WallLineType.Solid,
                  })
         {
-            current = WallLineEditing.CycleType(current);
+            current = WallLineEditing.CycleWallType(current);
             Assert.Equal(expected, current);
         }
     }
 
     [Fact]
-    public void CycleType_PortalIncludesDisabled()
+    public void CyclePortalType_UsesDoorLikeTypesOnly()
     {
-        Assert.Equal(WallLineType.Disabled, WallLineEditing.CycleType(WallLineType.Window));
-        Assert.Equal(WallLineType.Solid, WallLineEditing.CycleType(WallLineType.Disabled));
+        var current = WallLineType.Door;
+
+        foreach (var expected in new[]
+                 {
+                     WallLineType.SecretDoor,
+                     WallLineType.Window,
+                     WallLineType.Disabled,
+                     WallLineType.Door,
+                 })
+        {
+            current = WallLineEditing.CyclePortalType(current);
+            Assert.Equal(expected, current);
+        }
+    }
+
+    [Fact]
+    public void CycleWallType_DoorLeavesCycleAtSolid()
+    {
+        Assert.Equal(WallLineType.Solid, WallLineEditing.CycleWallType(WallLineType.Door));
+        Assert.Equal(WallLineType.Solid, WallLineEditing.CycleWallType(WallLineType.SecretDoor));
     }
 
     [Fact]
@@ -42,13 +58,13 @@ public class WallLineEditingTests
         {
             EntityId = 5,
             LineType = WallLineType.Solid,
-            Portals = [new WallPortal { Id = "gap-1", LineType = WallLineType.Solid }],
+            Portals = [new WallPortal { Id = "gap-1", LineType = WallLineType.Door }],
         };
 
         WallLineEditing.CycleType(wall, wall.Portals[0]);
 
         Assert.Equal(WallLineType.Solid, wall.LineType);
-        Assert.Equal(WallLineType.Terrain, wall.Portals[0].LineType);
+        Assert.Equal(WallLineType.SecretDoor, wall.Portals[0].LineType);
     }
 
     [Fact]

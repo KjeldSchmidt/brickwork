@@ -4,38 +4,54 @@ public static class WallLineEditing
 {
     public const double DefaultTerrainWallThickness = 50d;
 
-    private static readonly WallLineType[] CycleOrder =
+    /// <summary>Canvas cycle for walls — doors stay panel-only.</summary>
+    private static readonly WallLineType[] WallCycleOrder =
     [
         WallLineType.Solid,
         WallLineType.Terrain,
         WallLineType.Invisible,
         WallLineType.Ethereal,
+        WallLineType.Window,
+        WallLineType.Disabled,
+    ];
+
+    /// <summary>Canvas cycle for portals — door-like types only.</summary>
+    private static readonly WallLineType[] PortalCycleOrder =
+    [
         WallLineType.Door,
         WallLineType.SecretDoor,
         WallLineType.Window,
         WallLineType.Disabled,
     ];
 
-    public static WallLineType CycleType(WallLineType current)
-    {
-        var index = Array.IndexOf(CycleOrder, current);
-        if (index < 0)
-        {
-            return CycleOrder[0];
-        }
+    public static WallLineType CycleType(WallLineType current) => CycleWallType(current);
 
-        return CycleOrder[(index + 1) % CycleOrder.Length];
-    }
+    public static WallLineType CycleWallType(WallLineType current) =>
+        CycleIn(WallCycleOrder, current);
+
+    public static WallLineType CyclePortalType(WallLineType current) =>
+        CycleIn(PortalCycleOrder, current);
 
     public static void CycleType(Wall wall, WallPortal? portal)
     {
         if (portal is null)
         {
-            SetLineType(wall, CycleType(wall.LineType));
+            SetLineType(wall, CycleWallType(wall.LineType));
             return;
         }
 
-        portal.LineType = CycleType(portal.LineType);
+        portal.LineType = CyclePortalType(portal.LineType);
+    }
+
+    private static WallLineType CycleIn(WallLineType[] order, WallLineType current)
+    {
+        var index = Array.IndexOf(order, current);
+        if (index < 0)
+        {
+            return order[0];
+        }
+
+        return order[(index + 1) % order.Length];
     }
 
     public static void SetLineType(Wall wall, WallLineType lineType)
