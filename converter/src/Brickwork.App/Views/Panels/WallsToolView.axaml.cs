@@ -13,16 +13,86 @@ namespace Brickwork.App.Views.Panels;
 
 public partial class WallsToolView : UserControl
 {
+    private readonly ContextMenu _treeContextMenu;
+    private readonly MenuItem _renameMenuItem = new()
+    {
+        Header = "Rename",
+        InputGesture = new KeyGesture(Key.F2),
+    };
+    private readonly MenuItem _deleteMenuItem = new()
+    {
+        Header = "Delete",
+        InputGesture = new KeyGesture(Key.Delete),
+    };
+    private object? _contextMenuTarget;
+    private TopLevel? _topLevel;
     private int _expandedForTreeRevision = -1;
 
     public WallsToolView()
     {
         InitializeComponent();
+        _renameMenuItem.Click += OnRenameMenuClick;
+        _deleteMenuItem.Click += OnDeleteMenuClick;
+        _treeContextMenu = new ContextMenu
+        {
+            Items = { _renameMenuItem, _deleteMenuItem },
+        };
         DataContextChanged += OnDataContextChanged;
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
         WallsTree.PropertyChanged += OnWallsTreePropertyChanged;
         WallsTree.AddHandler(InputElement.PointerMovedEvent, OnTreePointerMoved, RoutingStrategies.Bubble, handledEventsToo: true);
         WallsTree.AddHandler(InputElement.PointerPressedEvent, OnTreePointerPressed, RoutingStrategies.Bubble, handledEventsToo: true);
+        WallsTree.AddHandler(InputElement.DoubleTappedEvent, OnTreeDoubleTapped, RoutingStrategies.Bubble, handledEventsToo: true);
         KeyDown += OnKeyDown;
+    }
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _topLevel = TopLevel.GetTopLevel(this);
+        // Catch right-clicks that only dismiss an open menu overlay and never reach the tree.
+        _topLevel?.AddHandler(
+            InputElement.PointerPressedEvent,
+            OnTopLevelPointerPressed,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _topLevel?.RemoveHandler(InputElement.PointerPressedEvent, OnTopLevelPointerPressed);
+        _topLevel = null;
+    }
+
+    private void OnTopLevelPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!_treeContextMenu.IsOpen ||
+            DataContext is not WallsToolViewModel viewModel ||
+            !e.GetCurrentPoint(WallsTree).Properties.IsRightButtonPressed)
+        {
+            return;
+        }
+
+        var position = e.GetPosition(WallsTree);
+        if (position.X < 0 ||
+            position.Y < 0 ||
+            position.X > WallsTree.Bounds.Width ||
+            position.Y > WallsTree.Bounds.Height)
+        {
+            return;
+        }
+
+        TryOpenTreeContextMenu(e, viewModel);
+    }
+
+    private void UpdateContextMenuHeaders(WallsToolViewModel viewModel, object target)
+    {
+        var count = viewModel.GetEditTargets(target).Count;
+        var suffix = count > 1 ? $" ({count})" : string.Empty;
+        _renameMenuItem.Header = viewModel.CanRename(target) ? $"Rename{suffix}" : "Rename";
+        _renameMenuItem.IsEnabled = viewModel.CanRename(target);
+        _deleteMenuItem.Header = viewModel.CanDelete(target) ? $"Delete{suffix}" : "Delete";
+        _deleteMenuItem.IsEnabled = viewModel.CanDelete(target);
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
@@ -34,8 +104,19 @@ public partial class WallsToolView : UserControl
 
         if (e.Key == Key.Escape)
         {
+            viewModel.CancelRename();
             viewModel.ClearSelection();
             e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.F2 && e.KeyModifiers == KeyModifiers.None)
+        {
+            if (TryBeginRenameFromHotkey())
+            {
+                e.Handled = true;
+            }
+
             return;
         }
 
@@ -45,6 +126,107 @@ public partial class WallsToolView : UserControl
             {
                 e.Handled = true;
             }
+        }
+    }
+
+    private void OnTreeDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is not WallsToolViewModel viewModel)
+        {
+            return;
+        }
+
+        if (e.Source is CheckBox or ComboBox or TextBox or ToggleButton ||
+            (e.Source as Control)?.GetVisualAncestors().Any(ancestor =>
+                ancestor is CheckBox or ComboBox or TextBox or ToggleButton) == true)
+        {
+            return;
+        }
+
+        var treeItem = ResolveTreeViewItem(WallsTree, e.GetPosition(WallsTree));
+        if (!viewModel.CanRename(treeItem?.DataContext))
+        {
+            return;
+        }
+
+        viewModel.BeginRename(treeItem!.DataContext);
+        ScheduleFocusRenameBox();
+        e.Handled = true;
+    }
+
+    private void OnRenameMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not WallsToolViewModel viewModel || !viewModel.CanRename(_contextMenuTarget))
+        {
+            return;
+        }
+
+        viewModel.BeginRename(_contextMenuTarget);
+        ScheduleFocusRenameBox();
+    }
+
+    private void OnDeleteMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is WallsToolViewModel viewModel)
+        {
+            viewModel.DeleteTreeItem(_contextMenuTarget);
+        }
+    }
+
+    public bool TryBeginRenameFromHotkey()
+    {
+        if (DataContext is not WallsToolViewModel viewModel || !viewModel.BeginRenameSelection())
+        {
+            return false;
+        }
+
+        ScheduleFocusRenameBox();
+        return true;
+    }
+
+    private void ScheduleFocusRenameBox() =>
+        Dispatcher.UIThread.Post(FocusActiveRenameBox, DispatcherPriority.Loaded);
+
+    private void FocusActiveRenameBox()
+    {
+        var renameBox = WallsTree.GetVisualDescendants()
+            .OfType<TextBox>()
+            .FirstOrDefault(box => box.Classes.Contains("wall-tree-rename") && box.IsVisible);
+        if (renameBox is null)
+        {
+            return;
+        }
+
+        renameBox.Focus();
+        renameBox.SelectAll();
+    }
+
+    private void OnRenameBoxKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox textBox || DataContext is not WallsToolViewModel viewModel)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            viewModel.CommitRename(textBox.DataContext);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Escape)
+        {
+            viewModel.CancelRename();
+            e.Handled = true;
+        }
+    }
+
+    private void OnRenameBoxLostFocus(object? sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox textBox && DataContext is WallsToolViewModel viewModel)
+        {
+            viewModel.CommitRename(textBox.DataContext);
         }
     }
 
@@ -109,15 +291,27 @@ public partial class WallsToolView : UserControl
 
     private void OnTreePointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!e.GetCurrentPoint(WallsTree).Properties.IsLeftButtonPressed ||
-            DataContext is not WallsToolViewModel viewModel)
+        if (DataContext is not WallsToolViewModel viewModel)
         {
             return;
         }
 
-        // Let checkboxes, type editors, and expanders handle their own clicks.
-        if (e.Source is CheckBox or ComboBox or ToggleButton ||
-            (e.Source as Control)?.GetVisualAncestors().Any(ancestor => ancestor is CheckBox or ComboBox or ToggleButton) == true)
+        var point = e.GetCurrentPoint(WallsTree);
+        if (point.Properties.IsRightButtonPressed)
+        {
+            TryOpenTreeContextMenu(e, viewModel);
+            return;
+        }
+
+        if (!point.Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        // Let checkboxes, type editors, rename boxes, and expanders handle their own clicks.
+        if (e.Source is CheckBox or ComboBox or TextBox or ToggleButton ||
+            (e.Source as Control)?.GetVisualAncestors().Any(ancestor =>
+                ancestor is CheckBox or ComboBox or TextBox or ToggleButton) == true)
         {
             return;
         }
@@ -125,6 +319,64 @@ public partial class WallsToolView : UserControl
         var treeItem = ResolveTreeViewItem(WallsTree, e.GetPosition(WallsTree));
         viewModel.HandleTreeActivation(treeItem?.DataContext, e.KeyModifiers);
         e.Handled = true;
+    }
+
+    private void TryOpenTreeContextMenu(PointerPressedEventArgs e, WallsToolViewModel viewModel)
+    {
+        // Let editors keep their own context menus / text selection.
+        if (e.Source is CheckBox or ComboBox or TextBox or ToggleButton ||
+            (e.Source as Control)?.GetVisualAncestors().Any(ancestor =>
+                ancestor is CheckBox or ComboBox or TextBox or ToggleButton) == true)
+        {
+            return;
+        }
+
+        var treeItem = ResolveTreeViewItem(WallsTree, e.GetPosition(WallsTree));
+        var target = treeItem?.DataContext;
+        if (!viewModel.CanRename(target) && !viewModel.CanDelete(target))
+        {
+            if (_treeContextMenu.IsOpen)
+            {
+                _treeContextMenu.Close();
+            }
+
+            _contextMenuTarget = null;
+            return;
+        }
+
+        _contextMenuTarget = target;
+        // Keep a multi-selection when right-clicking an already-selected node.
+        if (viewModel.IsTreeNodeSelected(target))
+        {
+            viewModel.FocusTreeItem(target);
+        }
+        else
+        {
+            viewModel.HandleTreeActivation(target, e.KeyModifiers);
+        }
+
+        UpdateContextMenuHeaders(viewModel, target!);
+        e.Handled = true;
+
+        if (_treeContextMenu.IsOpen)
+        {
+            _treeContextMenu.Close();
+        }
+
+        // Open on the next pass so light-dismiss from an already-open menu doesn't eat this click.
+        var host = treeItem as Control ?? WallsTree;
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (_contextMenuTarget is null)
+                {
+                    return;
+                }
+
+                UpdateContextMenuHeaders(viewModel, _contextMenuTarget);
+                _treeContextMenu.Open(host);
+            },
+            DispatcherPriority.Input);
     }
 
     private static TreeViewItem? ResolveTreeViewItem(TreeView tree, Point position)

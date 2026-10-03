@@ -26,6 +26,13 @@
             <Setter Property="FontSize" Value="12" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
+        <Style Selector="TextBox.wall-tree-rename">
+            <Setter Property="MinHeight" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
     </UserControl.Styles>
     <ScrollViewer Classes="tool-panel-scroll">
         <Grid Margin="12">
@@ -52,7 +59,14 @@
                                       VerticalAlignment="Center" />
                             <TextBlock Text="{Binding DisplayName}"
                                        FontWeight="SemiBold"
-                                       VerticalAlignment="Center" />
+                                       VerticalAlignment="Center"
+                                       IsVisible="{Binding !IsRenaming}" />
+                            <TextBox Classes="wall-tree-rename"
+                                     Text="{Binding RenameText, Mode=TwoWay}"
+                                     MinWidth="120"
+                                     IsVisible="{Binding IsRenaming}"
+                                     KeyDown="OnRenameBoxKeyDown"
+                                     LostFocus="OnRenameBoxLostFocus" />
                         </StackPanel>
                     </Border>
                 </TreeDataTemplate>
@@ -70,7 +84,14 @@
                             <TextBlock Text="{Binding DisplayName}"
                                        FontWeight="Medium"
                                        Opacity="0.95"
-                                       VerticalAlignment="Center" />
+                                       VerticalAlignment="Center"
+                                       IsVisible="{Binding !IsRenaming}" />
+                            <TextBox Classes="wall-tree-rename"
+                                     Text="{Binding RenameText, Mode=TwoWay}"
+                                     MinWidth="120"
+                                     IsVisible="{Binding IsRenaming}"
+                                     KeyDown="OnRenameBoxKeyDown"
+                                     LostFocus="OnRenameBoxLostFocus" />
                         </StackPanel>
                     </Border>
                 </TreeDataTemplate>
@@ -86,10 +107,16 @@
                             <CheckBox Grid.Column="0"
                                       IsChecked="{Binding IsActive}"
                                       VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding DisplayName}"
-                                       VerticalAlignment="Center"
-                                       Margin="6,0" />
+                            <Panel Grid.Column="1" Margin="6,0">
+                                <TextBlock Text="{Binding DisplayName}"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsRenaming}" />
+                                <TextBox Classes="wall-tree-rename"
+                                         Text="{Binding RenameText, Mode=TwoWay}"
+                                         IsVisible="{Binding IsRenaming}"
+                                         KeyDown="OnRenameBoxKeyDown"
+                                         LostFocus="OnRenameBoxLostFocus" />
+                            </Panel>
                             <ComboBox Grid.Column="2"
                                       Classes="wall-tree-type"
                                       Width="118"
@@ -116,11 +143,17 @@
                             <CheckBox Grid.Column="0"
                                       IsChecked="{Binding IsActive}"
                                       VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding DisplayName}"
-                                       VerticalAlignment="Center"
-                                       Margin="6,0"
-                                       Opacity="0.85" />
+                            <Panel Grid.Column="1" Margin="6,0">
+                                <TextBlock Text="{Binding DisplayName}"
+                                           VerticalAlignment="Center"
+                                           Opacity="0.85"
+                                           IsVisible="{Binding !IsRenaming}" />
+                                <TextBox Classes="wall-tree-rename"
+                                         Text="{Binding RenameText, Mode=TwoWay}"
+                                         IsVisible="{Binding IsRenaming}"
+                                         KeyDown="OnRenameBoxKeyDown"
+                                         LostFocus="OnRenameBoxLostFocus" />
+                            </Panel>
                             <ComboBox Grid.Column="2"
                                       Classes="wall-tree-type"
                                       Width="118"

@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using Brickwork.App.ViewModels;
+using Brickwork.App.Views.Panels;
 using Dock.Model.Core;
 
 namespace Brickwork.App.Views;
@@ -35,6 +37,16 @@ public partial class MainWindow : Window
         if ((e.Key is Key.Enter or Key.Return) && e.KeyModifiers == KeyModifiers.None)
         {
             if (TryFinishDrawingWall(viewModel))
+            {
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        if (e.Key == Key.F2 && e.KeyModifiers == KeyModifiers.None)
+        {
+            if (TryBeginWallsRename())
             {
                 e.Handled = true;
             }
@@ -90,6 +102,13 @@ public partial class MainWindow : Window
                 break;
         }
     }
+
+    private bool TryBeginWallsRename() =>
+        this.GetVisualDescendants()
+            .OfType<WallsToolView>()
+            .FirstOrDefault()
+            ?.TryBeginRenameFromHotkey()
+        == true;
 
     private bool IsTextInputFocused()
     {

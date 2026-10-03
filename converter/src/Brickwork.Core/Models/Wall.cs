@@ -43,7 +43,7 @@ public sealed class Wall
 
     public IList<WallPortal> Portals { get; init; } = [];
 
-    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? $"Wall {EntityId}" : Name;
+    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? "Wall" : Name;
 
     public double SceneThickness => WallThickness * Scale;
 }
@@ -52,6 +52,8 @@ public sealed class WallPortal
 {
     public string Id { get; set; } = string.Empty;
 
+    public string? Name { get; set; }
+
     public MapPoint Anchor { get; set; }
 
     public double Width { get; set; }
@@ -59,4 +61,6 @@ public sealed class WallPortal
     public bool IsActive { get; set; } = true;
 
     public WallLineType LineType { get; set; } = WallLineType.Door;
+
+    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? "Portal" : Name;
 }

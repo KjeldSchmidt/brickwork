@@ -82,21 +82,36 @@ public sealed class UvttImporter : IMapImporter
             },
         };
 
+        var defaultLayer = MapLayerEditing.EnsureDefaultLayer(map);
         var entityId = 1;
 
         foreach (var polyline in document.LineOfSight)
         {
-            AddPolylineWall(map, polyline, UvttWallCategory.LineOfSight, origin, cellSize, ref entityId);
+            AddPolylineWall(
+                map,
+                polyline,
+                UvttWallCategory.LineOfSight,
+                origin,
+                cellSize,
+                defaultLayer.Id,
+                ref entityId);
         }
 
         foreach (var polyline in document.ObjectsLineOfSight)
         {
-            AddPolylineWall(map, polyline, UvttWallCategory.ObjectsLineOfSight, origin, cellSize, ref entityId);
+            AddPolylineWall(
+                map,
+                polyline,
+                UvttWallCategory.ObjectsLineOfSight,
+                origin,
+                cellSize,
+                defaultLayer.Id,
+                ref entityId);
         }
 
         foreach (var portal in document.Portals)
         {
-            AddPortalWall(map, portal, origin, cellSize, ref entityId);
+            AddPortalWall(map, portal, origin, cellSize, defaultLayer.Id, ref entityId);
         }
 
         return map;
@@ -108,6 +123,7 @@ public sealed class UvttImporter : IMapImporter
         UvttWallCategory category,
         MapPoint origin,
         double cellSize,
+        string layerId,
         ref int entityId)
     {
         if (polyline.Count < 2)
@@ -118,6 +134,7 @@ public sealed class UvttImporter : IMapImporter
         var wall = new Wall
         {
             EntityId = entityId++,
+            LayerId = layerId,
             LineType = UvttWallMapping.ImportLineType(category),
             IsActive = true,
             WallEnabled = true,
@@ -140,6 +157,7 @@ public sealed class UvttImporter : IMapImporter
         UvttPortal portal,
         MapPoint origin,
         double cellSize,
+        string layerId,
         ref int entityId)
     {
         if (portal.Bounds.Count < 2)
@@ -150,6 +168,7 @@ public sealed class UvttImporter : IMapImporter
         var wall = new Wall
         {
             EntityId = entityId++,
+            LayerId = layerId,
             LineType = WallLineType.Door,
             IsActive = portal.Closed,
             WallEnabled = true,

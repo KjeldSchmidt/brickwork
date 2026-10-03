@@ -45,4 +45,18 @@ public class DocumentContentMementoTests
 
         Assert.Equal(new[] { 1, 2 }, map.Walls.Select(wall => wall.EntityId));
     }
+
+    [Fact]
+    public void RestoreTo_ReappliesLayerRenameInPlace()
+    {
+        var map = new MapDocument();
+        var layer = MapLayerEditing.EnsureDefaultLayer(map);
+
+        var before = DocumentContentMemento.Capture(map);
+        layer.Name = "Renamed";
+        before.RestoreTo(map);
+
+        Assert.Same(layer, map.Layers.Single());
+        Assert.Equal(MapLayerEditing.DefaultLayerName, layer.Name);
+    }
 }

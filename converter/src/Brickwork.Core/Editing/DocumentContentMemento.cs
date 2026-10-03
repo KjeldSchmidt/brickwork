@@ -3,16 +3,22 @@ using Brickwork.Core.Models;
 namespace Brickwork.Core.Editing;
 
 /// <summary>
-/// Deep snapshot of editable map content (walls + groups) for undo/redo.
+/// Deep snapshot of editable map content (layers + walls + groups) for undo/redo.
 /// Restore updates existing instances in place so UI bindings keep working.
 /// </summary>
 public sealed class DocumentContentMemento
 {
-    private DocumentContentMemento(IReadOnlyList<Wall> walls, IReadOnlyList<EntityGroup> groups)
+    private DocumentContentMemento(
+        IReadOnlyList<MapLayer> layers,
+        IReadOnlyList<Wall> walls,
+        IReadOnlyList<EntityGroup> groups)
     {
+        Layers = layers;
         Walls = walls;
         Groups = groups;
     }
+
+    public IReadOnlyList<MapLayer> Layers { get; }
 
     public IReadOnlyList<Wall> Walls { get; }
 
@@ -20,20 +26,32 @@ public sealed class DocumentContentMemento
 
     public static DocumentContentMemento Capture(MapDocument map) =>
         new(
+            map.Layers.Select(CloneLayer).ToList(),
             map.Walls.Select(CloneWall).ToList(),
             map.Groups.Select(CloneGroup).ToList());
 
     public void RestoreTo(MapDocument map)
     {
+        RestoreLayers(map);
         RestoreWalls(map);
         RestoreGroups(map);
     }
 
     public bool ContentEquals(DocumentContentMemento other)
     {
-        if (Walls.Count != other.Walls.Count || Groups.Count != other.Groups.Count)
+        if (Layers.Count != other.Layers.Count ||
+            Walls.Count != other.Walls.Count ||
+            Groups.Count != other.Groups.Count)
         {
             return false;
+        }
+
+        for (var i = 0; i < Layers.Count; i++)
+        {
+            if (!LayerEquals(Layers[i], other.Layers[i]))
+            {
+                return false;
+            }
         }
 
         for (var i = 0; i < Walls.Count; i++)
@@ -53,6 +71,57 @@ public sealed class DocumentContentMemento
         }
 
         return true;
+    }
+
+    private void RestoreLayers(MapDocument map)
+    {
+        var targetById = Layers.ToDictionary(
+            layer => layer.Id,
+            StringComparer.OrdinalIgnoreCase);
+        for (var index = map.Layers.Count - 1; index >= 0; index--)
+        {
+            if (!targetById.ContainsKey(map.Layers[index].Id))
+            {
+                map.Layers.RemoveAt(index);
+            }
+        }
+
+        var existingById = map.Layers.ToDictionary(
+            layer => layer.Id,
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var source in Layers)
+        {
+            if (existingById.TryGetValue(source.Id, out var existing))
+            {
+                CopyLayerInto(source, existing);
+            }
+            else
+            {
+                map.Layers.Add(CloneLayer(source));
+            }
+        }
+
+        // Keep list order aligned with the snapshot.
+        for (var index = 0; index < Layers.Count; index++)
+        {
+            var desiredId = Layers[index].Id;
+            var currentIndex = -1;
+            for (var search = 0; search < map.Layers.Count; search++)
+            {
+                if (string.Equals(map.Layers[search].Id, desiredId, StringComparison.OrdinalIgnoreCase))
+                {
+                    currentIndex = search;
+                    break;
+                }
+            }
+
+            if (currentIndex >= 0 && currentIndex != index)
+            {
+                var layer = map.Layers[currentIndex];
+                map.Layers.RemoveAt(currentIndex);
+                map.Layers.Insert(index, layer);
+            }
+        }
     }
 
     private void RestoreWalls(MapDocument map)
@@ -103,6 +172,14 @@ public sealed class DocumentContentMemento
                 map.Groups.Add(CloneGroup(source));
             }
         }
+    }
+
+    private static void CopyLayerInto(MapLayer source, MapLayer target)
+    {
+        target.Name = source.Name;
+        target.Kind = source.Kind;
+        target.IsVisible = source.IsVisible;
+        target.Order = source.Order;
     }
 
     private static void CopyWallInto(Wall source, Wall target)
@@ -163,6 +240,7 @@ public sealed class DocumentContentMemento
     private static void CopyPortalInto(WallPortal source, WallPortal target)
     {
         target.Id = source.Id;
+        target.Name = source.Name;
         target.Anchor = source.Anchor;
         target.Width = source.Width;
         target.IsActive = source.IsActive;
@@ -193,6 +271,16 @@ public sealed class DocumentContentMemento
         }
     }
 
+    private static MapLayer CloneLayer(MapLayer layer) =>
+        new()
+        {
+            Id = layer.Id,
+            Name = layer.Name,
+            Kind = layer.Kind,
+            IsVisible = layer.IsVisible,
+            Order = layer.Order,
+        };
+
     private static Wall CloneWall(Wall wall) =>
         new()
         {
@@ -220,6 +308,7 @@ public sealed class DocumentContentMemento
         new()
         {
             Id = portal.Id,
+            Name = portal.Name,
             Anchor = portal.Anchor,
             Width = portal.Width,
             IsActive = portal.IsActive,
@@ -238,6 +327,13 @@ public sealed class DocumentContentMemento
             RotationPivot = group.RotationPivot,
             Angle = group.Angle,
         };
+
+    private static bool LayerEquals(MapLayer a, MapLayer b) =>
+        string.Equals(a.Id, b.Id, StringComparison.OrdinalIgnoreCase) &&
+        a.Name == b.Name &&
+        a.Kind == b.Kind &&
+        a.IsVisible == b.IsVisible &&
+        a.Order == b.Order;
 
     private static bool WallEquals(Wall a, Wall b) =>
         a.EntityId == b.EntityId &&
@@ -279,6 +375,7 @@ public sealed class DocumentContentMemento
 
     private static bool PortalEquals(WallPortal a, WallPortal b) =>
         a.Id == b.Id &&
+        a.Name == b.Name &&
         a.Anchor.Equals(b.Anchor) &&
         a.Width.Equals(b.Width) &&
         a.IsActive == b.IsActive &&

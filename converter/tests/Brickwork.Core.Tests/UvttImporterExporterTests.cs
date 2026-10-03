@@ -38,6 +38,9 @@ public class UvttImporterExporterTests
         Assert.Equal(58, map.Walls.Count(w => w.LineType == WallLineType.Window));
         Assert.Equal(12, map.Walls.Count(w => w.LineType == WallLineType.Door));
         Assert.Equal(0, map.Walls.Count(w => w.LineType == WallLineType.Solid));
+        Assert.Contains(map.Layers, layer => layer.Id == MapLayerEditing.DefaultLayerId);
+        Assert.Equal(MapLayerEditing.DefaultLayerName, map.Layers.Single(layer => layer.Id == MapLayerEditing.DefaultLayerId).Name);
+        Assert.All(map.Walls, wall => Assert.Equal(MapLayerEditing.DefaultLayerId, wall.LayerId));
     }
 
     [Fact]

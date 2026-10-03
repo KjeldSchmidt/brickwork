@@ -279,12 +279,11 @@ public partial class MapPreviewDocumentViewModel : Document
         var entityId = Map.Walls.Count == 0
             ? 1
             : Map.Walls.Max(wall => wall.EntityId) + 1;
-        var layerId = Map.Layers.OrderBy(layer => layer.Order).FirstOrDefault()?.Id;
 
         var wall = new Wall
         {
             EntityId = entityId,
-            LayerId = layerId,
+            Name = "Wall",
             LineType = WallLineType.Solid,
             IsActive = true,
             WallEnabled = true,
@@ -295,6 +294,7 @@ public partial class MapPreviewDocumentViewModel : Document
         _drawingGesture = _session.BeginGesture("Add wall");
         _session.Execute("Add wall", () =>
         {
+            wall.LayerId = MapLayerEditing.EnsureDefaultLayer(Map).Id;
             Map.Walls.Add(wall);
         });
 

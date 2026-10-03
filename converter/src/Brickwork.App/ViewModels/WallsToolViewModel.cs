@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Mvvm.Controls;
+using Brickwork.Core.Geometry;
 using Brickwork.Core.Models;
 
 namespace Brickwork.App.ViewModels;
@@ -9,8 +10,11 @@ namespace Brickwork.App.ViewModels;
 public partial class WallsToolViewModel : Tool
 {
     private readonly EditorSession _session;
+    private readonly HashSet<object> _selectedTreeNodes = new(ReferenceEqualityComparer.Instance);
     private bool _syncingSelection;
     private int? _selectionAnchorWallId;
+    private object? _treeSelectionAnchor;
+    private IReadOnlyList<object>? _renameTargets;
 
     [ObservableProperty]
     private ObservableCollection<WallLayerNodeViewModel> _layers = [];
@@ -104,11 +108,456 @@ public partial class WallsToolViewModel : Tool
             _syncingSelection = false;
         }
 
+        _selectedTreeNodes.Clear();
+        _treeSelectionAnchor = null;
         _selectionAnchorWallId = null;
         _session.ClearWallSelection();
     }
 
+    public bool IsTreeNodeSelected(object? item) =>
+        item switch
+        {
+            WallItemViewModel wall =>
+                _session.SelectedWallEntityIds.Contains(wall.Wall.EntityId),
+            WallGroupNodeViewModel group =>
+                _selectedTreeNodes.Contains(group) || AreAllDescendantWallsSelected(group.Children),
+            WallLayerNodeViewModel layer =>
+                _selectedTreeNodes.Contains(layer) || AreAllDescendantWallsSelected(layer.Children),
+            WallPortalItemViewModel portal =>
+                _selectedTreeNodes.Contains(portal),
+            _ => item is not null && _selectedTreeNodes.Contains(item),
+        };
+
+    public void FocusTreeItem(object? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        _syncingSelection = true;
+        SelectedTreeItem = item;
+        _syncingSelection = false;
+    }
+
     public bool DeleteSelectedWalls() => _session.DeleteSelectedWalls();
+
+    public bool CanRename(object? item) =>
+        item is WallLayerNodeViewModel
+            or WallGroupNodeViewModel
+            or WallItemViewModel
+            or WallPortalItemViewModel;
+
+    public bool CanDelete(object? item) =>
+        item is WallLayerNodeViewModel
+            or WallGroupNodeViewModel
+            or WallItemViewModel
+            or WallPortalItemViewModel;
+
+    public IReadOnlyList<object> GetEditTargets(object? item)
+    {
+        if (item is null || (!CanRename(item) && !CanDelete(item)))
+        {
+            return [];
+        }
+
+        return ResolveEditTargets(item);
+    }
+
+    public bool DeleteTreeItem(object? item)
+    {
+        if (_session.Map is null || item is null)
+        {
+            return false;
+        }
+
+        var targets = ResolveEditTargets(item);
+        if (targets.Count == 0)
+        {
+            return false;
+        }
+
+        var deleted = false;
+        var actionName = targets.Count == 1 ? "Delete" : "Delete selection";
+        _session.Execute(actionName, () =>
+        {
+            foreach (var target in targets)
+            {
+                deleted |= DeleteTarget(target);
+            }
+        });
+
+        if (deleted)
+        {
+            ClearSelection();
+        }
+
+        return deleted;
+    }
+
+    private bool DeleteTarget(object target)
+    {
+        if (_session.Map is null)
+        {
+            return false;
+        }
+
+        switch (target)
+        {
+            case WallItemViewModel wallItem:
+                return WallLineEditing.RemoveFromMap(_session.Map, wallItem.Wall);
+
+            case WallPortalItemViewModel portalItem:
+            {
+                var wall = _session.Map.Walls.FirstOrDefault(candidate =>
+                    candidate.EntityId == portalItem.WallEntityId);
+                return wall is not null && WallGeometryEditing.TryRemovePortal(wall, portalItem.Portal);
+            }
+
+            case WallGroupNodeViewModel groupItem:
+            {
+                var walls = EnumerateDescendantWallIds(groupItem.Children)
+                    .Select(id => _session.Map.Walls.FirstOrDefault(candidate => candidate.EntityId == id))
+                    .Where(wall => wall is not null)
+                    .Cast<Wall>()
+                    .ToList();
+                var removed = false;
+                foreach (var wall in walls)
+                {
+                    removed |= WallLineEditing.RemoveFromMap(_session.Map, wall);
+                }
+
+                return removed;
+            }
+
+            case WallLayerNodeViewModel layerItem:
+            {
+                var layerId = layerItem.LayerId;
+                var walls = _session.Map.Walls
+                    .Where(wall =>
+                        string.Equals(
+                            wall.LayerId ?? "(no layer)",
+                            layerId,
+                            StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                var removed = false;
+                foreach (var wall in walls)
+                {
+                    removed |= WallLineEditing.RemoveFromMap(_session.Map, wall);
+                }
+
+                return removed;
+            }
+
+            default:
+                return false;
+        }
+    }
+
+    public bool BeginRenameSelection()
+    {
+        var primary = SelectedTreeItem;
+        if (!CanRename(primary))
+        {
+            primary = _selectedTreeNodes.FirstOrDefault(CanRename);
+        }
+
+        if (primary is null)
+        {
+            return false;
+        }
+
+        BeginRename(primary);
+        return true;
+    }
+
+    public void BeginRename(object? item)
+    {
+        CancelRename();
+        if (!CanRename(item))
+        {
+            return;
+        }
+
+        _renameTargets = ResolveEditTargets(item!);
+        BeginRenameEdit(item!);
+    }
+
+    public void CommitRename(object? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        var renameText = TakeRenameText(item);
+        var targets = _renameTargets ?? ResolveEditTargets(item);
+        _renameTargets = null;
+        CancelRename();
+
+        if (renameText is null)
+        {
+            return;
+        }
+
+        var name = string.IsNullOrWhiteSpace(renameText) ? null : renameText.Trim();
+        ApplyRename(targets, name);
+    }
+
+    public void CancelRename()
+    {
+        _renameTargets = null;
+        foreach (var layer in Layers)
+        {
+            CancelRenameInTree(layer);
+        }
+    }
+
+    /// <summary>
+    /// Resolves mass-edit targets of the same kind as <paramref name="item"/> without
+    /// descending into children (e.g. renaming groups does not rename nested walls).
+    /// Walls use session multi-selection; groups/layers use fully-selected containers
+    /// and/or explicit tree multi-selection.
+    /// </summary>
+    private IReadOnlyList<object> ResolveEditTargets(object item)
+    {
+        switch (item)
+        {
+            case WallItemViewModel:
+            {
+                var walls = EnumerateAllWallItems()
+                    .Where(wall => _session.SelectedWallEntityIds.Contains(wall.Wall.EntityId))
+                    .Cast<object>()
+                    .ToList();
+                return walls.Count > 0 ? walls : [item];
+            }
+
+            case WallPortalItemViewModel:
+            {
+                var portals = CollectSameTypeTreeTargets(item);
+                return portals.Count > 0 ? portals : [item];
+            }
+
+            case WallGroupNodeViewModel:
+            {
+                var groups = EnumerateAllGroupItems()
+                    .Where(group =>
+                        ReferenceEquals(group, item) ||
+                        _selectedTreeNodes.Contains(group) ||
+                        AreAllDescendantWallsSelected(group.Children))
+                    .Cast<object>()
+                    .ToList();
+                return groups.Count > 0 ? groups : [item];
+            }
+
+            case WallLayerNodeViewModel:
+            {
+                var layers = Layers
+                    .Where(layer =>
+                        ReferenceEquals(layer, item) ||
+                        _selectedTreeNodes.Contains(layer) ||
+                        AreAllDescendantWallsSelected(layer.Children))
+                    .Cast<object>()
+                    .ToList();
+                return layers.Count > 0 ? layers : [item];
+            }
+
+            default:
+                return [item];
+        }
+    }
+
+    private List<object> CollectSameTypeTreeTargets(object item)
+    {
+        var sameType = _selectedTreeNodes
+            .Where(candidate => candidate.GetType() == item.GetType())
+            .ToList();
+        if (sameType.Count > 0 && sameType.Contains(item))
+        {
+            return sameType;
+        }
+
+        return [item];
+    }
+
+    private bool AreAllDescendantWallsSelected(IEnumerable<object> children)
+    {
+        var wallIds = EnumerateDescendantWallIds(children);
+        return wallIds.Count > 0 &&
+               wallIds.All(id => _session.SelectedWallEntityIds.Contains(id));
+    }
+
+    private IEnumerable<WallItemViewModel> EnumerateAllWallItems()
+    {
+        foreach (var node in EnumerateTreeNodesInOrder())
+        {
+            if (node is WallItemViewModel wall)
+            {
+                yield return wall;
+            }
+        }
+    }
+
+    private IEnumerable<WallGroupNodeViewModel> EnumerateAllGroupItems()
+    {
+        foreach (var node in EnumerateTreeNodesInOrder())
+        {
+            if (node is WallGroupNodeViewModel group)
+            {
+                yield return group;
+            }
+        }
+    }
+
+    private void ApplyRename(IReadOnlyList<object> targets, string? name)
+    {
+        if (targets.Count == 0 || _session.Map is null)
+        {
+            return;
+        }
+
+        var actionName = targets.Count == 1 ? "Rename" : "Rename selection";
+        _session.Execute(actionName, () =>
+        {
+            foreach (var target in targets)
+            {
+                switch (target)
+                {
+                    case WallLayerNodeViewModel layer:
+                        ApplyLayerName(layer, name);
+                        break;
+                    case WallGroupNodeViewModel group:
+                        group.Group.Name = name;
+                        break;
+                    case WallItemViewModel wall:
+                        wall.Wall.Name = name;
+                        break;
+                    case WallPortalItemViewModel portal:
+                        portal.Portal.Name = name;
+                        break;
+                }
+            }
+        });
+
+        foreach (var target in targets)
+        {
+            NotifyDisplayName(target);
+        }
+    }
+
+    private void ApplyLayerName(WallLayerNodeViewModel layerNode, string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || _session.Map is null)
+        {
+            return;
+        }
+
+        var layerId = layerNode.LayerId;
+        var layer = _session.Map.Layers.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, layerId, StringComparison.OrdinalIgnoreCase));
+        if (layer is null)
+        {
+            if (string.Equals(layerId, "(no layer)", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            layer = new MapLayer
+            {
+                Id = layerId,
+                Name = name,
+                IsVisible = true,
+                Order = _session.Map.Layers.Count == 0
+                    ? 0
+                    : _session.Map.Layers.Max(candidate => candidate.Order) + 1,
+            };
+            _session.Map.Layers.Add(layer);
+        }
+
+        layer.Name = name;
+    }
+
+    private static void BeginRenameEdit(object item)
+    {
+        switch (item)
+        {
+            case WallLayerNodeViewModel layer:
+                layer.BeginRename();
+                break;
+            case WallGroupNodeViewModel group:
+                group.BeginRename();
+                break;
+            case WallItemViewModel wall:
+                wall.BeginRename();
+                break;
+            case WallPortalItemViewModel portal:
+                portal.BeginRename();
+                break;
+        }
+    }
+
+    private static string? TakeRenameText(object item) =>
+        item switch
+        {
+            WallLayerNodeViewModel layer => layer.TakeRenameText(),
+            WallGroupNodeViewModel group => group.TakeRenameText(),
+            WallItemViewModel wall => wall.TakeRenameText(),
+            WallPortalItemViewModel portal => portal.TakeRenameText(),
+            _ => null,
+        };
+
+    private static void NotifyDisplayName(object item)
+    {
+        switch (item)
+        {
+            case WallLayerNodeViewModel layer:
+                layer.RefreshFromModel();
+                break;
+            case WallGroupNodeViewModel group:
+                group.RefreshFromModel();
+                break;
+            case WallItemViewModel wall:
+                wall.RefreshFromModel();
+                break;
+            case WallPortalItemViewModel portal:
+                portal.RefreshFromModel();
+                break;
+        }
+    }
+
+    private static void CancelRenameInTree(object node)
+    {
+        switch (node)
+        {
+            case WallLayerNodeViewModel layer:
+                layer.CancelRename();
+                foreach (var child in layer.Children)
+                {
+                    CancelRenameInTree(child);
+                }
+
+                break;
+            case WallGroupNodeViewModel group:
+                group.CancelRename();
+                foreach (var child in group.Children)
+                {
+                    CancelRenameInTree(child);
+                }
+
+                break;
+            case WallItemViewModel wall:
+                wall.CancelRename();
+                foreach (var portal in wall.Portals)
+                {
+                    portal.CancelRename();
+                }
+
+                break;
+            case WallPortalItemViewModel portal:
+                portal.CancelRename();
+                break;
+        }
+    }
 
     public void HandleTreeActivation(object? item, KeyModifiers modifiers)
     {
@@ -128,17 +577,114 @@ public partial class WallsToolViewModel : Tool
                 break;
             default:
                 ClearSelection();
-                break;
+                return;
+        }
+
+        UpdateTreeNodeSelection(item, modifiers);
+    }
+
+    private void UpdateTreeNodeSelection(object? item, KeyModifiers modifiers)
+    {
+        if (item is null)
+        {
+            _selectedTreeNodes.Clear();
+            _treeSelectionAnchor = null;
+            _syncingSelection = true;
+            SelectedTreeItem = null;
+            _syncingSelection = false;
+            return;
+        }
+
+        if (HasMultiSelectModifier(modifiers))
+        {
+            if (!_selectedTreeNodes.Remove(item))
+            {
+                _selectedTreeNodes.Add(item);
+            }
+
+            _treeSelectionAnchor = item;
+        }
+        else if (modifiers.HasFlag(KeyModifiers.Shift) && _treeSelectionAnchor is not null)
+        {
+            var ordered = EnumerateTreeNodesInOrder().ToList();
+            var anchorIndex = ordered.FindIndex(node => ReferenceEquals(node, _treeSelectionAnchor));
+            var clickIndex = ordered.FindIndex(node => ReferenceEquals(node, item));
+            _selectedTreeNodes.Clear();
+            if (anchorIndex >= 0 && clickIndex >= 0)
+            {
+                var start = Math.Min(anchorIndex, clickIndex);
+                var end = Math.Max(anchorIndex, clickIndex);
+                for (var index = start; index <= end; index++)
+                {
+                    if (ordered[index].GetType() == item.GetType())
+                    {
+                        _selectedTreeNodes.Add(ordered[index]);
+                    }
+                }
+            }
+            else
+            {
+                _selectedTreeNodes.Add(item);
+            }
+        }
+        else
+        {
+            _selectedTreeNodes.Clear();
+            _selectedTreeNodes.Add(item);
+            _treeSelectionAnchor = item;
+        }
+
+        _syncingSelection = true;
+        SelectedTreeItem = item;
+        _syncingSelection = false;
+    }
+
+    private IEnumerable<object> EnumerateTreeNodesInOrder()
+    {
+        foreach (var layer in Layers)
+        {
+            yield return layer;
+            foreach (var node in EnumerateTreeNodesInOrder(layer.Children))
+            {
+                yield return node;
+            }
         }
     }
 
+    private static IEnumerable<object> EnumerateTreeNodesInOrder(IEnumerable<object> children)
+    {
+        foreach (var child in children)
+        {
+            yield return child;
+            switch (child)
+            {
+                case WallGroupNodeViewModel group:
+                    foreach (var nested in EnumerateTreeNodesInOrder(group.Children))
+                    {
+                        yield return nested;
+                    }
+
+                    break;
+                case WallItemViewModel wall:
+                    foreach (var portal in wall.Portals)
+                    {
+                        yield return portal;
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    private static bool HasMultiSelectModifier(KeyModifiers modifiers) =>
+        modifiers.HasFlag(KeyModifiers.Control) || modifiers.HasFlag(KeyModifiers.Meta);
+
     private void HandleWallTreeClick(int wallId, WallPortal? portal, KeyModifiers modifiers)
     {
-        if (modifiers.HasFlag(KeyModifiers.Control))
+        if (HasMultiSelectModifier(modifiers))
         {
             _session.ToggleWallInSelection(wallId);
             _selectionAnchorWallId = wallId;
-            SyncSelectedTreeItemFromPrimary(portal);
             return;
         }
 
@@ -153,14 +699,12 @@ public partial class WallsToolViewModel : Tool
                 var end = Math.Max(anchorIndex, clickIndex);
                 var range = ordered.Skip(start).Take(end - start + 1);
                 _session.SetSelection(range, wallId, portal);
-                SyncSelectedTreeItemFromPrimary(portal);
                 return;
             }
         }
 
         _session.SetSelection([wallId], wallId, portal);
         _selectionAnchorWallId = wallId;
-        SyncSelectedTreeItemFromPrimary(portal);
     }
 
     private void HandleGroupTreeClick(IReadOnlyList<int> wallIds, KeyModifiers modifiers)
@@ -170,7 +714,7 @@ public partial class WallsToolViewModel : Tool
             return;
         }
 
-        if (modifiers.HasFlag(KeyModifiers.Control))
+        if (HasMultiSelectModifier(modifiers))
         {
             var anyMissing = wallIds.Any(id => !_session.SelectedWallEntityIds.Contains(id));
             if (anyMissing)
@@ -183,27 +727,35 @@ public partial class WallsToolViewModel : Tool
             }
 
             _selectionAnchorWallId = wallIds[0];
-            SyncSelectedTreeItemFromPrimary(portal: null);
             return;
         }
 
         _session.SetSelection(wallIds, wallIds[0]);
         _selectionAnchorWallId = wallIds[0];
-        SyncSelectedTreeItemFromPrimary(portal: null);
     }
 
     private void SyncSelectedTreeItemFromPrimary(WallPortal? portal)
     {
         if (_session.FocusedWallEntityId is not int wallId)
         {
+            _selectedTreeNodes.Clear();
+            _treeSelectionAnchor = null;
             _syncingSelection = true;
             SelectedTreeItem = null;
             _syncingSelection = false;
             return;
         }
 
+        var treeItem = FindTreeItem(wallId, portal ?? _session.FocusedPortal);
+        _selectedTreeNodes.Clear();
+        if (treeItem is not null)
+        {
+            _selectedTreeNodes.Add(treeItem);
+        }
+
+        _treeSelectionAnchor = treeItem;
         _syncingSelection = true;
-        SelectedTreeItem = FindTreeItem(wallId, portal ?? _session.FocusedPortal);
+        SelectedTreeItem = treeItem;
         _syncingSelection = false;
     }
 
@@ -624,6 +1176,9 @@ public partial class WallsToolViewModel : Tool
 
     private void RebuildLayers()
     {
+        _selectedTreeNodes.Clear();
+        _treeSelectionAnchor = null;
+        _renameTargets = null;
         _syncingSelection = true;
         SelectedTreeItem = null;
         _syncingSelection = false;
@@ -817,17 +1372,32 @@ public partial class WallsToolViewModel : Tool
 public partial class WallLayerNodeViewModel : ObservableObject
 {
     private readonly EditorSession _session;
+    private readonly string _fallbackDisplayName;
+
+    [ObservableProperty]
+    private bool _isRenaming;
+
+    [ObservableProperty]
+    private string _renameText = string.Empty;
 
     public WallLayerNodeViewModel(EditorSession session, string layerId, string displayName)
     {
         _session = session;
         LayerId = layerId;
-        DisplayName = displayName;
+        _fallbackDisplayName = displayName;
     }
 
     public string LayerId { get; }
 
-    public string DisplayName { get; }
+    public string DisplayName
+    {
+        get
+        {
+            var layer = _session.Map?.Layers.FirstOrDefault(candidate =>
+                string.Equals(candidate.Id, LayerId, StringComparison.OrdinalIgnoreCase));
+            return layer?.DisplayName ?? _fallbackDisplayName;
+        }
+    }
 
     public ObservableCollection<object> Children { get; } = [];
 
@@ -852,6 +1422,29 @@ public partial class WallLayerNodeViewModel : ObservableObject
             });
             OnPropertyChanged();
         }
+    }
+
+    public void BeginRename()
+    {
+        RenameText = DisplayName;
+        IsRenaming = true;
+    }
+
+    public string? TakeRenameText()
+    {
+        if (!IsRenaming)
+        {
+            return null;
+        }
+
+        var text = RenameText;
+        IsRenaming = false;
+        return text;
+    }
+
+    public void CancelRename()
+    {
+        IsRenaming = false;
     }
 
     public void RefreshFromModel()
@@ -904,6 +1497,12 @@ public partial class WallGroupNodeViewModel : ObservableObject
 {
     private readonly EditorSession _session;
 
+    [ObservableProperty]
+    private bool _isRenaming;
+
+    [ObservableProperty]
+    private string _renameText = string.Empty;
+
     public WallGroupNodeViewModel(EditorSession session, EntityGroup group)
     {
         _session = session;
@@ -915,6 +1514,29 @@ public partial class WallGroupNodeViewModel : ObservableObject
     public ObservableCollection<object> Children { get; } = [];
 
     public string DisplayName => Group.DisplayName;
+
+    public void BeginRename()
+    {
+        RenameText = DisplayName;
+        IsRenaming = true;
+    }
+
+    public string? TakeRenameText()
+    {
+        if (!IsRenaming)
+        {
+            return null;
+        }
+
+        var text = RenameText;
+        IsRenaming = false;
+        return text;
+    }
+
+    public void CancelRename()
+    {
+        IsRenaming = false;
+    }
 
     public bool IsTreeHighlighted
     {
@@ -988,6 +1610,12 @@ public partial class WallItemViewModel : ObservableObject
 {
     private readonly EditorSession _session;
 
+    [ObservableProperty]
+    private bool _isRenaming;
+
+    [ObservableProperty]
+    private string _renameText = string.Empty;
+
     public WallItemViewModel(EditorSession session, Wall wall)
     {
         _session = session;
@@ -1009,6 +1637,29 @@ public partial class WallItemViewModel : ObservableObject
         Enum.GetValues<WallLineType>();
 
     public string DisplayName => Wall.DisplayName;
+
+    public void BeginRename()
+    {
+        RenameText = DisplayName;
+        IsRenaming = true;
+    }
+
+    public string? TakeRenameText()
+    {
+        if (!IsRenaming)
+        {
+            return null;
+        }
+
+        var text = RenameText;
+        IsRenaming = false;
+        return text;
+    }
+
+    public void CancelRename()
+    {
+        IsRenaming = false;
+    }
 
     public bool IsFocused =>
         _session.FocusedWallEntityId == Wall.EntityId && _session.FocusedPortal is null;
@@ -1116,6 +1767,12 @@ public partial class WallPortalItemViewModel : ObservableObject
 {
     private readonly EditorSession _session;
 
+    [ObservableProperty]
+    private bool _isRenaming;
+
+    [ObservableProperty]
+    private string _renameText = string.Empty;
+
     public WallPortalItemViewModel(EditorSession session, int wallEntityId, WallPortal portal, int portalNumber)
     {
         _session = session;
@@ -1133,7 +1790,31 @@ public partial class WallPortalItemViewModel : ObservableObject
     public IReadOnlyList<WallLineType> LineTypeOptions { get; } =
         Enum.GetValues<WallLineType>();
 
-    public string DisplayName => $"Portal {PortalNumber}";
+    public string DisplayName =>
+        string.IsNullOrWhiteSpace(Portal.Name) ? $"Portal {PortalNumber}" : Portal.Name;
+
+    public void BeginRename()
+    {
+        RenameText = DisplayName;
+        IsRenaming = true;
+    }
+
+    public string? TakeRenameText()
+    {
+        if (!IsRenaming)
+        {
+            return null;
+        }
+
+        var text = RenameText;
+        IsRenaming = false;
+        return text;
+    }
+
+    public void CancelRename()
+    {
+        IsRenaming = false;
+    }
 
     public bool IsFocused =>
         _session.FocusedWallEntityId == WallEntityId &&
@@ -1185,6 +1866,7 @@ public partial class WallPortalItemViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(LineType));
+        OnPropertyChanged(nameof(DisplayName));
         RefreshHighlightState();
     }
 
