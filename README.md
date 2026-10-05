@@ -65,10 +65,11 @@ something out.
 **A**: This project was indeed created with heavy usage of LLM-driven coding
 tools. I am a professional software developer - I could have implemented every
 individual part of this application myself, but probably never would have found
-the free time to do it without AI coding tools. Even so, I've spent several days
+the free time to do it without AI coding tools. Even so, I've spent many days
 of full-time work on searching for existing solutions, finding a technical
 approach to getting wall data from Inkarnate, checking for edge-cases, bugs,
-awkward interactions and applying lots of polish until it felt great to use.
+awkward interactions and applying lots of polish until it felt great to use -
+before adding lots more features.
 
 I have intensely validated a complete flow from Inkarnate through Brickwork into
 FoundryVTT and polished the flow carefully to make this a piece of software that

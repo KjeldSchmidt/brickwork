@@ -209,46 +209,46 @@ public partial class WallsToolViewModel : Tool
                 return WallLineEditing.RemoveFromMap(_session.Map, wallItem.Wall);
 
             case WallPortalItemViewModel portalItem:
-            {
-                var wall = _session.Map.Walls.FirstOrDefault(candidate =>
-                    candidate.EntityId == portalItem.WallEntityId);
-                return wall is not null && WallGeometryEditing.TryRemovePortal(wall, portalItem.Portal);
-            }
+                {
+                    var wall = _session.Map.Walls.FirstOrDefault(candidate =>
+                        candidate.EntityId == portalItem.WallEntityId);
+                    return wall is not null && WallGeometryEditing.TryRemovePortal(wall, portalItem.Portal);
+                }
 
             case WallGroupNodeViewModel groupItem:
-            {
-                var walls = EnumerateDescendantWallIds(groupItem.Children)
-                    .Select(id => _session.Map.Walls.FirstOrDefault(candidate => candidate.EntityId == id))
-                    .Where(wall => wall is not null)
-                    .Cast<Wall>()
-                    .ToList();
-                var removed = false;
-                foreach (var wall in walls)
                 {
-                    removed |= WallLineEditing.RemoveFromMap(_session.Map, wall);
-                }
+                    var walls = EnumerateDescendantWallIds(groupItem.Children)
+                        .Select(id => _session.Map.Walls.FirstOrDefault(candidate => candidate.EntityId == id))
+                        .Where(wall => wall is not null)
+                        .Cast<Wall>()
+                        .ToList();
+                    var removed = false;
+                    foreach (var wall in walls)
+                    {
+                        removed |= WallLineEditing.RemoveFromMap(_session.Map, wall);
+                    }
 
-                return removed;
-            }
+                    return removed;
+                }
 
             case WallLayerNodeViewModel layerItem:
-            {
-                var layerId = layerItem.LayerId;
-                var walls = _session.Map.Walls
-                    .Where(wall =>
-                        string.Equals(
-                            wall.LayerId ?? "(no layer)",
-                            layerId,
-                            StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-                var removed = false;
-                foreach (var wall in walls)
                 {
-                    removed |= WallLineEditing.RemoveFromMap(_session.Map, wall);
-                }
+                    var layerId = layerItem.LayerId;
+                    var walls = _session.Map.Walls
+                        .Where(wall =>
+                            string.Equals(
+                                wall.LayerId ?? "(no layer)",
+                                layerId,
+                                StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    var removed = false;
+                    foreach (var wall in walls)
+                    {
+                        removed |= WallLineEditing.RemoveFromMap(_session.Map, wall);
+                    }
 
-                return removed;
-            }
+                    return removed;
+                }
 
             default:
                 return false;
@@ -325,43 +325,43 @@ public partial class WallsToolViewModel : Tool
         switch (item)
         {
             case WallItemViewModel:
-            {
-                var walls = EnumerateAllWallItems()
-                    .Where(wall => _session.SelectedWallEntityIds.Contains(wall.Wall.EntityId))
-                    .Cast<object>()
-                    .ToList();
-                return walls.Count > 0 ? walls : [item];
-            }
+                {
+                    var walls = EnumerateAllWallItems()
+                        .Where(wall => _session.SelectedWallEntityIds.Contains(wall.Wall.EntityId))
+                        .Cast<object>()
+                        .ToList();
+                    return walls.Count > 0 ? walls : [item];
+                }
 
             case WallPortalItemViewModel:
-            {
-                var portals = CollectSameTypeTreeTargets(item);
-                return portals.Count > 0 ? portals : [item];
-            }
+                {
+                    var portals = CollectSameTypeTreeTargets(item);
+                    return portals.Count > 0 ? portals : [item];
+                }
 
             case WallGroupNodeViewModel:
-            {
-                var groups = EnumerateAllGroupItems()
-                    .Where(group =>
-                        ReferenceEquals(group, item) ||
-                        _selectedTreeNodes.Contains(group) ||
-                        AreAllDescendantWallsSelected(group.Children))
-                    .Cast<object>()
-                    .ToList();
-                return groups.Count > 0 ? groups : [item];
-            }
+                {
+                    var groups = EnumerateAllGroupItems()
+                        .Where(group =>
+                            ReferenceEquals(group, item) ||
+                            _selectedTreeNodes.Contains(group) ||
+                            AreAllDescendantWallsSelected(group.Children))
+                        .Cast<object>()
+                        .ToList();
+                    return groups.Count > 0 ? groups : [item];
+                }
 
             case WallLayerNodeViewModel:
-            {
-                var layers = Layers
-                    .Where(layer =>
-                        ReferenceEquals(layer, item) ||
-                        _selectedTreeNodes.Contains(layer) ||
-                        AreAllDescendantWallsSelected(layer.Children))
-                    .Cast<object>()
-                    .ToList();
-                return layers.Count > 0 ? layers : [item];
-            }
+                {
+                    var layers = Layers
+                        .Where(layer =>
+                            ReferenceEquals(layer, item) ||
+                            _selectedTreeNodes.Contains(layer) ||
+                            AreAllDescendantWallsSelected(layer.Children))
+                        .Cast<object>()
+                        .ToList();
+                    return layers.Count > 0 ? layers : [item];
+                }
 
             default:
                 return [item];
