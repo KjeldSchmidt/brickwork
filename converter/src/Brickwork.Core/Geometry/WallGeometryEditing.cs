@@ -18,6 +18,23 @@ public static class WallGeometryEditing
     }
 
     /// <summary>
+    /// Translates scene-space wall geometry. Portal anchors stay correct because
+    /// <see cref="Wall.PathOrigin"/> moves with the wall.
+    /// </summary>
+    public static void Translate(Wall wall, double dx, double dy)
+    {
+        if (Math.Abs(dx) <= Epsilon && Math.Abs(dy) <= Epsilon)
+        {
+            return;
+        }
+
+        MapPointTransforms.Translate(wall.Points, dx, dy);
+        wall.PathOrigin = new MapPoint(wall.PathOrigin.X + dx, wall.PathOrigin.Y + dy);
+        wall.Origin = new MapPoint(wall.Origin.X + dx, wall.Origin.Y + dy);
+        wall.RotationPivot = new MapPoint(wall.RotationPivot.X + dx, wall.RotationPivot.Y + dy);
+    }
+
+    /// <summary>
     /// Keeps portal anchors on the wall centerline after polyline edits so handles stay with segments.
     /// </summary>
     public static void ResnapPortalAnchors(Wall wall)

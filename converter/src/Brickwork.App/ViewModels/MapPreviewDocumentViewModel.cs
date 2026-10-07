@@ -11,6 +11,10 @@ public partial class MapPreviewDocumentViewModel : Document
     private WallVertexPickTarget? _vertexDragTarget;
     private RegionVertexPickTarget? _regionVertexDragTarget;
     private IDisposable? _vertexDragGesture;
+    private IReadOnlyList<Wall>? _movingWalls;
+    private IReadOnlyList<Region>? _movingRegions;
+    private MapPoint? _entityMoveLastScenePoint;
+    private IDisposable? _entityMoveGesture;
     private Wall? _drawingWall;
     private Region? _drawingRegion;
     private IDisposable? _drawingGesture;
@@ -75,6 +79,7 @@ public partial class MapPreviewDocumentViewModel : Document
                 _vertexDragTarget = null;
                 _regionVertexDragTarget = null;
                 _vertexDragGesture = null;
+                EndEntityMove();
                 EndEraserStroke();
                 UpdateFromSession();
             }
@@ -393,6 +398,154 @@ public partial class MapPreviewDocumentViewModel : Document
         _regionVertexDragTarget = null;
         var gesture = _vertexDragGesture;
         _vertexDragGesture = null;
+        gesture?.Dispose();
+    }
+
+    public bool CanBeginEntityMoveAt(MapPoint previewPoint)
+    {
+        if (Map is null || IsDrawing)
+        {
+            return false;
+        }
+
+        return _session.ActiveMapTool switch
+        {
+            MapToolKind.WallEditing => WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null,
+            MapToolKind.RegionEditing => RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null,
+            _ => false,
+        };
+    }
+
+    public bool TryBeginEntityMove(MapPoint previewPoint)
+    {
+        if (Map is null || IsDrawing)
+        {
+            return false;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return false;
+        }
+
+        if (_session.ActiveMapTool == MapToolKind.RegionEditing)
+        {
+            var regionHit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+            if (regionHit is null)
+            {
+                return false;
+            }
+
+            var selectedIds = _session.SelectedRegionEntityIds.ToHashSet();
+            var moveSelection = selectedIds.Contains(regionHit.Region.EntityId) && selectedIds.Count > 0;
+            _movingRegions = moveSelection
+                ? Map.Regions.Where(region => selectedIds.Contains(region.EntityId)).ToList()
+                : [regionHit.Region];
+            _movingWalls = null;
+            _entityMoveLastScenePoint = transform.PreviewToScene(previewPoint);
+            _entityMoveGesture = _session.BeginGesture(
+                _movingRegions.Count > 1 ? "Move regions" : "Move region");
+
+            if (moveSelection)
+            {
+                _session.SetRegionSelection(selectedIds, regionHit.Region.EntityId);
+                _session.TreeFocusGeneration++;
+            }
+            else
+            {
+                _session.RequestRegionTreeFocus(regionHit.Region);
+            }
+
+            return true;
+        }
+
+        if (_session.ActiveMapTool != MapToolKind.WallEditing)
+        {
+            return false;
+        }
+
+        var wallHit = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (wallHit is null)
+        {
+            return false;
+        }
+
+        var wallIds = _session.SelectedWallEntityIds.ToHashSet();
+        var moveWallSelection = wallIds.Contains(wallHit.Wall.EntityId) && wallIds.Count > 0;
+        _movingWalls = moveWallSelection
+            ? Map.Walls.Where(wall => wallIds.Contains(wall.EntityId)).ToList()
+            : [wallHit.Wall];
+        _movingRegions = null;
+        _entityMoveLastScenePoint = transform.PreviewToScene(previewPoint);
+        _entityMoveGesture = _session.BeginGesture(
+            _movingWalls.Count > 1 ? "Move walls" : "Move wall");
+
+        if (moveWallSelection)
+        {
+            // Keep multi-selection; only update primary focus for highlights/tree.
+            _session.SetPrimaryFocus(wallHit.Wall.EntityId, wallHit.Portal);
+            _session.TreeFocusGeneration++;
+        }
+        else
+        {
+            _session.RequestWallTreeFocus(wallHit.Wall, wallHit.Portal);
+        }
+
+        return true;
+    }
+
+    public void DragEntityTo(MapPoint previewPoint)
+    {
+        if (Map is null || _entityMoveLastScenePoint is not { } lastScene)
+        {
+            return;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return;
+        }
+
+        var scenePoint = transform.PreviewToScene(previewPoint);
+        var dx = scenePoint.X - lastScene.X;
+        var dy = scenePoint.Y - lastScene.Y;
+        if (Math.Abs(dx) <= 1e-9 && Math.Abs(dy) <= 1e-9)
+        {
+            return;
+        }
+
+        if (_movingWalls is { Count: > 0 })
+        {
+            foreach (var wall in _movingWalls)
+            {
+                WallGeometryEditing.Translate(wall, dx, dy);
+            }
+        }
+        else if (_movingRegions is { Count: > 0 })
+        {
+            foreach (var region in _movingRegions)
+            {
+                RegionGeometryEditing.Translate(region, dx, dy);
+            }
+        }
+        else
+        {
+            return;
+        }
+
+        _entityMoveLastScenePoint = scenePoint;
+        _session.NotifyContentChanged();
+    }
+
+    public void EndEntityMove()
+    {
+        _movingWalls = null;
+        _movingRegions = null;
+        _entityMoveLastScenePoint = null;
+        var gesture = _entityMoveGesture;
+        _entityMoveGesture = null;
         gesture?.Dispose();
     }
 

@@ -7,6 +7,9 @@ public static class RegionGeometryEditing
     public static void SetVertexPosition(Region region, int vertexIndex, MapPoint scenePoint) =>
         WallGeometryEditing.SetVertexPosition(AsClosedWall(region), vertexIndex, scenePoint);
 
+    public static void Translate(Region region, double dx, double dy) =>
+        MapPointTransforms.Translate(region.Points, dx, dy);
+
     public static int? TryInsertVertex(Region region, MapPoint scenePoint, double minDistanceFromExisting = 1d) =>
         WallGeometryEditing.TryInsertVertex(AsClosedWall(region), scenePoint, minDistanceFromExisting);
 

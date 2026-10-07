@@ -65,24 +65,48 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Z)
+        if (IsPrimaryModifier(e.KeyModifiers) && e.Key == Key.Z && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
         {
             viewModel.Session.Undo();
             e.Handled = true;
             return;
         }
 
-        if (e.KeyModifiers == KeyModifiers.Control && e.Key == Key.Y)
+        if ((IsPrimaryModifier(e.KeyModifiers) && e.Key == Key.Y) ||
+            (IsPrimaryModifier(e.KeyModifiers) && e.KeyModifiers.HasFlag(KeyModifiers.Shift) && e.Key == Key.Z))
         {
             viewModel.Session.Redo();
             e.Handled = true;
             return;
         }
 
-        if (e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift) && e.Key == Key.Z)
+        if (IsPrimaryModifier(e.KeyModifiers) && e.Key == Key.C)
         {
-            viewModel.Session.Redo();
-            e.Handled = true;
+            if (viewModel.Session.CopySelection())
+            {
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        if (IsPrimaryModifier(e.KeyModifiers) && e.Key == Key.X)
+        {
+            if (viewModel.Session.CutSelection())
+            {
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        if (IsPrimaryModifier(e.KeyModifiers) && e.Key == Key.V)
+        {
+            if (viewModel.Session.PasteClipboard())
+            {
+                e.Handled = true;
+            }
+
             return;
         }
 
@@ -127,6 +151,9 @@ public partial class MainWindow : Window
         var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
         return focused is TextBox or NumericUpDown or ComboBox;
     }
+
+    private static bool IsPrimaryModifier(KeyModifiers modifiers) =>
+        modifiers.HasFlag(KeyModifiers.Control) || modifiers.HasFlag(KeyModifiers.Meta);
 
     private static bool TryFinishDrawing(MainWindowViewModel viewModel) =>
         viewModel.Layout is not null && TryFinishDrawingInDockable(viewModel.Layout);

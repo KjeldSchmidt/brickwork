@@ -13,6 +13,8 @@ public sealed partial class EditorSession : ObservableObject
     private bool _restoringHistory;
     private readonly HashSet<int> _selectedWallEntityIds = [];
     private readonly HashSet<int> _selectedRegionEntityIds = [];
+    private MapEntityClipboard _clipboard = MapEntityClipboard.Empty;
+    private int _pasteCount;
 
     [ObservableProperty]
     private MapDocument? _map;
@@ -71,6 +73,11 @@ public sealed partial class EditorSession : ObservableObject
     public IReadOnlySet<int> SelectedWallEntityIds => _selectedWallEntityIds;
 
     public IReadOnlySet<int> SelectedRegionEntityIds => _selectedRegionEntityIds;
+
+    public bool CanPaste => !_clipboard.IsEmpty;
+
+    /// <summary>Scene-space nudge applied on each paste (stacks for repeated pastes).</summary>
+    public const double PasteOffsetSceneUnits = 40d;
 
     public void NotifyContentChanged()
     {
@@ -550,6 +557,70 @@ public sealed partial class EditorSession : ObservableObject
         return DeleteSelectedWalls();
     }
 
+    public bool CopySelection()
+    {
+        if (Map is null)
+        {
+            return false;
+        }
+
+        if (_selectedWallEntityIds.Count == 0 && _selectedRegionEntityIds.Count == 0)
+        {
+            return false;
+        }
+
+        _clipboard = MapEntityClipboard.Capture(Map, _selectedWallEntityIds, _selectedRegionEntityIds);
+        _pasteCount = 0;
+        OnPropertyChanged(nameof(CanPaste));
+        return !_clipboard.IsEmpty;
+    }
+
+    public bool CutSelection()
+    {
+        if (!CopySelection())
+        {
+            return false;
+        }
+
+        return DeleteSelection();
+    }
+
+    public bool PasteClipboard()
+    {
+        if (Map is null || _clipboard.IsEmpty)
+        {
+            return false;
+        }
+
+        _pasteCount++;
+        var offset = PasteOffsetSceneUnits * _pasteCount;
+        IReadOnlyList<Wall> pastedWalls = [];
+        IReadOnlyList<Region> pastedRegions = [];
+
+        Execute("Paste", () =>
+        {
+            (pastedWalls, pastedRegions) = _clipboard.PasteInto(Map, offset, offset);
+        });
+
+        if (pastedWalls.Count == 0 && pastedRegions.Count == 0)
+        {
+            return false;
+        }
+
+        if (pastedWalls.Count > 0)
+        {
+            SetSelection(pastedWalls.Select(wall => wall.EntityId));
+            TreeFocusGeneration++;
+        }
+        else
+        {
+            SetRegionSelection(pastedRegions.Select(region => region.EntityId));
+            TreeFocusGeneration++;
+        }
+
+        return true;
+    }
+
     partial void OnMapChanged(MapDocument? value)
     {
         _activeGesture?.Cancel();
@@ -558,6 +629,8 @@ public sealed partial class EditorSession : ObservableObject
         RefreshHistoryState();
         ClearWallSelection();
         ClearRegionSelection();
+        // Keep clipboard across map loads so paste still works after reopening a file.
+        _pasteCount = 0;
     }
 
     private void CompleteGesture(EditGesture gesture)

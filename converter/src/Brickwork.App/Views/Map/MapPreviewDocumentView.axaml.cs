@@ -17,6 +17,8 @@ public partial class MapPreviewDocumentView : UserControl
     private Point? _rightPressScreenPosition;
     private bool _rightDragMoved;
     private bool _vertexDragActive;
+    private bool _entityMoveArmed;
+    private bool _entityMoveActive;
     private bool _marqueeActive;
     private bool _marqueeAddToSelection;
     private bool _marqueeArmed;
@@ -53,6 +55,13 @@ public partial class MapPreviewDocumentView : UserControl
         if (e.Key == Key.Escape)
         {
             CancelMarquee();
+            if (_entityMoveActive)
+            {
+                viewModel.EndEntityMove();
+                _entityMoveActive = false;
+                _entityMoveArmed = false;
+            }
+
             if (viewModel.IsDrawing)
             {
                 viewModel.CancelDrawing();
@@ -109,6 +118,8 @@ public partial class MapPreviewDocumentView : UserControl
         if (e.PropertyName is nameof(MapPreviewDocumentViewModel.Map) or nameof(MapPreviewDocumentViewModel.HasMap))
         {
             _vertexDragActive = false;
+            _entityMoveArmed = false;
+            _entityMoveActive = false;
             _leftPressPosition = null;
             _rightPressScreenPosition = null;
             _rightDragMoved = false;
@@ -178,7 +189,8 @@ public partial class MapPreviewDocumentView : UserControl
                 return;
             }
 
-            _vertexDragActive = viewModel.TryBeginVertexDrag(ToPreviewPoint(pressPosition));
+            var previewPress = ToPreviewPoint(pressPosition);
+            _vertexDragActive = viewModel.TryBeginVertexDrag(previewPress);
             if (_vertexDragActive)
             {
                 e.Pointer.Capture(MapViewport);
@@ -186,7 +198,14 @@ public partial class MapPreviewDocumentView : UserControl
                 return;
             }
 
-            var previewPress = ToPreviewPoint(pressPosition);
+            _entityMoveArmed = viewModel.CanBeginEntityMoveAt(previewPress);
+            if (_entityMoveArmed)
+            {
+                e.Pointer.Capture(MapViewport);
+                e.Handled = true;
+                return;
+            }
+
             _marqueeArmed =
                 (viewModel.IsWallEditingToolActive && !viewModel.HasWallAt(previewPress))
                 || (viewModel.IsRegionEditingToolActive && !viewModel.HasRegionAt(previewPress));
@@ -275,6 +294,30 @@ public partial class MapPreviewDocumentView : UserControl
             viewModel.DragVertexTo(ToPreviewPoint(e.GetPosition(MapViewport)));
             e.Handled = true;
             return;
+        }
+
+        if (_entityMoveArmed &&
+            _leftPressPosition is { } entityPress &&
+            e.GetCurrentPoint(MapViewport).Properties.IsLeftButtonPressed)
+        {
+            var current = e.GetPosition(MapViewport);
+            var delta = current - entityPress;
+            if (!_entityMoveActive &&
+                (Math.Abs(delta.X) > ClickMoveThreshold || Math.Abs(delta.Y) > ClickMoveThreshold))
+            {
+                _entityMoveActive = viewModel.TryBeginEntityMove(ToPreviewPoint(entityPress));
+                if (!_entityMoveActive)
+                {
+                    _entityMoveArmed = false;
+                }
+            }
+
+            if (_entityMoveActive)
+            {
+                viewModel.DragEntityTo(ToPreviewPoint(current));
+                e.Handled = true;
+                return;
+            }
         }
 
         if (_eraserStrokeActive)
@@ -528,6 +571,23 @@ public partial class MapPreviewDocumentView : UserControl
             return;
         }
 
+        if (_entityMoveActive)
+        {
+            viewModel.EndEntityMove();
+            _entityMoveActive = false;
+            _entityMoveArmed = false;
+            _leftPressPosition = null;
+            if (e.Pointer.Captured == MapViewport)
+            {
+                e.Pointer.Capture(null);
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        _entityMoveArmed = false;
+
         if (_eraserStrokeActive)
         {
             viewModel.EndEraserStroke();
@@ -610,6 +670,7 @@ public partial class MapPreviewDocumentView : UserControl
         _marqueeActive = false;
         _marqueeArmed = false;
         _marqueeAddToSelection = false;
+        _entityMoveArmed = false;
         MarqueeRect.IsVisible = false;
         MarqueeRect.Width = 0;
         MarqueeRect.Height = 0;
