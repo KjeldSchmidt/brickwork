@@ -39,6 +39,14 @@ public sealed class AppDockFactory : Factory
             CanPin = true,
         };
 
+        var regionsTool = new RegionsToolViewModel(_session)
+        {
+            Id = "RegionsTool",
+            Title = "Regions",
+            CanClose = false,
+            CanPin = true,
+        };
+
         var settingsTool = new SettingsToolViewModel(_session)
         {
             Id = "SettingsTool",
@@ -77,7 +85,7 @@ public sealed class AppDockFactory : Factory
         var wallsDock = new ToolDock
         {
             ActiveDockable = wallsTool,
-            VisibleDockables = CreateList<IDockable>(wallsTool, settingsTool),
+            VisibleDockables = CreateList<IDockable>(wallsTool, regionsTool, settingsTool),
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible,
             Proportion = WallsDockCompactProportion,
@@ -87,6 +95,21 @@ public sealed class AppDockFactory : Factory
         {
             importDock.Proportion = expanded ? FileDockExpandedProportion : FileDockCompactProportion;
             wallsDock.Proportion = expanded ? WallsDockExpandedProportion : WallsDockCompactProportion;
+        };
+
+        _session.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is not nameof(EditorSession.ActiveMapTool))
+            {
+                return;
+            }
+
+            wallsDock.ActiveDockable = _session.ActiveMapTool switch
+            {
+                MapToolKind.WallEditing => wallsTool,
+                MapToolKind.RegionEditing => regionsTool,
+                _ => wallsDock.ActiveDockable,
+            };
         };
 
         var leftSidebar = new ProportionalDock
@@ -149,6 +172,7 @@ public sealed class AppDockFactory : Factory
         {
             ["ImportTool"] = () => _session,
             ["WallsTool"] = () => _session,
+            ["RegionsTool"] = () => _session,
             ["SettingsTool"] = () => _session,
             ["ToolPalette"] = () => _session,
             ["MapPreview"] = () => _session,

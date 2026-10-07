@@ -25,6 +25,8 @@ public sealed class MapDocument
 
     public IList<Wall> Walls { get; init; } = [];
 
+    public IList<Region> Regions { get; init; } = [];
+
     public IList<EntityGroup> Groups { get; init; } = [];
 
     public IList<LightSource> Lights { get; init; } = [];

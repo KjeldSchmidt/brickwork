@@ -12,6 +12,7 @@ public sealed partial class EditorSession : ObservableObject
     private EditGesture? _activeGesture;
     private bool _restoringHistory;
     private readonly HashSet<int> _selectedWallEntityIds = [];
+    private readonly HashSet<int> _selectedRegionEntityIds = [];
 
     [ObservableProperty]
     private MapDocument? _map;
@@ -41,6 +42,12 @@ public sealed partial class EditorSession : ObservableObject
     private WallPortal? _hoveredPortal;
 
     [ObservableProperty]
+    private int? _focusedRegionEntityId;
+
+    [ObservableProperty]
+    private int? _hoveredRegionEntityId;
+
+    [ObservableProperty]
     private int _highlightRevision;
 
     [ObservableProperty]
@@ -62,6 +69,8 @@ public sealed partial class EditorSession : ObservableObject
     private string? _redoActionName;
 
     public IReadOnlySet<int> SelectedWallEntityIds => _selectedWallEntityIds;
+
+    public IReadOnlySet<int> SelectedRegionEntityIds => _selectedRegionEntityIds;
 
     public void NotifyContentChanged()
     {
@@ -124,6 +133,7 @@ public sealed partial class EditorSession : ObservableObject
         command.Undo(this);
         RefreshHistoryState();
         ClearWallSelection();
+        ClearRegionSelection();
         NotifyContentChanged();
     }
 
@@ -143,6 +153,7 @@ public sealed partial class EditorSession : ObservableObject
         command.Redo(this);
         RefreshHistoryState();
         ClearWallSelection();
+        ClearRegionSelection();
         NotifyContentChanged();
     }
 
@@ -169,6 +180,8 @@ public sealed partial class EditorSession : ObservableObject
         int? primaryId = null,
         WallPortal? portal = null)
     {
+        ClearRegionSelection();
+
         var next = wallIds.ToHashSet();
         int? primary = primaryId;
         if (next.Count == 0)
@@ -208,8 +221,49 @@ public sealed partial class EditorSession : ObservableObject
         HighlightRevision++;
     }
 
+    public void SetRegionSelection(IEnumerable<int> regionIds, int? primaryId = null)
+    {
+        ClearWallSelection();
+
+        var next = regionIds.ToHashSet();
+        int? primary = primaryId;
+        if (next.Count == 0)
+        {
+            primary = null;
+        }
+        else
+        {
+            primary ??= next.OrderBy(id => id).First();
+            if (primary is int id && !next.Contains(id))
+            {
+                primary = next.OrderBy(candidate => candidate).First();
+            }
+        }
+
+        var selectionChanged = !_selectedRegionEntityIds.SetEquals(next);
+        var focusChanged = FocusedRegionEntityId != primary;
+        if (!selectionChanged && !focusChanged)
+        {
+            return;
+        }
+
+        if (selectionChanged)
+        {
+            _selectedRegionEntityIds.Clear();
+            foreach (var id in next)
+            {
+                _selectedRegionEntityIds.Add(id);
+            }
+        }
+
+        FocusedRegionEntityId = primary;
+        HighlightRevision++;
+    }
+
     public void ToggleWallInSelection(int wallId)
     {
+        ClearRegionSelection();
+
         if (_selectedWallEntityIds.Contains(wallId))
         {
             _selectedWallEntityIds.Remove(wallId);
@@ -229,8 +283,31 @@ public sealed partial class EditorSession : ObservableObject
         HighlightRevision++;
     }
 
+    public void ToggleRegionInSelection(int regionId)
+    {
+        ClearWallSelection();
+
+        if (_selectedRegionEntityIds.Contains(regionId))
+        {
+            _selectedRegionEntityIds.Remove(regionId);
+            if (FocusedRegionEntityId == regionId)
+            {
+                FocusedRegionEntityId = _selectedRegionEntityIds.OrderBy(id => id).Cast<int?>().FirstOrDefault();
+            }
+        }
+        else
+        {
+            _selectedRegionEntityIds.Add(regionId);
+            FocusedRegionEntityId = regionId;
+        }
+
+        HighlightRevision++;
+    }
+
     public void AddWallsToSelection(IEnumerable<int> wallIds)
     {
+        ClearRegionSelection();
+
         var added = false;
         foreach (var id in wallIds)
         {
@@ -243,6 +320,25 @@ public sealed partial class EditorSession : ObservableObject
         }
 
         FocusedWallEntityId ??= _selectedWallEntityIds.OrderBy(id => id).First();
+        HighlightRevision++;
+    }
+
+    public void AddRegionsToSelection(IEnumerable<int> regionIds)
+    {
+        ClearWallSelection();
+
+        var added = false;
+        foreach (var id in regionIds)
+        {
+            added |= _selectedRegionEntityIds.Add(id);
+        }
+
+        if (!added)
+        {
+            return;
+        }
+
+        FocusedRegionEntityId ??= _selectedRegionEntityIds.OrderBy(id => id).First();
         HighlightRevision++;
     }
 
@@ -273,6 +369,9 @@ public sealed partial class EditorSession : ObservableObject
         SetSelection([wall.EntityId], wall.EntityId, portal);
     }
 
+    public void SetFocusedRegion(Region region) =>
+        SetRegionSelection([region.EntityId], region.EntityId);
+
     /// <summary>
     /// Updates focus/hover primary without changing the wall multi-selection set.
     /// Used when multi-selecting portals in the tree.
@@ -295,6 +394,12 @@ public sealed partial class EditorSession : ObservableObject
         TreeFocusGeneration++;
     }
 
+    public void RequestRegionTreeFocus(Region region)
+    {
+        SetFocusedRegion(region);
+        TreeFocusGeneration++;
+    }
+
     public void SetHoveredWall(Wall? wall, WallPortal? portal = null)
     {
         var entityId = wall?.EntityId;
@@ -303,8 +408,23 @@ public sealed partial class EditorSession : ObservableObject
             return;
         }
 
+        HoveredRegionEntityId = null;
         HoveredWallEntityId = entityId;
         HoveredPortal = portal;
+        HighlightRevision++;
+    }
+
+    public void SetHoveredRegion(Region? region)
+    {
+        var entityId = region?.EntityId;
+        if (HoveredRegionEntityId == entityId && HoveredWallEntityId is null && HoveredPortal is null)
+        {
+            return;
+        }
+
+        HoveredWallEntityId = null;
+        HoveredPortal = null;
+        HoveredRegionEntityId = entityId;
         HighlightRevision++;
     }
 
@@ -317,6 +437,32 @@ public sealed partial class EditorSession : ObservableObject
 
         HoveredWallEntityId = null;
         HoveredPortal = null;
+        HighlightRevision++;
+    }
+
+    public void ClearHoveredRegion()
+    {
+        if (HoveredRegionEntityId is null)
+        {
+            return;
+        }
+
+        HoveredRegionEntityId = null;
+        HighlightRevision++;
+    }
+
+    public void ClearHover()
+    {
+        if (HoveredWallEntityId is null &&
+            HoveredPortal is null &&
+            HoveredRegionEntityId is null)
+        {
+            return;
+        }
+
+        HoveredWallEntityId = null;
+        HoveredPortal = null;
+        HoveredRegionEntityId = null;
         HighlightRevision++;
     }
 
@@ -336,6 +482,21 @@ public sealed partial class EditorSession : ObservableObject
         FocusedPortal = null;
         HoveredWallEntityId = null;
         HoveredPortal = null;
+        HighlightRevision++;
+    }
+
+    public void ClearRegionSelection()
+    {
+        if (_selectedRegionEntityIds.Count == 0 &&
+            FocusedRegionEntityId is null &&
+            HoveredRegionEntityId is null)
+        {
+            return;
+        }
+
+        _selectedRegionEntityIds.Clear();
+        FocusedRegionEntityId = null;
+        HoveredRegionEntityId = null;
         HighlightRevision++;
     }
 
@@ -359,6 +520,36 @@ public sealed partial class EditorSession : ObservableObject
         return true;
     }
 
+    public bool DeleteSelectedRegions()
+    {
+        if (Map is null || _selectedRegionEntityIds.Count == 0)
+        {
+            return false;
+        }
+
+        var ids = _selectedRegionEntityIds.ToHashSet();
+        Execute("Delete regions", () =>
+        {
+            foreach (var region in Map.Regions.Where(candidate => ids.Contains(candidate.EntityId)).ToList())
+            {
+                RegionEditing.RemoveFromMap(Map, region);
+            }
+        });
+
+        ClearRegionSelection();
+        return true;
+    }
+
+    public bool DeleteSelection()
+    {
+        if (_selectedRegionEntityIds.Count > 0)
+        {
+            return DeleteSelectedRegions();
+        }
+
+        return DeleteSelectedWalls();
+    }
+
     partial void OnMapChanged(MapDocument? value)
     {
         _activeGesture?.Cancel();
@@ -366,6 +557,7 @@ public sealed partial class EditorSession : ObservableObject
         _history.Clear();
         RefreshHistoryState();
         ClearWallSelection();
+        ClearRegionSelection();
     }
 
     private void CompleteGesture(EditGesture gesture)

@@ -155,6 +155,33 @@ public partial class WallsToolViewModel : Tool
             or WallItemViewModel
             or WallPortalItemViewModel;
 
+    public bool CanConvertToRegion(object? item) =>
+        item is WallItemViewModel wallItem && wallItem.Wall.Points.Count >= 2;
+
+    public bool ConvertToRegion(object? item)
+    {
+        if (_session.Map is null || item is not WallItemViewModel wallItem)
+        {
+            return false;
+        }
+
+        Region? region = null;
+        _session.Execute("Convert wall to region", () =>
+        {
+            RegionConversion.TryConvertWallToRegion(_session.Map, wallItem.Wall, out region);
+        });
+
+        if (region is null)
+        {
+            return false;
+        }
+
+        ClearSelection();
+        _session.ActiveMapTool = MapToolKind.RegionEditing;
+        _session.RequestRegionTreeFocus(region);
+        return true;
+    }
+
     public IReadOnlyList<object> GetEditTargets(object? item)
     {
         if (item is null || (!CanRename(item) && !CanDelete(item)))

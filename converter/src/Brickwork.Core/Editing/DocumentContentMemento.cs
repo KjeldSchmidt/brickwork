@@ -3,7 +3,7 @@ using Brickwork.Core.Models;
 namespace Brickwork.Core.Editing;
 
 /// <summary>
-/// Deep snapshot of editable map content (layers + walls + groups) for undo/redo.
+/// Deep snapshot of editable map content (layers + walls + regions + groups) for undo/redo.
 /// Restore updates existing instances in place so UI bindings keep working.
 /// </summary>
 public sealed class DocumentContentMemento
@@ -11,10 +11,12 @@ public sealed class DocumentContentMemento
     private DocumentContentMemento(
         IReadOnlyList<MapLayer> layers,
         IReadOnlyList<Wall> walls,
+        IReadOnlyList<Region> regions,
         IReadOnlyList<EntityGroup> groups)
     {
         Layers = layers;
         Walls = walls;
+        Regions = regions;
         Groups = groups;
     }
 
@@ -22,18 +24,22 @@ public sealed class DocumentContentMemento
 
     public IReadOnlyList<Wall> Walls { get; }
 
+    public IReadOnlyList<Region> Regions { get; }
+
     public IReadOnlyList<EntityGroup> Groups { get; }
 
     public static DocumentContentMemento Capture(MapDocument map) =>
         new(
             map.Layers.Select(CloneLayer).ToList(),
             map.Walls.Select(CloneWall).ToList(),
+            map.Regions.Select(CloneRegion).ToList(),
             map.Groups.Select(CloneGroup).ToList());
 
     public void RestoreTo(MapDocument map)
     {
         RestoreLayers(map);
         RestoreWalls(map);
+        RestoreRegions(map);
         RestoreGroups(map);
     }
 
@@ -41,6 +47,7 @@ public sealed class DocumentContentMemento
     {
         if (Layers.Count != other.Layers.Count ||
             Walls.Count != other.Walls.Count ||
+            Regions.Count != other.Regions.Count ||
             Groups.Count != other.Groups.Count)
         {
             return false;
@@ -57,6 +64,14 @@ public sealed class DocumentContentMemento
         for (var i = 0; i < Walls.Count; i++)
         {
             if (!WallEquals(Walls[i], other.Walls[i]))
+            {
+                return false;
+            }
+        }
+
+        for (var i = 0; i < Regions.Count; i++)
+        {
+            if (!RegionEquals(Regions[i], other.Regions[i]))
             {
                 return false;
             }
@@ -149,6 +164,31 @@ public sealed class DocumentContentMemento
         }
     }
 
+    private void RestoreRegions(MapDocument map)
+    {
+        var targetById = Regions.ToDictionary(region => region.EntityId);
+        for (var index = map.Regions.Count - 1; index >= 0; index--)
+        {
+            if (!targetById.ContainsKey(map.Regions[index].EntityId))
+            {
+                map.Regions.RemoveAt(index);
+            }
+        }
+
+        var existingById = map.Regions.ToDictionary(region => region.EntityId);
+        foreach (var source in Regions)
+        {
+            if (existingById.TryGetValue(source.EntityId, out var existing))
+            {
+                CopyRegionInto(source, existing);
+            }
+            else
+            {
+                map.Regions.Add(CloneRegion(source));
+            }
+        }
+    }
+
     private void RestoreGroups(MapDocument map)
     {
         var targetById = Groups.ToDictionary(group => group.GroupId);
@@ -201,6 +241,17 @@ public sealed class DocumentContentMemento
         target.GroupId = source.GroupId;
         ReplacePoints(target.Points, source.Points);
         SyncPortals(source.Portals, target.Portals);
+    }
+
+    private static void CopyRegionInto(Region source, Region target)
+    {
+        target.Name = source.Name;
+        target.LayerId = source.LayerId;
+        target.IsActive = source.IsActive;
+        target.IsEntityVisible = source.IsEntityVisible;
+        target.RegionType = source.RegionType;
+        target.GroupId = source.GroupId;
+        ReplacePoints(target.Points, source.Points);
     }
 
     private static void SyncPortals(IList<WallPortal> source, IList<WallPortal> target)
@@ -304,6 +355,19 @@ public sealed class DocumentContentMemento
             Portals = wall.Portals.Select(ClonePortal).ToList(),
         };
 
+    private static Region CloneRegion(Region region) =>
+        new()
+        {
+            EntityId = region.EntityId,
+            Name = region.Name,
+            LayerId = region.LayerId,
+            IsActive = region.IsActive,
+            IsEntityVisible = region.IsEntityVisible,
+            RegionType = region.RegionType,
+            GroupId = region.GroupId,
+            Points = region.Points.ToList(),
+        };
+
     private static WallPortal ClonePortal(WallPortal portal) =>
         new()
         {
@@ -354,6 +418,16 @@ public sealed class DocumentContentMemento
         a.GroupId == b.GroupId &&
         a.Points.SequenceEqual(b.Points) &&
         PortalListsEqual(a.Portals, b.Portals);
+
+    private static bool RegionEquals(Region a, Region b) =>
+        a.EntityId == b.EntityId &&
+        a.Name == b.Name &&
+        a.LayerId == b.LayerId &&
+        a.IsActive == b.IsActive &&
+        a.IsEntityVisible == b.IsEntityVisible &&
+        a.RegionType == b.RegionType &&
+        a.GroupId == b.GroupId &&
+        a.Points.SequenceEqual(b.Points);
 
     private static bool PortalListsEqual(IList<WallPortal> a, IList<WallPortal> b)
     {

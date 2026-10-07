@@ -9,8 +9,10 @@ public partial class MapPreviewDocumentViewModel : Document
 {
     private readonly EditorSession _session;
     private WallVertexPickTarget? _vertexDragTarget;
+    private RegionVertexPickTarget? _regionVertexDragTarget;
     private IDisposable? _vertexDragGesture;
     private Wall? _drawingWall;
+    private Region? _drawingRegion;
     private IDisposable? _drawingGesture;
     private IDisposable? _eraserGesture;
     private MapPoint? _lastErasePreviewPoint;
@@ -51,6 +53,15 @@ public partial class MapPreviewDocumentViewModel : Document
     [ObservableProperty]
     private IReadOnlySet<int> _selectedWallEntityIds = new HashSet<int>();
 
+    [ObservableProperty]
+    private int? _focusedRegionEntityId;
+
+    [ObservableProperty]
+    private int? _hoveredRegionEntityId;
+
+    [ObservableProperty]
+    private IReadOnlySet<int> _selectedRegionEntityIds = new HashSet<int>();
+
     public MapPreviewDocumentViewModel(EditorSession session)
     {
         _session = session;
@@ -59,8 +70,10 @@ public partial class MapPreviewDocumentViewModel : Document
             if (args.PropertyName is nameof(EditorSession.Map))
             {
                 _drawingWall = null;
+                _drawingRegion = null;
                 _drawingGesture = null;
                 _vertexDragTarget = null;
+                _regionVertexDragTarget = null;
                 _vertexDragGesture = null;
                 EndEraserStroke();
                 UpdateFromSession();
@@ -75,9 +88,20 @@ public partial class MapPreviewDocumentViewModel : Document
                 or nameof(EditorSession.FocusedWallEntityId)
                 or nameof(EditorSession.FocusedPortal)
                 or nameof(EditorSession.HoveredWallEntityId)
-                or nameof(EditorSession.HoveredPortal))
+                or nameof(EditorSession.HoveredPortal)
+                or nameof(EditorSession.FocusedRegionEntityId)
+                or nameof(EditorSession.HoveredRegionEntityId))
             {
                 UpdateHighlightFromSession();
+            }
+
+            if (args.PropertyName is nameof(EditorSession.ActiveMapTool))
+            {
+                OnPropertyChanged(nameof(IsWallEditingToolActive));
+                OnPropertyChanged(nameof(IsRegionEditingToolActive));
+                OnPropertyChanged(nameof(IsEraserToolActive));
+                // Handles visibility is tool-gated; force a redraw.
+                HighlightRevision = _session.HighlightRevision;
             }
         };
         UpdateFromSession();
@@ -102,13 +126,38 @@ public partial class MapPreviewDocumentViewModel : Document
         HoveredWallEntityId = _session.HoveredWallEntityId;
         HoveredPortal = _session.HoveredPortal;
         SelectedWallEntityIds = _session.SelectedWallEntityIds.ToHashSet();
+        FocusedRegionEntityId = _session.FocusedRegionEntityId;
+        HoveredRegionEntityId = _session.HoveredRegionEntityId;
+        SelectedRegionEntityIds = _session.SelectedRegionEntityIds.ToHashSet();
     }
 
     public void UpdateHoverAt(MapPoint previewPoint)
     {
         if (Map is null)
         {
-            _session.ClearHoveredWall();
+            _session.ClearHover();
+            return;
+        }
+
+        switch (_session.ActiveMapTool)
+        {
+            case MapToolKind.RegionEditing:
+                UpdateRegionHoverAt(previewPoint);
+                return;
+            case MapToolKind.Eraser:
+                UpdateEraserHoverAt(previewPoint);
+                return;
+            default:
+                UpdateWallHoverAt(previewPoint);
+                return;
+        }
+    }
+
+    private void UpdateWallHoverAt(MapPoint previewPoint)
+    {
+        if (Map is null)
+        {
+            _session.ClearHover();
             return;
         }
 
@@ -126,20 +175,100 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        _session.ClearHoveredWall();
+        _session.ClearHover();
     }
 
-    public void ClearHover() => _session.ClearHoveredWall();
+    private void UpdateRegionHoverAt(MapPoint previewPoint)
+    {
+        if (Map is null)
+        {
+            _session.ClearHover();
+            return;
+        }
+
+        var vertexHit = RegionVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (vertexHit is not null)
+        {
+            _session.SetHoveredRegion(vertexHit.Region);
+            return;
+        }
+
+        var regionHit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (regionHit is not null)
+        {
+            _session.SetHoveredRegion(regionHit.Region);
+            return;
+        }
+
+        _session.ClearHover();
+    }
+
+    private void UpdateEraserHoverAt(MapPoint previewPoint)
+    {
+        if (Map is null)
+        {
+            _session.ClearHover();
+            return;
+        }
+
+        var wallVertex = WallVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        var regionVertex = RegionVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (wallVertex is not null)
+        {
+            _session.SetHoveredWall(wallVertex.Wall, wallVertex.Portal);
+            return;
+        }
+
+        if (regionVertex is not null)
+        {
+            _session.SetHoveredRegion(regionVertex.Region);
+            return;
+        }
+
+        var wallHit = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        var regionHit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (wallHit is not null)
+        {
+            _session.SetHoveredWall(wallHit.Wall, wallHit.Portal);
+            return;
+        }
+
+        if (regionHit is not null)
+        {
+            _session.SetHoveredRegion(regionHit.Region);
+            return;
+        }
+
+        _session.ClearHover();
+    }
+
+    public void ClearHover() => _session.ClearHover();
 
     public bool IsWallEditingToolActive => _session.ActiveMapTool == MapToolKind.WallEditing;
+
+    public bool IsRegionEditingToolActive => _session.ActiveMapTool == MapToolKind.RegionEditing;
 
     public bool IsEraserToolActive => _session.ActiveMapTool == MapToolKind.Eraser;
 
     public bool IsDrawingWall => _drawingWall is not null;
 
+    public bool IsDrawingRegion => _drawingRegion is not null;
+
+    public bool IsDrawing => IsDrawingWall || IsDrawingRegion;
+
     public void ClearWallSelection() => _session.ClearWallSelection();
 
+    public void ClearRegionSelection() => _session.ClearRegionSelection();
+
+    public void ClearSelection()
+    {
+        _session.ClearWallSelection();
+        _session.ClearRegionSelection();
+    }
+
     public bool DeleteSelectedWalls() => _session.DeleteSelectedWalls();
+
+    public bool DeleteSelection() => _session.DeleteSelection();
 
     public bool HasWallAt(MapPoint previewPoint)
     {
@@ -152,9 +281,40 @@ public partial class MapPreviewDocumentViewModel : Document
             || WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null;
     }
 
+    public bool HasRegionAt(MapPoint previewPoint)
+    {
+        if (Map is null)
+        {
+            return false;
+        }
+
+        return RegionVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null
+            || RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null;
+    }
+
     public bool TryBeginVertexDrag(MapPoint previewPoint)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || IsDrawingWall)
+        if (Map is null || IsDrawing)
+        {
+            return false;
+        }
+
+        if (_session.ActiveMapTool == MapToolKind.RegionEditing)
+        {
+            var regionHit = RegionVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+            if (regionHit is null)
+            {
+                return false;
+            }
+
+            _regionVertexDragTarget = regionHit;
+            _vertexDragTarget = null;
+            _vertexDragGesture = _session.BeginGesture("Move region geometry");
+            _session.RequestRegionTreeFocus(regionHit.Region);
+            return true;
+        }
+
+        if (_session.ActiveMapTool != MapToolKind.WallEditing)
         {
             return false;
         }
@@ -166,6 +326,7 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         _vertexDragTarget = hit;
+        _regionVertexDragTarget = null;
         _vertexDragGesture = _session.BeginGesture("Move wall geometry");
         _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
         return true;
@@ -173,7 +334,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public void DragVertexTo(MapPoint previewPoint)
     {
-        if (Map is null || _vertexDragTarget is null)
+        if (Map is null)
         {
             return;
         }
@@ -185,6 +346,22 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         var scenePoint = transform.PreviewToScene(previewPoint);
+
+        if (_regionVertexDragTarget is { } regionTarget)
+        {
+            RegionGeometryEditing.SetVertexPosition(
+                regionTarget.Region,
+                regionTarget.VertexIndex,
+                scenePoint);
+            _session.NotifyContentChanged();
+            return;
+        }
+
+        if (_vertexDragTarget is null)
+        {
+            return;
+        }
+
         var target = _vertexDragTarget;
 
         if (target.VertexIndex is int vertexIndex)
@@ -213,6 +390,7 @@ public partial class MapPreviewDocumentViewModel : Document
     public void EndVertexDrag()
     {
         _vertexDragTarget = null;
+        _regionVertexDragTarget = null;
         var gesture = _vertexDragGesture;
         _vertexDragGesture = null;
         gesture?.Dispose();
@@ -259,7 +437,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public bool TryStartDrawingWall(MapPoint previewPoint)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || IsDrawingWall)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || IsDrawing)
         {
             return false;
         }
@@ -276,9 +454,7 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         var scenePoint = transform.PreviewToScene(previewPoint);
-        var entityId = Map.Walls.Count == 0
-            ? 1
-            : Map.Walls.Max(wall => wall.EntityId) + 1;
+        var entityId = RegionConversion.AllocateEntityId(Map);
 
         var wall = new Wall
         {
@@ -303,6 +479,47 @@ public partial class MapPreviewDocumentViewModel : Document
         return true;
     }
 
+    public bool TryStartDrawingRegion(MapPoint previewPoint)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.RegionEditing || IsDrawing)
+        {
+            return false;
+        }
+
+        if (HasRegionAt(previewPoint))
+        {
+            return false;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return false;
+        }
+
+        var scenePoint = transform.PreviewToScene(previewPoint);
+        var entityId = RegionConversion.AllocateEntityId(Map);
+        var region = new Region
+        {
+            EntityId = entityId,
+            Name = "Region",
+            IsActive = true,
+            RegionType = RegionType.DifficultTerrain,
+            Points = { scenePoint, scenePoint },
+        };
+
+        _drawingGesture = _session.BeginGesture("Add region");
+        _session.Execute("Add region", () =>
+        {
+            region.LayerId = MapLayerEditing.EnsureDefaultLayer(Map).Id;
+            Map.Regions.Add(region);
+        });
+
+        _drawingRegion = region;
+        _session.RequestRegionTreeFocus(region);
+        return true;
+    }
+
     public void UpdateDrawingWallPreview(MapPoint previewPoint)
     {
         if (Map is null || _drawingWall is null || _drawingWall.Points.Count == 0)
@@ -317,6 +534,23 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         _drawingWall.Points[^1] = transform.PreviewToScene(previewPoint);
+        _session.NotifyContentChanged();
+    }
+
+    public void UpdateDrawingRegionPreview(MapPoint previewPoint)
+    {
+        if (Map is null || _drawingRegion is null || _drawingRegion.Points.Count == 0)
+        {
+            return;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return;
+        }
+
+        _drawingRegion.Points[^1] = transform.PreviewToScene(previewPoint);
         _session.NotifyContentChanged();
     }
 
@@ -340,6 +574,26 @@ public partial class MapPreviewDocumentViewModel : Document
         _session.RequestWallTreeFocus(_drawingWall);
     }
 
+    public void CommitDrawingRegionVertex(MapPoint previewPoint)
+    {
+        if (Map is null || _drawingRegion is null)
+        {
+            return;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return;
+        }
+
+        var scenePoint = transform.PreviewToScene(previewPoint);
+        _drawingRegion.Points[^1] = scenePoint;
+        _drawingRegion.Points.Add(scenePoint);
+        _session.NotifyContentChanged();
+        _session.RequestRegionTreeFocus(_drawingRegion);
+    }
+
     public bool TryFinishDrawingWall()
     {
         if (Map is null || _drawingWall is null || _drawingWall.Points.Count == 0)
@@ -354,6 +608,37 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         return TryFinishDrawingWall(transform.SceneToPreview(_drawingWall.Points[^1]));
+    }
+
+    public bool TryFinishDrawingRegion()
+    {
+        if (Map is null || _drawingRegion is null || _drawingRegion.Points.Count == 0)
+        {
+            return false;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return false;
+        }
+
+        return TryFinishDrawingRegion(transform.SceneToPreview(_drawingRegion.Points[^1]));
+    }
+
+    public bool TryFinishDrawing()
+    {
+        if (IsDrawingWall)
+        {
+            return TryFinishDrawingWall();
+        }
+
+        if (IsDrawingRegion)
+        {
+            return TryFinishDrawingRegion();
+        }
+
+        return false;
     }
 
     public bool TryFinishDrawingWall(MapPoint previewPoint)
@@ -375,6 +660,14 @@ public partial class MapPreviewDocumentViewModel : Document
             DistanceSquared(firstPreview, previewPoint) <= 8d * 8d &&
             _drawingWall.Points.Count >= 4;
 
+        // A finish with only the start + rubber-band is almost certainly accidental —
+        // place the vertex and keep drawing instead of creating a degenerate wall.
+        if (!close && _drawingWall.Points.Count < 3)
+        {
+            CommitDrawingWallVertex(previewPoint);
+            return true;
+        }
+
         if (close)
         {
             _drawingWall.Points.RemoveAt(_drawingWall.Points.Count - 1);
@@ -387,7 +680,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
         if (_drawingWall.Points.Count < 2)
         {
-            CancelDrawingWall();
+            CommitDrawingWallVertex(previewPoint);
             return true;
         }
 
@@ -397,6 +690,57 @@ public partial class MapPreviewDocumentViewModel : Document
         _drawingGesture = null;
         gesture?.Dispose();
         _session.RequestWallTreeFocus(wall);
+        return true;
+    }
+
+    public bool TryFinishDrawingRegion(MapPoint previewPoint)
+    {
+        if (Map is null || _drawingRegion is null)
+        {
+            return false;
+        }
+
+        var transform = SceneTransform.FromMap(Map);
+        if (transform is null)
+        {
+            return false;
+        }
+
+        var firstPreview = transform.SceneToPreview(_drawingRegion.Points[0]);
+        var snapClose =
+            DistanceSquared(firstPreview, previewPoint) <= 8d * 8d &&
+            _drawingRegion.Points.Count >= 4;
+
+        // Too few vertices for a closed region: treat finish as placing the current
+        // node and keep drawing (avoids vanishing on an early finish click).
+        if (_drawingRegion.Points.Count < 4)
+        {
+            CommitDrawingRegionVertex(previewPoint);
+            return true;
+        }
+
+        var scenePoint = transform.PreviewToScene(previewPoint);
+        if (snapClose)
+        {
+            _drawingRegion.Points.RemoveAt(_drawingRegion.Points.Count - 1);
+        }
+        else
+        {
+            _drawingRegion.Points[^1] = scenePoint;
+        }
+
+        if (_drawingRegion.Points.Count < 3)
+        {
+            CommitDrawingRegionVertex(previewPoint);
+            return true;
+        }
+
+        var region = _drawingRegion;
+        _drawingRegion = null;
+        var gesture = _drawingGesture;
+        _drawingGesture = null;
+        gesture?.Dispose();
+        _session.RequestRegionTreeFocus(region);
         return true;
     }
 
@@ -413,9 +757,36 @@ public partial class MapPreviewDocumentViewModel : Document
         ClearWallSelection();
     }
 
+    public void CancelDrawingRegion()
+    {
+        if (_drawingRegion is null && _drawingGesture is null)
+        {
+            return;
+        }
+
+        _drawingRegion = null;
+        _drawingGesture = null;
+        _session.CancelActiveGesture();
+        ClearRegionSelection();
+    }
+
+    public void CancelDrawing()
+    {
+        if (IsDrawingWall)
+        {
+            CancelDrawingWall();
+            return;
+        }
+
+        if (IsDrawingRegion)
+        {
+            CancelDrawingRegion();
+        }
+    }
+
     public void EditWallAt(MapPoint previewPoint, bool cycleType)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || !cycleType || IsDrawingWall)
+        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing || !cycleType || IsDrawing)
         {
             return;
         }
@@ -516,7 +887,37 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public bool TryRemoveVertexAt(MapPoint previewPoint)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
+        if (Map is null)
+        {
+            return false;
+        }
+
+        if (_session.ActiveMapTool == MapToolKind.RegionEditing)
+        {
+            var regionHit = RegionVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+            if (regionHit is null)
+            {
+                return false;
+            }
+
+            var removedRegionVertex = false;
+            _session.Execute("Remove region vertex", () =>
+            {
+                removedRegionVertex = RegionGeometryEditing.TryRemoveVertex(
+                    regionHit.Region,
+                    regionHit.VertexIndex);
+            });
+
+            if (!removedRegionVertex)
+            {
+                return false;
+            }
+
+            _session.RequestRegionTreeFocus(regionHit.Region);
+            return true;
+        }
+
+        if (_session.ActiveMapTool != MapToolKind.WallEditing)
         {
             return false;
         }
@@ -566,13 +967,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public bool TryInsertVertexAt(MapPoint previewPoint)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
-        {
-            return false;
-        }
-
-        var hit = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
-        if (hit is null)
+        if (Map is null)
         {
             return false;
         }
@@ -584,6 +979,41 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         var scenePoint = transform.PreviewToScene(previewPoint);
+
+        if (_session.ActiveMapTool == MapToolKind.RegionEditing)
+        {
+            var regionHit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+            if (regionHit is null)
+            {
+                return false;
+            }
+
+            var insertedRegion = false;
+            _session.Execute("Insert region vertex", () =>
+            {
+                insertedRegion = RegionGeometryEditing.TryInsertVertex(regionHit.Region, scenePoint) is not null;
+            });
+
+            if (!insertedRegion)
+            {
+                return false;
+            }
+
+            _session.RequestRegionTreeFocus(regionHit.Region);
+            return true;
+        }
+
+        if (_session.ActiveMapTool != MapToolKind.WallEditing)
+        {
+            return false;
+        }
+
+        var hit = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (hit is null)
+        {
+            return false;
+        }
+
         var inserted = false;
         _session.Execute("Insert wall vertex", () =>
         {
@@ -599,25 +1029,43 @@ public partial class MapPreviewDocumentViewModel : Document
         return true;
     }
 
-    public bool TryEraseWallAt(MapPoint previewPoint)
+    public bool TryEraseAt(MapPoint previewPoint)
     {
         if (Map is null || _session.ActiveMapTool != MapToolKind.Eraser)
         {
             return false;
         }
 
-        Wall? wall = null;
-        var vertexHit = WallVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
-        if (vertexHit is not null)
+        var wallVertex = WallVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (wallVertex is not null)
         {
-            wall = vertexHit.Wall;
-        }
-        else
-        {
-            wall = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)?.Wall;
+            return EraseWall(wallVertex.Wall);
         }
 
-        if (wall is null)
+        var regionVertex = RegionVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (regionVertex is not null)
+        {
+            return EraseRegion(regionVertex.Region);
+        }
+
+        var wall = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)?.Wall;
+        if (wall is not null)
+        {
+            return EraseWall(wall);
+        }
+
+        var region = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)?.Region;
+        if (region is not null)
+        {
+            return EraseRegion(region);
+        }
+
+        return false;
+    }
+
+    private bool EraseWall(Wall wall)
+    {
+        if (Map is null)
         {
             return false;
         }
@@ -637,6 +1085,28 @@ public partial class MapPreviewDocumentViewModel : Document
         return true;
     }
 
+    private bool EraseRegion(Region region)
+    {
+        if (Map is null)
+        {
+            return false;
+        }
+
+        var removed = false;
+        _session.Execute("Delete region", () =>
+        {
+            removed = RegionEditing.RemoveFromMap(Map, region);
+        });
+
+        if (!removed)
+        {
+            return false;
+        }
+
+        _session.ClearRegionSelection();
+        return true;
+    }
+
     public bool TryBeginEraserStroke(MapPoint previewPoint)
     {
         if (Map is null || _session.ActiveMapTool != MapToolKind.Eraser)
@@ -644,9 +1114,9 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        _eraserGesture = _session.BeginGesture("Erase walls");
+        _eraserGesture = _session.BeginGesture("Erase");
         _lastErasePreviewPoint = previewPoint;
-        TryEraseWallAt(previewPoint);
+        TryEraseAt(previewPoint);
         return true;
     }
 
@@ -666,12 +1136,12 @@ public partial class MapPreviewDocumentViewModel : Document
             for (var i = 1; i <= steps; i++)
             {
                 var t = i / (double)steps;
-                TryEraseWallAt(new MapPoint(last.X + (dx * t), last.Y + (dy * t)));
+                TryEraseAt(new MapPoint(last.X + (dx * t), last.Y + (dy * t)));
             }
         }
         else
         {
-            TryEraseWallAt(previewPoint);
+            TryEraseAt(previewPoint);
         }
 
         _lastErasePreviewPoint = previewPoint;
@@ -687,7 +1157,28 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public void HandleShiftSelectClick(MapPoint previewPoint)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
+        if (Map is null)
+        {
+            return;
+        }
+
+        if (_session.ActiveMapTool == MapToolKind.RegionEditing)
+        {
+            var regionHit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
+                ?? (RegionVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is { } regionVertex
+                    ? new RegionPickTarget(regionVertex.Region)
+                    : null);
+            if (regionHit is null)
+            {
+                return;
+            }
+
+            _session.ToggleRegionInSelection(regionHit.Region.EntityId);
+            _session.TreeFocusGeneration++;
+            return;
+        }
+
+        if (_session.ActiveMapTool != MapToolKind.WallEditing)
         {
             return;
         }
@@ -708,7 +1199,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public void ApplyMarqueeSelection(MapPoint previewMin, MapPoint previewMax, bool addToSelection)
     {
-        if (Map is null || _session.ActiveMapTool != MapToolKind.WallEditing)
+        if (Map is null)
         {
             return;
         }
@@ -717,6 +1208,38 @@ public partial class MapPreviewDocumentViewModel : Document
         var top = Math.Min(previewMin.Y, previewMax.Y);
         var right = Math.Max(previewMin.X, previewMax.X);
         var bottom = Math.Max(previewMin.Y, previewMax.Y);
+
+        if (_session.ActiveMapTool == MapToolKind.RegionEditing)
+        {
+            var regionIds = RegionMarqueePicker.PickRegionIds(Map, left, top, right, bottom);
+            if (regionIds.Count == 0)
+            {
+                if (!addToSelection)
+                {
+                    ClearRegionSelection();
+                }
+
+                return;
+            }
+
+            if (addToSelection)
+            {
+                _session.AddRegionsToSelection(regionIds);
+            }
+            else
+            {
+                _session.SetRegionSelection(regionIds);
+            }
+
+            _session.TreeFocusGeneration++;
+            return;
+        }
+
+        if (_session.ActiveMapTool != MapToolKind.WallEditing)
+        {
+            return;
+        }
+
         var ids = WallMarqueePicker.PickWallIds(Map, left, top, right, bottom);
         if (ids.Count == 0)
         {
@@ -740,17 +1263,58 @@ public partial class MapPreviewDocumentViewModel : Document
         _session.TreeFocusGeneration++;
     }
 
+    public void EditRegionAt(MapPoint previewPoint, bool cycleType)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.RegionEditing || !cycleType || IsDrawing)
+        {
+            return;
+        }
+
+        var hit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
+            ?? (RegionVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is { } vertex
+                ? new RegionPickTarget(vertex.Region)
+                : null);
+        if (hit is null)
+        {
+            return;
+        }
+
+        var selectedIds = _session.SelectedRegionEntityIds;
+        var nextType = RegionEditing.CycleType(hit.Region.RegionType);
+        var targets = selectedIds.Contains(hit.Region.EntityId)
+            ? Map.Regions.Where(region => selectedIds.Contains(region.EntityId)).ToList()
+            : [hit.Region];
+
+        _session.Execute(
+            targets.Count > 1 ? "Change region types" : "Change region type",
+            () =>
+            {
+                foreach (var region in targets)
+                {
+                    RegionEditing.SetRegionType(region, nextType);
+                }
+            });
+
+        if (selectedIds.Contains(hit.Region.EntityId) && selectedIds.Count > 1)
+        {
+            _session.SetRegionSelection(selectedIds, hit.Region.EntityId);
+            return;
+        }
+
+        _session.RequestRegionTreeFocus(hit.Region);
+    }
+
     public void HandlePrimaryClick(MapPoint previewPoint, bool shiftSelect = false)
     {
         switch (_session.ActiveMapTool)
         {
             case MapToolKind.Eraser:
-                TryEraseWallAt(previewPoint);
+                TryEraseAt(previewPoint);
                 break;
             case MapToolKind.WallEditing:
                 if (IsDrawingWall)
                 {
-                    CommitDrawingWallVertex(previewPoint);
+                    // Left-click finish is handled on pointer pressed; ignore click fall-through.
                     break;
                 }
 
@@ -767,6 +1331,28 @@ public partial class MapPreviewDocumentViewModel : Document
                 else
                 {
                     EditWallAt(previewPoint, cycleType: true);
+                }
+
+                break;
+            case MapToolKind.RegionEditing:
+                if (IsDrawingRegion)
+                {
+                    break;
+                }
+
+                if (shiftSelect)
+                {
+                    HandleShiftSelectClick(previewPoint);
+                    break;
+                }
+
+                if (!HasRegionAt(previewPoint))
+                {
+                    ClearRegionSelection();
+                }
+                else
+                {
+                    EditRegionAt(previewPoint, cycleType: true);
                 }
 
                 break;

@@ -19,6 +19,10 @@ public partial class WallsToolView : UserControl
         Header = "Rename",
         InputGesture = new KeyGesture(Key.F2),
     };
+    private readonly MenuItem _convertMenuItem = new()
+    {
+        Header = "Convert to Region",
+    };
     private readonly MenuItem _deleteMenuItem = new()
     {
         Header = "Delete",
@@ -34,11 +38,15 @@ public partial class WallsToolView : UserControl
     public WallsToolView()
     {
         InitializeComponent();
+        ToolTip.SetTip(
+            _convertMenuItem,
+            "Replace this wall with a region. Open walls use the terrain-style thickness outline; closed walls use the closed path itself.");
         _renameMenuItem.Click += OnRenameMenuClick;
+        _convertMenuItem.Click += OnConvertMenuClick;
         _deleteMenuItem.Click += OnDeleteMenuClick;
         _treeContextMenu = new ContextMenu
         {
-            Items = { _renameMenuItem, _deleteMenuItem },
+            Items = { _renameMenuItem, _convertMenuItem, _deleteMenuItem },
         };
         DataContextChanged += OnDataContextChanged;
         AttachedToVisualTree += OnAttachedToVisualTree;
@@ -94,6 +102,7 @@ public partial class WallsToolView : UserControl
         var suffix = count > 1 ? $" ({count})" : string.Empty;
         _renameMenuItem.Header = viewModel.CanRename(target) ? $"Rename{suffix}" : "Rename";
         _renameMenuItem.IsEnabled = viewModel.CanRename(target);
+        _convertMenuItem.IsEnabled = viewModel.CanConvertToRegion(target) && count == 1;
         _deleteMenuItem.Header = viewModel.CanDelete(target) ? $"Delete{suffix}" : "Delete";
         _deleteMenuItem.IsEnabled = viewModel.CanDelete(target);
     }
@@ -164,6 +173,14 @@ public partial class WallsToolView : UserControl
 
         viewModel.BeginRename(_contextMenuTarget);
         ScheduleFocusRenameBox();
+    }
+
+    private void OnConvertMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is WallsToolViewModel viewModel)
+        {
+            viewModel.ConvertToRegion(_contextMenuTarget);
+        }
     }
 
     private void OnDeleteMenuClick(object? sender, RoutedEventArgs e)

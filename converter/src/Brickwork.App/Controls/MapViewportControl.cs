@@ -37,6 +37,23 @@ public class MapViewportControl : Control
     public static readonly StyledProperty<WallPortal?> HoveredPortalProperty =
         AvaloniaProperty.Register<MapViewportControl, WallPortal?>(nameof(HoveredPortal));
 
+    public static readonly StyledProperty<IReadOnlySet<int>> SelectedRegionEntityIdsProperty =
+        AvaloniaProperty.Register<MapViewportControl, IReadOnlySet<int>>(
+            nameof(SelectedRegionEntityIds),
+            defaultValue: new HashSet<int>());
+
+    public static readonly StyledProperty<int?> FocusedRegionEntityIdProperty =
+        AvaloniaProperty.Register<MapViewportControl, int?>(nameof(FocusedRegionEntityId));
+
+    public static readonly StyledProperty<int?> HoveredRegionEntityIdProperty =
+        AvaloniaProperty.Register<MapViewportControl, int?>(nameof(HoveredRegionEntityId));
+
+    public static readonly StyledProperty<bool> ShowWallHandlesProperty =
+        AvaloniaProperty.Register<MapViewportControl, bool>(nameof(ShowWallHandles));
+
+    public static readonly StyledProperty<bool> ShowRegionHandlesProperty =
+        AvaloniaProperty.Register<MapViewportControl, bool>(nameof(ShowRegionHandles));
+
     private readonly IMapSceneRenderer _renderer = new MapSceneRenderer();
 
     static MapViewportControl()
@@ -49,7 +66,12 @@ public class MapViewportControl : Control
             FocusedWallEntityIdProperty,
             FocusedPortalProperty,
             HoveredWallEntityIdProperty,
-            HoveredPortalProperty);
+            HoveredPortalProperty,
+            SelectedRegionEntityIdsProperty,
+            FocusedRegionEntityIdProperty,
+            HoveredRegionEntityIdProperty,
+            ShowWallHandlesProperty,
+            ShowRegionHandlesProperty);
 
         MapProperty.Changed.AddClassHandler<MapViewportControl>((control, args) =>
         {
@@ -102,6 +124,36 @@ public class MapViewportControl : Control
         set => SetValue(HoveredPortalProperty, value);
     }
 
+    public IReadOnlySet<int> SelectedRegionEntityIds
+    {
+        get => GetValue(SelectedRegionEntityIdsProperty);
+        set => SetValue(SelectedRegionEntityIdsProperty, value);
+    }
+
+    public int? FocusedRegionEntityId
+    {
+        get => GetValue(FocusedRegionEntityIdProperty);
+        set => SetValue(FocusedRegionEntityIdProperty, value);
+    }
+
+    public int? HoveredRegionEntityId
+    {
+        get => GetValue(HoveredRegionEntityIdProperty);
+        set => SetValue(HoveredRegionEntityIdProperty, value);
+    }
+
+    public bool ShowWallHandles
+    {
+        get => GetValue(ShowWallHandlesProperty);
+        set => SetValue(ShowWallHandlesProperty, value);
+    }
+
+    public bool ShowRegionHandles
+    {
+        get => GetValue(ShowRegionHandlesProperty);
+        set => SetValue(ShowRegionHandlesProperty, value);
+    }
+
     public MapDocument? Map
     {
         get => GetValue(MapProperty);
@@ -122,7 +174,12 @@ public class MapViewportControl : Control
             FocusedWallEntityId,
             FocusedPortal,
             HoveredWallEntityId,
-            HoveredPortal);
+            HoveredPortal,
+            SelectedRegionEntityIds,
+            FocusedRegionEntityId,
+            HoveredRegionEntityId,
+            ShowWallHandles,
+            ShowRegionHandles);
         context.Custom(new MapDrawOperation(bounds, Map, _renderer, highlight));
     }
 

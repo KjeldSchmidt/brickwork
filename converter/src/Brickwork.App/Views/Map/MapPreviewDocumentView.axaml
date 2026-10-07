@@ -34,6 +34,11 @@
                                              FocusedPortal="{Binding FocusedPortal}"
                                              HoveredWallEntityId="{Binding HoveredWallEntityId}"
                                              HoveredPortal="{Binding HoveredPortal}"
+                                             SelectedRegionEntityIds="{Binding SelectedRegionEntityIds}"
+                                             FocusedRegionEntityId="{Binding FocusedRegionEntityId}"
+                                             HoveredRegionEntityId="{Binding HoveredRegionEntityId}"
+                                             ShowWallHandles="{Binding IsWallEditingToolActive}"
+                                             ShowRegionHandles="{Binding IsRegionEditingToolActive}"
                                              Width="{Binding PreviewWidth}"
                                              Height="{Binding PreviewHeight}" />
                 <Canvas x:Name="MarqueeLayer"

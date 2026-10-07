@@ -12,6 +12,10 @@ public partial class ToolPaletteViewModel : Tool
     private const string WallEditingIconGeometry =
         "M3 17.5 L3 21 L6.5 21 L17.5 10 L14 6.5 Z M18.5 9 L21 6.5 L17.5 3 L15 5.5 Z";
 
+    // Closed region / polygon glyph.
+    private const string RegionEditingIconGeometry =
+        "M4 8 L12 3 L20 8 L17 18 L7 18 Z";
+
     private const string EraserIconGeometry =
         "M16.2 3.2 L20.8 7.8 C21.5 8.5 21.5 9.6 20.8 10.3 L10.3 20.8 C9.9 21.2 9.4 21.4 8.8 21.4 H3.6 V16.2 C3.6 15.6 3.8 15.1 4.2 14.7 L14.7 4.2 C15.4 3.5 16.5 3.5 17.2 4.2 Z M6.4 16.6 L14.4 8.6";
 
@@ -41,7 +45,9 @@ public partial class ToolPaletteViewModel : Tool
                     new("Drag Node", "Move Node, Resize Gap"),
                     new("Right-Click Wall", "Add Node"),
                     new("Right-Click Node", "Remove Node or Portal"),
-                    new("Middle-Drag Empty", "Draw Wall"),
+                    new("Middle-Drag Empty", "Start Drawing Wall"),
+                    new("Middle-Click", "Add Wall Node (While Drawing)"),
+                    new("Click / Enter", "Finish Wall (While Drawing)"),
                     new("Middle-Click Wall", "Add Portal"),
                     new("Middle-Drag Wall", "Add Portal and Resize"),
                     new("Delete", "Delete Selection"),
@@ -49,13 +55,33 @@ public partial class ToolPaletteViewModel : Tool
                 ],
                 iconMargin: new Thickness(2, 1, 0, 0)),
             new MapToolItemViewModel(
+                MapToolKind.RegionEditing,
+                "Region Editing",
+                "R",
+                RegionEditingIconGeometry,
+                buttonHints:
+                [
+                    new("Click Region", "Change Region Type"),
+                    new("Shift-Click", "Add or Remove Region"),
+                    new("Drag Empty", "Marquee Select"),
+                    new("Drag Node", "Move Node"),
+                    new("Right-Click Region", "Add Node"),
+                    new("Right-Click Node", "Remove Node"),
+                    new("Middle-Drag Empty", "Start Drawing Region"),
+                    new("Middle-Click", "Add Region Node (While Drawing)"),
+                    new("Click / Enter", "Finish Region (While Drawing)"),
+                    new("Delete", "Delete Selection"),
+                    new("Right-Drag", "Pan Map"),
+                ],
+                iconMargin: new Thickness(1, 1, 0, 0)),
+            new MapToolItemViewModel(
                 MapToolKind.Eraser,
                 "Eraser",
                 "E",
                 EraserIconGeometry,
                 buttonHints:
                 [
-                    new("Click Wall", "Delete Wall"),
+                    new("Click Wall or Region", "Delete"),
                     new("Right-Drag", "Pan Map"),
                 ],
                 iconMargin: new Thickness(1, 1, 0, 0)),

@@ -59,4 +59,30 @@ public class DocumentContentMementoTests
         Assert.Same(layer, map.Layers.Single());
         Assert.Equal(MapLayerEditing.DefaultLayerName, layer.Name);
     }
+
+    [Fact]
+    public void RestoreTo_ReappliesRegionMutationInPlace()
+    {
+        var map = new MapDocument();
+        var region = new Region
+        {
+            EntityId = 1,
+            RegionType = RegionType.Other,
+            Points = { new MapPoint(0, 0), new MapPoint(10, 0), new MapPoint(10, 10) },
+        };
+        map.Regions.Add(region);
+
+        var before = DocumentContentMemento.Capture(map);
+        region.RegionType = RegionType.DifficultTerrain;
+        region.Points[1] = new MapPoint(20, 0);
+        var after = DocumentContentMemento.Capture(map);
+
+        Assert.False(before.ContentEquals(after));
+
+        before.RestoreTo(map);
+
+        Assert.Same(region, map.Regions.Single());
+        Assert.Equal(RegionType.Other, region.RegionType);
+        Assert.Equal(new MapPoint(10, 0), region.Points[1]);
+    }
 }

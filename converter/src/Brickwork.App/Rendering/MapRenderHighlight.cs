@@ -7,12 +7,20 @@ public sealed record MapRenderHighlight(
     int? FocusedWallEntityId,
     WallPortal? FocusedPortal,
     int? HoveredWallEntityId,
-    WallPortal? HoveredPortal)
+    WallPortal? HoveredPortal,
+    IReadOnlySet<int> SelectedRegionEntityIds,
+    int? FocusedRegionEntityId,
+    int? HoveredRegionEntityId,
+    bool ShowWallHandles = false,
+    bool ShowRegionHandles = false)
 {
     public static MapRenderHighlight Empty { get; } = new(
         new HashSet<int>(),
         null,
         null,
+        null,
+        null,
+        new HashSet<int>(),
         null,
         null);
 
@@ -28,6 +36,8 @@ public sealed record MapRenderHighlight(
             return null;
         }
     }
+
+    public int? RegionHoverTarget => HoveredRegionEntityId;
 }
 
 public readonly record struct WallHighlightTarget(int WallEntityId, WallPortal? Portal);

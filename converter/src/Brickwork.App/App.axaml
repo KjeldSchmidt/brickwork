@@ -14,6 +14,9 @@
         <DataTemplate DataType="vm:WallsToolViewModel">
             <panels:WallsToolView />
         </DataTemplate>
+        <DataTemplate DataType="vm:RegionsToolViewModel">
+            <panels:RegionsToolView />
+        </DataTemplate>
         <DataTemplate DataType="vm:SettingsToolViewModel">
             <panels:SettingsToolView />
         </DataTemplate>

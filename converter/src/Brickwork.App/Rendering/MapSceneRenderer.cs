@@ -30,6 +30,19 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             return;
         }
 
+        var showWallHandles = highlight?.ShowWallHandles == true;
+        var showRegionHandles = highlight?.ShowRegionHandles == true;
+
+        foreach (var region in map.Regions)
+        {
+            if (!region.IsActive || region.Points.Count < 2)
+            {
+                continue;
+            }
+
+            DrawRegion(canvas, transform, region, showRegionHandles);
+        }
+
         foreach (var wall in map.Walls)
         {
             if (!wall.WallEnabled || wall.Points.Count < 2)
@@ -61,7 +74,10 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
                     isClosed: false);
             }
 
-            DrawWallNodes(canvas, transform, wall);
+            if (showWallHandles)
+            {
+                DrawWallNodes(canvas, transform, wall);
+            }
         }
 
         if (highlight is null)
@@ -69,34 +85,116 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             return;
         }
 
+        foreach (var selectedRegionId in highlight.SelectedRegionEntityIds)
+        {
+            DrawRegionHighlight(canvas, map, transform, selectedRegionId, showRegionHandles);
+        }
+
+        if (highlight.RegionHoverTarget is int hoveredRegionId)
+        {
+            DrawRegionHighlight(canvas, map, transform, hoveredRegionId, showRegionHandles);
+        }
+
         foreach (var selectedId in highlight.SelectedWallEntityIds)
         {
             var portal = highlight.FocusedWallEntityId == selectedId
                 ? highlight.FocusedPortal
                 : null;
-            DrawWallHighlight(canvas, map, transform, selectedId, portal);
+            DrawWallHighlight(canvas, map, transform, selectedId, portal, showWallHandles);
         }
 
         if (highlight.HoverTarget is { } hover &&
             !highlight.SelectedWallEntityIds.Contains(hover.WallEntityId))
         {
-            DrawWallHighlight(canvas, map, transform, hover.WallEntityId, hover.Portal);
+            DrawWallHighlight(canvas, map, transform, hover.WallEntityId, hover.Portal, showWallHandles);
         }
         else if (highlight.HoverTarget is { } hoveredSelected)
         {
             // Re-draw hover on top of selection for portal-specific emphasis.
-            DrawWallHighlight(canvas, map, transform, hoveredSelected.WallEntityId, hoveredSelected.Portal);
+            DrawWallHighlight(canvas, map, transform, hoveredSelected.WallEntityId, hoveredSelected.Portal, showWallHandles);
         }
     }
 
     public void ReleaseMap(MapDocument map) => _imageCache.Remove(map);
+
+    private static void DrawRegion(
+        SKCanvas canvas,
+        SceneTransform transform,
+        Region region,
+        bool showNodes)
+    {
+        var fill = RegionColors.ForFill(region.RegionType, region.IsActive);
+        var stroke = RegionColors.ForStroke(region.RegionType, region.IsActive);
+        IReadOnlyList<MapPoint> points = region.Points as IReadOnlyList<MapPoint> ?? region.Points.ToList();
+        if (points.Count >= 3)
+        {
+            DrawPolygon(canvas, transform, points, fill, stroke);
+        }
+        else
+        {
+            DrawPolyline(canvas, transform, points, stroke, isClosed: true);
+        }
+
+        if (showNodes)
+        {
+            DrawRegionNodes(canvas, transform, region);
+        }
+    }
+
+    private static void DrawRegionHighlight(
+        SKCanvas canvas,
+        MapDocument map,
+        SceneTransform transform,
+        int regionEntityId,
+        bool showNodes)
+    {
+        var region = map.Regions.FirstOrDefault(candidate => candidate.EntityId == regionEntityId);
+        if (region is null || !region.IsActive || region.Points.Count < 2)
+        {
+            return;
+        }
+
+        var color = RegionColors.ForHighlight();
+        IReadOnlyList<MapPoint> points = region.Points as IReadOnlyList<MapPoint> ?? region.Points.ToList();
+        DrawPolyline(canvas, transform, points, color, isClosed: true, LineStrokeWidth * 2f);
+        if (showNodes)
+        {
+            DrawRegionNodes(canvas, transform, region, color, NodeRadius + 1.5f, LineStrokeWidth * 2f);
+        }
+
+        DrawRegion(canvas, transform, region, showNodes);
+    }
+
+    private static void DrawRegionNodes(
+        SKCanvas canvas,
+        SceneTransform transform,
+        Region region,
+        SKColor? overrideColor = null,
+        float? overrideRadius = null,
+        float? overrideBorderWidth = null)
+    {
+        var stroke = overrideColor ?? RegionColors.ForStroke(region.RegionType, region.IsActive);
+        for (var i = 0; i < region.Points.Count; i++)
+        {
+            DrawWallNode(
+                canvas,
+                transform,
+                region.Points[i],
+                WallLineType.Solid,
+                region.IsActive,
+                stroke,
+                overrideRadius,
+                overrideBorderWidth);
+        }
+    }
 
     private static void DrawWallHighlight(
         SKCanvas canvas,
         MapDocument map,
         SceneTransform transform,
         int wallEntityId,
-        WallPortal? portal)
+        WallPortal? portal,
+        bool showHandles)
     {
         var wall = map.Walls.FirstOrDefault(candidate => candidate.EntityId == wallEntityId);
         if (wall is null || !wall.WallEnabled || wall.Points.Count < 2)
@@ -114,9 +212,10 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             portal,
             color,
             underlayWidth,
-            nodeRadius: NodeRadius + 1.5f);
+            nodeRadius: NodeRadius + 1.5f,
+            showHandles);
 
-        RedrawCoreWallGeometry(canvas, transform, wall, portal);
+        RedrawCoreWallGeometry(canvas, transform, wall, portal, showHandles);
     }
 
     private static void DrawWallHighlightOverlay(
@@ -126,7 +225,8 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         WallPortal? portal,
         SKColor color,
         float strokeWidth,
-        float nodeRadius)
+        float nodeRadius,
+        bool showHandles)
     {
         foreach (var segment in WallPathSegmentBuilder.BuildSegments(wall))
         {
@@ -154,7 +254,11 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
                 DrawPolyline(canvas, transform, portalSegment.Points, color, isClosed: false, strokeWidth);
             }
 
-            DrawWallNodes(canvas, transform, wall, color, nodeRadius, strokeWidth);
+            if (showHandles)
+            {
+                DrawWallNodes(canvas, transform, wall, color, nodeRadius, strokeWidth);
+            }
+
             return;
         }
 
@@ -164,6 +268,11 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             {
                 DrawPolyline(canvas, transform, portalSegment.Points, color, isClosed: false, strokeWidth);
             }
+        }
+
+        if (!showHandles)
+        {
+            return;
         }
 
         if (WallPathSegmentBuilder.TryGetPortalArcInterval(wall, portal, out var start, out var end))
@@ -180,7 +289,8 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         SKCanvas canvas,
         SceneTransform transform,
         Wall wall,
-        WallPortal? portal)
+        WallPortal? portal,
+        bool showHandles)
     {
         foreach (var segment in WallPathSegmentBuilder.BuildSegments(wall))
         {
@@ -204,6 +314,11 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
                 portalSegment.Portal.IsActive,
                 wall.SceneThickness,
                 isClosed: false);
+        }
+
+        if (!showHandles)
+        {
+            return;
         }
 
         if (portal is null)
