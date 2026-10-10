@@ -5,6 +5,7 @@ public static class RegionEditing
     private static readonly RegionType[] CycleOrder =
     [
         RegionType.DifficultTerrain,
+        RegionType.GreaterDifficultTerrain,
         RegionType.Other,
     ];
 

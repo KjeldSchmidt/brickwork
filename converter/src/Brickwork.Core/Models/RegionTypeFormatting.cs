@@ -6,6 +6,8 @@ public static class RegionTypeFormatting
         regionType switch
         {
             RegionType.DifficultTerrain => "Difficult Terrain",
+            RegionType.GreaterDifficultTerrain => "Greater Difficult Terrain",
+            RegionType.Other => "Other",
             _ => regionType.ToString(),
         };
 }

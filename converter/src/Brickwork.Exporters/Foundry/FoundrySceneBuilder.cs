@@ -30,6 +30,9 @@ internal static class FoundrySceneBuilder
         var wallSegments = FoundryWallSegmentBuilder.BuildFromMap(map);
         scene["walls"] = new JsonArray(wallSegments.Select(ToWallJson).ToArray());
 
+        var regions = FoundryRegionBuilder.BuildFromMap(map);
+        scene["regions"] = new JsonArray(regions.Select(ToRegionJson).ToArray());
+
         await JsonSerializer.SerializeAsync(destination, scene, SerializerOptions, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -69,4 +72,78 @@ internal static class FoundrySceneBuilder
             ["_id"] = FoundryIdGenerator.Create(),
         };
     }
+
+    private static JsonObject ToRegionJson(FoundryRegion region)
+    {
+        var behaviors = new JsonArray();
+        if (region.WalkMovementCost is { } cost)
+        {
+            behaviors.Add(new JsonObject
+            {
+                ["name"] = region.Name,
+                ["type"] = "modifyMovementCost",
+                ["_id"] = FoundryIdGenerator.Create(),
+                ["system"] = new JsonObject
+                {
+                    ["difficulties"] = new JsonObject
+                    {
+                        ["walk"] = cost,
+                        ["fly"] = 1,
+                        ["swim"] = 1,
+                        ["burrow"] = 1,
+                        ["deploy"] = cost,
+                        ["travel"] = cost,
+                    },
+                },
+                ["disabled"] = false,
+                ["flags"] = new JsonObject(),
+            });
+        }
+
+        return new JsonObject
+        {
+            ["name"] = region.Name,
+            ["_id"] = FoundryIdGenerator.Create(),
+            ["color"] = region.Color,
+            ["shapes"] = new JsonArray(region.Shapes.Select(ToShapeJson).ToArray()),
+            ["elevation"] = new JsonObject
+            {
+                ["bottom"] = 0,
+                ["top"] = 20,
+                ["topInclusive"] = false,
+            },
+            ["levels"] = new JsonArray("defaultLevel0000"),
+            ["restriction"] = new JsonObject
+            {
+                ["enabled"] = false,
+                ["type"] = "move",
+                ["priority"] = 0,
+            },
+            ["attachment"] = new JsonObject
+            {
+                ["token"] = null,
+            },
+            ["behaviors"] = behaviors,
+            ["visibility"] = 4,
+            ["highlightMode"] = "shapes",
+            ["displayMeasurements"] = false,
+            ["hidden"] = false,
+            ["locked"] = false,
+            ["flags"] = new JsonObject(),
+            ["_shapeConstraints"] = null,
+            ["ownership"] = new JsonObject
+            {
+                ["default"] = 0,
+            },
+        };
+    }
+
+    private static JsonObject ToShapeJson(FoundryRegionPolygon shape) =>
+        new()
+        {
+            ["type"] = "polygon",
+            ["points"] = new JsonArray(shape.Points.Select(point => (JsonNode)point).ToArray()),
+            ["hole"] = false,
+            ["origin"] = null,
+        };
 }

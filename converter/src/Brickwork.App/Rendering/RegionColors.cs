@@ -14,6 +14,7 @@ public static class RegionColors
             : regionType switch
             {
                 RegionType.DifficultTerrain => new SKColor(0x81, 0xB9, 0x0C, 0xCC),
+                RegionType.GreaterDifficultTerrain => new SKColor(0x6D, 0x28, 0xCC, 0xCC),
                 _ => new SKColor(0xAA, 0xAA, 0xBB, 0xCC),
             };
 
@@ -23,6 +24,7 @@ public static class RegionColors
             : regionType switch
             {
                 RegionType.DifficultTerrain => new SKColor(0x81, 0xB9, 0x0C, 0x44),
+                RegionType.GreaterDifficultTerrain => new SKColor(0x6D, 0x28, 0xCC, 0x44),
                 _ => new SKColor(0xAA, 0xAA, 0xBB, 0x44),
             };
 

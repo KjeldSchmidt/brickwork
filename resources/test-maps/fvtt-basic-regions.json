@@ -1,0 +1,427 @@
+{
+  "name": "Region Examples",
+  "navigation": false,
+  "thumb": null,
+  "width": 4000,
+  "height": 3000,
+  "padding": 0.25,
+  "shiftX": 0,
+  "shiftY": 0,
+  "initial": {
+    "x": null,
+    "y": null,
+    "scale": null
+  },
+  "initialLevel": "defaultLevel0000",
+  "grid": {
+    "type": 1,
+    "size": 100,
+    "style": "solidLines",
+    "thickness": 1,
+    "color": "#000000",
+    "alpha": 0.2,
+    "distance": 5,
+    "units": "ft"
+  },
+  "tokenVision": true,
+  "fog": {
+    "mode": 1,
+    "colors": {
+      "explored": null,
+      "unexplored": null
+    }
+  },
+  "environment": {
+    "darknessLevel": 0,
+    "darknessLock": false,
+    "globalLight": {
+      "enabled": false,
+      "alpha": 0.5,
+      "bright": false,
+      "color": null,
+      "coloration": 1,
+      "luminosity": 0,
+      "saturation": 0,
+      "contrast": 0,
+      "shadows": 0,
+      "darkness": {
+        "min": 0,
+        "max": 1
+      }
+    },
+    "cycle": true,
+    "base": {
+      "hue": 0,
+      "intensity": 0,
+      "luminosity": 0,
+      "saturation": 0,
+      "shadows": 0
+    },
+    "dark": {
+      "hue": 0.7138888888888889,
+      "intensity": 0,
+      "luminosity": -0.25,
+      "saturation": 0,
+      "shadows": 0
+    }
+  },
+  "transition": {
+    "type": null,
+    "duration": 1500,
+    "activeOnly": false
+  },
+  "drawings": [],
+  "tokens": [],
+  "levels": [
+    {
+      "_id": "defaultLevel0000",
+      "name": "Level",
+      "elevation": {
+        "bottom": 0,
+        "top": 20
+      },
+      "background": {
+        "color": "#999999",
+        "src": null,
+        "tint": "#ffffff",
+        "alphaThreshold": 0.75
+      },
+      "foreground": {
+        "src": null,
+        "tint": "#ffffff",
+        "alphaThreshold": 0.75
+      },
+      "fog": {
+        "src": null
+      },
+      "textures": {
+        "anchorX": 0.5,
+        "anchorY": 0.5,
+        "offsetX": 0,
+        "offsetY": 0,
+        "fit": "fill",
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0
+      },
+      "visibility": {
+        "levels": []
+      },
+      "sort": 0,
+      "flags": {}
+    }
+  ],
+  "lights": [],
+  "notes": [],
+  "sounds": [],
+  "regions": [
+    {
+      "color": "#cc7428",
+      "elevation": {
+        "bottom": 0,
+        "top": 20,
+        "topInclusive": false
+      },
+      "levels": [
+        "defaultLevel0000"
+      ],
+      "restriction": {
+        "enabled": false,
+        "type": "move",
+        "priority": 0
+      },
+      "attachment": {
+        "token": null
+      },
+      "visibility": 4,
+      "highlightMode": "shapes",
+      "displayMeasurements": false,
+      "hidden": false,
+      "name": "Region",
+      "_id": "Ty2XeX4c5WSfeFSY",
+      "shapes": [
+        {
+          "type": "rectangle",
+          "x": 1200,
+          "y": 950,
+          "width": 250,
+          "height": 250,
+          "hole": false,
+          "anchorX": 0,
+          "anchorY": 0,
+          "rotation": 0,
+          "gridBased": false
+        },
+        {
+          "type": "rectangle",
+          "x": 2100,
+          "y": 1250,
+          "width": 400,
+          "height": 300,
+          "hole": false,
+          "anchorX": 0,
+          "anchorY": 0,
+          "rotation": 0,
+          "gridBased": false
+        },
+        {
+          "type": "rectangle",
+          "x": 1450,
+          "y": 1450,
+          "width": 300,
+          "height": 400,
+          "hole": false,
+          "anchorX": 0,
+          "anchorY": 0,
+          "rotation": 0,
+          "gridBased": false
+        },
+        {
+          "type": "rectangle",
+          "x": 2200,
+          "y": 2000,
+          "width": 250,
+          "height": 300,
+          "hole": false,
+          "anchorX": 0,
+          "anchorY": 0,
+          "rotation": 0,
+          "gridBased": false
+        },
+        {
+          "type": "rectangle",
+          "x": 2700,
+          "y": 1200,
+          "width": 500,
+          "height": 650,
+          "hole": false,
+          "anchorX": 0,
+          "anchorY": 0,
+          "rotation": 0,
+          "gridBased": false
+        }
+      ],
+      "behaviors": [
+        {
+          "name": "Difficult Terrain",
+          "type": "modifyMovementCost",
+          "_id": "Z6rXXKr45jdYhF11",
+          "system": {
+            "difficulties": {
+              "walk": 2,
+              "fly": 1,
+              "swim": 1,
+              "burrow": 1,
+              "deploy": 2,
+              "travel": 2
+            }
+          },
+          "disabled": false,
+          "flags": {},
+          "_stats": {
+            "coreVersion": "14.364",
+            "systemId": "pf2e",
+            "systemVersion": "8.3.0",
+            "createdTime": 1791646369694,
+            "modifiedTime": 1791647419491,
+            "lastModifiedBy": "ddmkPey1tojNIvLF",
+            "compendiumSource": null,
+            "duplicateSource": null,
+            "exportSource": null
+          }
+        }
+      ],
+      "locked": false,
+      "flags": {
+        "pf2e": {
+          "areaShape": null
+        }
+      },
+      "_shapeConstraints": null,
+      "ownership": {
+        "default": 0
+      }
+    },
+    {
+      "name": "Region (2)",
+      "_id": "IujLu2IgCiczl8xP",
+      "color": "#6d28cc",
+      "shapes": [
+        {
+          "type": "rectangle",
+          "x": 1350,
+          "y": 2200,
+          "width": 200,
+          "height": 250,
+          "hole": false,
+          "anchorX": 0,
+          "anchorY": 0,
+          "rotation": 0,
+          "gridBased": false
+        },
+        {
+          "type": "rectangle",
+          "x": 1900,
+          "y": 1800,
+          "width": 150,
+          "height": 250,
+          "hole": false,
+          "anchorX": 0,
+          "anchorY": 0,
+          "rotation": 0,
+          "gridBased": false
+        },
+        {
+          "type": "polygon",
+          "points": [
+            2887.5,
+            2212.5,
+            2662.5,
+            2600,
+            3125,
+            2850,
+            3475,
+            2450,
+            3462.5,
+            1987.5,
+            2975,
+            1987.5,
+            2587.5,
+            2087.5,
+            2612.5,
+            2250,
+            2737.5,
+            2125,
+            2962.5,
+            2050,
+            3300,
+            2100,
+            3300,
+            2400,
+            3012.5,
+            2637.5,
+            2812.5,
+            2550,
+            3100,
+            2387.5,
+            3275,
+            2175,
+            3012.5,
+            2112.5,
+            2887.5,
+            2150,
+            3112.5,
+            2175,
+            3112.5,
+            2287.5,
+            2900,
+            2412.5,
+            2950,
+            2237.5,
+            3025,
+            2237.5,
+            2925,
+            2187.5
+          ],
+          "hole": false,
+          "origin": null
+        }
+      ],
+      "elevation": {
+        "bottom": null,
+        "top": null,
+        "topInclusive": false
+      },
+      "levels": [],
+      "restriction": {
+        "enabled": false,
+        "type": "move",
+        "priority": 0
+      },
+      "attachment": {
+        "token": null
+      },
+      "behaviors": [
+        {
+          "name": "Difficult Terrain",
+          "type": "modifyMovementCost",
+          "_id": "jwbc9KLNHizilXQ8",
+          "system": {
+            "difficulties": {
+              "walk": 3,
+              "fly": 1,
+              "swim": 1,
+              "burrow": 1,
+              "deploy": 3,
+              "travel": 3
+            }
+          },
+          "disabled": false,
+          "flags": {},
+          "_stats": {
+            "coreVersion": "14.364",
+            "systemId": "pf2e",
+            "systemVersion": "8.3.0",
+            "createdTime": 1791646478057,
+            "modifiedTime": 1791647432319,
+            "lastModifiedBy": "ddmkPey1tojNIvLF",
+            "compendiumSource": null,
+            "duplicateSource": null,
+            "exportSource": null
+          }
+        }
+      ],
+      "visibility": 4,
+      "highlightMode": "shapes",
+      "displayMeasurements": false,
+      "hidden": false,
+      "locked": false,
+      "flags": {
+        "pf2e": {
+          "areaShape": null
+        }
+      },
+      "_shapeConstraints": null,
+      "ownership": {
+        "default": 0
+      }
+    }
+  ],
+  "tiles": [],
+  "walls": [],
+  "playlist": null,
+  "playlistSound": null,
+  "journal": null,
+  "journalEntryPage": null,
+  "weather": "",
+  "folder": null,
+  "flags": {
+    "pf2e": {
+      "rulesBasedVision": null,
+      "hearingRange": null,
+      "environmentTypes": [],
+      "syncDarkness": "default"
+    }
+  },
+  "_stats": {
+    "coreVersion": "14.364",
+    "systemId": "pf2e",
+    "systemVersion": "8.3.0",
+    "createdTime": 1791646320181,
+    "modifiedTime": 1791646327825,
+    "lastModifiedBy": "ddmkPey1tojNIvLF",
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": {
+      "worldId": "pathfinder-test",
+      "uuid": "Scene.2Xcue8FDEkrHxofQ",
+      "coreVersion": "14.364",
+      "systemId": "pf2e",
+      "systemVersion": "8.3.0"
+    }
+  },
+  "navName": "",
+  "ownership": {
+    "default": 0
+  }
+}

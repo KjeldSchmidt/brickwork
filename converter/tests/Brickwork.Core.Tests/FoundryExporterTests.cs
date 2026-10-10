@@ -406,6 +406,41 @@ public class FoundryExporterTests
         Assert.Equal(12, segments.Count(segment => segment.Sight == 10));
     }
 
+    [Fact]
+    public async Task ExportAsync_GroupsRegionsByType_WithExpectedBehaviors()
+    {
+        var map = await LoadPreparedBasicWallsMapAsync();
+        map.Regions.Add(CreateRegion(101, RegionType.DifficultTerrain, (0, 0), (100, 0), (100, 100)));
+        map.Regions.Add(CreateRegion(102, RegionType.DifficultTerrain, (200, 0), (300, 0), (300, 100)));
+        map.Regions.Add(CreateRegion(103, RegionType.GreaterDifficultTerrain, (0, 200), (100, 200), (50, 300)));
+        map.Regions.Add(CreateRegion(104, RegionType.Other, (400, 0), (500, 0), (500, 100)));
+        map.Regions.Add(CreateRegion(105, RegionType.DifficultTerrain, (0, 0), (10, 0), (10, 10), isActive: false));
+
+        await using var output = new MemoryStream();
+        await ServiceFactory.CreateConvertMapService()
+            .ConvertAsync(map, output, "foundry");
+
+        output.Position = 0;
+        using var document = await JsonDocument.ParseAsync(output);
+        var regions = document.RootElement.GetProperty("regions");
+        Assert.Equal(3, regions.GetArrayLength());
+
+        var difficult = Assert.Single(regions.EnumerateArray(), r => r.GetProperty("name").GetString() == "Difficult Terrain");
+        Assert.Equal(2, difficult.GetProperty("shapes").GetArrayLength());
+        Assert.All(difficult.GetProperty("shapes").EnumerateArray(), shape => Assert.Equal("polygon", shape.GetProperty("type").GetString()));
+        var difficultCost = difficult.GetProperty("behaviors")[0].GetProperty("system").GetProperty("difficulties");
+        Assert.Equal(2, difficultCost.GetProperty("walk").GetInt32());
+        Assert.Equal(2, difficultCost.GetProperty("deploy").GetInt32());
+
+        var greater = Assert.Single(regions.EnumerateArray(), r => r.GetProperty("name").GetString() == "Greater Difficult Terrain");
+        Assert.Equal(1, greater.GetProperty("shapes").GetArrayLength());
+        Assert.Equal(3, greater.GetProperty("behaviors")[0].GetProperty("system").GetProperty("difficulties").GetProperty("walk").GetInt32());
+
+        var other = Assert.Single(regions.EnumerateArray(), r => r.GetProperty("name").GetString() == "Other");
+        Assert.Equal(1, other.GetProperty("shapes").GetArrayLength());
+        Assert.Equal(0, other.GetProperty("behaviors").GetArrayLength());
+    }
+
     private static async Task<MapDocument> LoadPreparedBasicWallsMapAsync()
     {
         Assert.True(File.Exists(BasicWallsInkPath), $"Missing test resource: {BasicWallsInkPath}");
@@ -417,10 +452,96 @@ public class FoundryExporterTests
         return map;
     }
 
+    private static Region CreateRegion(
+        int entityId,
+        RegionType regionType,
+        (double X, double Y) a,
+        (double X, double Y) b,
+        (double X, double Y) c,
+        bool isActive = true) =>
+        new()
+        {
+            EntityId = entityId,
+            RegionType = regionType,
+            IsActive = isActive,
+            Points =
+            {
+                new MapPoint(a.X, a.Y),
+                new MapPoint(b.X, b.Y),
+                new MapPoint(c.X, c.Y),
+            },
+        };
+
     private static async Task<string> ReadStreamAsStringAsync(MemoryStream stream)
     {
         stream.Position = 0;
         using var reader = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
         return await reader.ReadToEndAsync();
     }
+}
+
+public class FoundryRegionBuilderTests
+{
+    [Fact]
+    public void BuildFromMap_GroupsByType_AndSkipsInactive()
+    {
+        var map = CreateMap();
+        map.Regions.Add(CreateRegion(1, RegionType.DifficultTerrain, (0, 0), (10, 0), (10, 10)));
+        map.Regions.Add(CreateRegion(2, RegionType.DifficultTerrain, (20, 0), (30, 0), (30, 10)));
+        map.Regions.Add(CreateRegion(3, RegionType.Other, (0, 20), (10, 20), (10, 30)));
+        map.Regions.Add(CreateRegion(4, RegionType.GreaterDifficultTerrain, (0, 0), (5, 0), (5, 5), isActive: false));
+
+        var regions = FoundryRegionBuilder.BuildFromMap(map);
+
+        Assert.Equal(2, regions.Count);
+        var difficult = Assert.Single(regions, r => r.Name == "Difficult Terrain");
+        Assert.Equal(2, difficult.Shapes.Count);
+        Assert.Equal(2, difficult.WalkMovementCost);
+        var other = Assert.Single(regions, r => r.Name == "Other");
+        Assert.Null(other.WalkMovementCost);
+        Assert.DoesNotContain(regions, r => r.Name == "Greater Difficult Terrain");
+    }
+
+    [Fact]
+    public void BuildFromMap_TransformsScenePointsToPreviewIntegers()
+    {
+        var map = CreateMap(sceneWidth: 100, sceneHeight: 100, previewWidth: 200, previewHeight: 200);
+        map.Regions.Add(CreateRegion(1, RegionType.DifficultTerrain, (10, 20), (30, 20), (30, 40)));
+
+        var region = Assert.Single(FoundryRegionBuilder.BuildFromMap(map));
+        var points = Assert.Single(region.Shapes).Points;
+
+        Assert.Equal([20, 40, 60, 40, 60, 80], points);
+    }
+
+    private static MapDocument CreateMap(
+        double sceneWidth = 1000,
+        double sceneHeight = 1000,
+        int previewWidth = 1000,
+        int previewHeight = 1000) =>
+        new()
+        {
+            Scene = new SceneDimensions { Width = sceneWidth, Height = sceneHeight },
+            Preview = new PreviewDimensions { Width = previewWidth, Height = previewHeight },
+        };
+
+    private static Region CreateRegion(
+        int entityId,
+        RegionType regionType,
+        (double X, double Y) a,
+        (double X, double Y) b,
+        (double X, double Y) c,
+        bool isActive = true) =>
+        new()
+        {
+            EntityId = entityId,
+            RegionType = regionType,
+            IsActive = isActive,
+            Points =
+            {
+                new MapPoint(a.X, a.Y),
+                new MapPoint(b.X, b.Y),
+                new MapPoint(c.X, c.Y),
+            },
+        };
 }
