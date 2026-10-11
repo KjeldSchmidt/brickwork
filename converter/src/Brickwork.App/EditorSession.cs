@@ -62,6 +62,15 @@ public sealed partial class EditorSession : ObservableObject
     private string _foundryMapsPath = string.Empty;
 
     [ObservableProperty]
+    private bool _detectRegionsFromColorPaths = true;
+
+    [ObservableProperty]
+    private bool _detectRegionsFromNamedContainers = true;
+
+    [ObservableProperty]
+    private bool _detectRegionsFromPathNames = true;
+
+    [ObservableProperty]
     private MapToolKind _activeMapTool = MapToolKind.WallEditing;
 
     [ObservableProperty]

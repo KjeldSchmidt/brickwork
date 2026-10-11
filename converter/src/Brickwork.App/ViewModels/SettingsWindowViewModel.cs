@@ -32,6 +32,21 @@ public partial class SettingsWindowViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(FoundryMapsPath));
             }
+
+            if (args.PropertyName is nameof(EditorSession.DetectRegionsFromColorPaths))
+            {
+                OnPropertyChanged(nameof(DetectRegionsFromColorPaths));
+            }
+
+            if (args.PropertyName is nameof(EditorSession.DetectRegionsFromNamedContainers))
+            {
+                OnPropertyChanged(nameof(DetectRegionsFromNamedContainers));
+            }
+
+            if (args.PropertyName is nameof(EditorSession.DetectRegionsFromPathNames))
+            {
+                OnPropertyChanged(nameof(DetectRegionsFromPathNames));
+            }
         };
     }
 
@@ -45,6 +60,24 @@ public partial class SettingsWindowViewModel : ObservableObject
     {
         get => _session.WallSimplificationTolerance;
         set => _session.WallSimplificationTolerance = value;
+    }
+
+    public bool DetectRegionsFromColorPaths
+    {
+        get => _session.DetectRegionsFromColorPaths;
+        set => _session.DetectRegionsFromColorPaths = value;
+    }
+
+    public bool DetectRegionsFromNamedContainers
+    {
+        get => _session.DetectRegionsFromNamedContainers;
+        set => _session.DetectRegionsFromNamedContainers = value;
+    }
+
+    public bool DetectRegionsFromPathNames
+    {
+        get => _session.DetectRegionsFromPathNames;
+        set => _session.DetectRegionsFromPathNames = value;
     }
 
     public bool ShowDebugPanel

@@ -9,12 +9,12 @@ namespace Brickwork.Composition;
 public static class ServiceFactory
 {
     public static IMapImporter CreateInkarnateImporter(
-        double? wallSimplificationTolerance = null)
+        InkarnateImportOptions? options = null)
     {
         var importer = new InkarnateImporter();
-        if (wallSimplificationTolerance is { } tolerance)
+        if (options is not null)
         {
-            importer.WallSimplificationTolerance = tolerance;
+            importer.Options = options;
         }
 
         return importer;
@@ -24,10 +24,18 @@ public static class ServiceFactory
 
     public static IMapImporter CreateImporterForPath(
         string path,
-        double? wallSimplificationTolerance = null) =>
+        InkarnateImportOptions? inkarnateOptions = null) =>
         UvttImporter.IsUvttPath(path)
             ? CreateUvttImporter()
-            : CreateInkarnateImporter(wallSimplificationTolerance);
+            : CreateInkarnateImporter(inkarnateOptions);
+
+    /// <summary>Backward-compatible overload used by older call sites and tests.</summary>
+    public static IMapImporter CreateImporterForPath(
+        string path,
+        double wallSimplificationTolerance) =>
+        CreateImporterForPath(
+            path,
+            new InkarnateImportOptions { WallSimplificationTolerance = wallSimplificationTolerance });
 
     public static IReadOnlyList<IMapImporter> CreateImporters() =>
         [CreateInkarnateImporter(), CreateUvttImporter()];

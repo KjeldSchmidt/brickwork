@@ -99,6 +99,12 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
         }
 
         context.WallsByEntityId[wall.EntityId] = wall;
+        var wallType = InkJsonReader.ReadString(entity, "wallType");
+        if (!string.IsNullOrWhiteSpace(wallType))
+        {
+            context.PathWallTypes[wall.EntityId] = wallType;
+        }
+
         var groupId = InkJsonReader.ReadInt(entity, "groupId");
         if (groupId is > 0)
         {

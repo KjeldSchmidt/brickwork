@@ -19,6 +19,9 @@ internal sealed class InkImportContext
 
     public Dictionary<string, MapLayer> LayersById { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Final Inkarnate path-v2 wallType per entity (color vs texture), after history updates.</summary>
+    public Dictionary<int, string> PathWallTypes { get; } = [];
+
     public void SyncWalls()
     {
         Map.Walls.Clear();

@@ -263,6 +263,19 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
                     }
 
                     break;
+                case "wallType":
+                    if (property.Value.ValueKind == JsonValueKind.String)
+                    {
+                        var wallType = property.Value.GetString();
+                        if (!string.IsNullOrWhiteSpace(wallType))
+                        {
+                            context.PathWallTypes[wall.EntityId] = wallType;
+                        }
+
+                        appliedKnownField = true;
+                    }
+
+                    break;
                 case "isVisible":
                     if (property.Value.ValueKind is JsonValueKind.True or JsonValueKind.False)
                     {

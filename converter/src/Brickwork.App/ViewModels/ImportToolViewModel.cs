@@ -6,6 +6,7 @@ using Dock.Model.Mvvm.Controls;
 using Brickwork.App.Views.Dialogs;
 using Brickwork.Composition;
 using Brickwork.Core.Services;
+using Brickwork.Inkarnate;
 
 namespace Brickwork.App.ViewModels;
 
@@ -120,7 +121,13 @@ public partial class ImportToolViewModel : Tool
             await using var input = File.OpenRead(path);
             var importer = ServiceFactory.CreateImporterForPath(
                 path,
-                _session.WallSimplificationTolerance);
+                new InkarnateImportOptions
+                {
+                    WallSimplificationTolerance = _session.WallSimplificationTolerance,
+                    DetectRegionsFromColorPaths = _session.DetectRegionsFromColorPaths,
+                    DetectRegionsFromNamedContainers = _session.DetectRegionsFromNamedContainers,
+                    DetectRegionsFromPathNames = _session.DetectRegionsFromPathNames,
+                });
             var map = await importer.ImportAsync(input).ConfigureAwait(true);
             map.SourceFileName = Path.GetFileName(path);
             _session.SourceFilePath = path;

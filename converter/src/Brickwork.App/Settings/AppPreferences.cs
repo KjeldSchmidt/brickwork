@@ -24,7 +24,10 @@ public sealed class AppPreferences
 
             if (args.PropertyName is nameof(EditorSession.WallSimplificationTolerance)
                 or nameof(EditorSession.ShowDebugPanel)
-                or nameof(EditorSession.FoundryMapsPath))
+                or nameof(EditorSession.FoundryMapsPath)
+                or nameof(EditorSession.DetectRegionsFromColorPaths)
+                or nameof(EditorSession.DetectRegionsFromNamedContainers)
+                or nameof(EditorSession.DetectRegionsFromPathNames))
             {
                 Save();
             }
@@ -41,6 +44,9 @@ public sealed class AppPreferences
             _session.WallSimplificationTolerance = settings.WallSimplificationTolerance;
             _session.ShowDebugPanel = settings.ShowDebugPanel;
             _session.FoundryMapsPath = settings.FoundryMapsPath ?? string.Empty;
+            _session.DetectRegionsFromColorPaths = settings.DetectRegionsFromColorPaths;
+            _session.DetectRegionsFromNamedContainers = settings.DetectRegionsFromNamedContainers;
+            _session.DetectRegionsFromPathNames = settings.DetectRegionsFromPathNames;
         }
         finally
         {
@@ -55,6 +61,9 @@ public sealed class AppPreferences
             WallSimplificationTolerance = _session.WallSimplificationTolerance,
             ShowDebugPanel = _session.ShowDebugPanel,
             FoundryMapsPath = _session.FoundryMapsPath,
+            DetectRegionsFromColorPaths = _session.DetectRegionsFromColorPaths,
+            DetectRegionsFromNamedContainers = _session.DetectRegionsFromNamedContainers,
+            DetectRegionsFromPathNames = _session.DetectRegionsFromPathNames,
         });
     }
 }

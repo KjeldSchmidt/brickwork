@@ -7,7 +7,9 @@ internal static class InkarnateDocumentParser
 {
     private static readonly InkTransactionRegistry Registry = InkTransactionRegistry.CreateDefault();
 
-    public static MapDocument Parse(JsonElement root)
+    public static MapDocument Parse(JsonElement root) => ParseWithHints(root).Map;
+
+    public static InkParseResult ParseWithHints(JsonElement root)
     {
         var map = new MapDocument
         {
@@ -48,7 +50,11 @@ internal static class InkarnateDocumentParser
             Transactions = context.Transactions.ToList(),
         };
 
-        return map;
+        return new InkParseResult
+        {
+            Map = map,
+            PathWallTypes = new Dictionary<int, string>(context.PathWallTypes),
+        };
     }
 
     private static SceneDimensions ReadSceneDimensions(JsonElement sceneElement)

@@ -31,6 +31,9 @@
     <None Include="..\..\..\resources\test-maps\basic-walls.ink" Link="resources\test-maps\basic-walls.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\resources\test-maps\basic-regions.ink" Link="resources\test-maps\basic-regions.ink">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="..\..\..\resources\test-maps\walls-with-history.ink" Link="resources\test-maps\walls-with-history.ink">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -16,6 +16,9 @@ public class AppSettingsStoreTests
 
         Assert.Equal(WallSimplificationSettings.DefaultToleranceSceneUnits, settings.WallSimplificationTolerance);
         Assert.False(settings.ShowDebugPanel);
+        Assert.True(settings.DetectRegionsFromColorPaths);
+        Assert.True(settings.DetectRegionsFromNamedContainers);
+        Assert.True(settings.DetectRegionsFromPathNames);
     }
 
     [Fact]
@@ -29,6 +32,9 @@ public class AppSettingsStoreTests
             WallSimplificationTolerance = 42.5,
             ShowDebugPanel = true,
             FoundryMapsPath = @"C:\FoundryVTT\Data\maps",
+            DetectRegionsFromColorPaths = false,
+            DetectRegionsFromNamedContainers = false,
+            DetectRegionsFromPathNames = true,
         });
 
         var loaded = store.Load();
@@ -36,6 +42,9 @@ public class AppSettingsStoreTests
         Assert.Equal(42.5, loaded.WallSimplificationTolerance);
         Assert.True(loaded.ShowDebugPanel);
         Assert.Equal(@"C:\FoundryVTT\Data\maps", loaded.FoundryMapsPath);
+        Assert.False(loaded.DetectRegionsFromColorPaths);
+        Assert.False(loaded.DetectRegionsFromNamedContainers);
+        Assert.True(loaded.DetectRegionsFromPathNames);
         Assert.True(File.Exists(store.SettingsFilePath));
     }
 

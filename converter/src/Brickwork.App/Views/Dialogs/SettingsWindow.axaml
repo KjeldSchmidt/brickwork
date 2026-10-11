@@ -88,6 +88,18 @@
                                    Value="{Binding WallSimplificationTolerance}"
                                    HorizontalAlignment="Left"
                                    Width="160" />
+                    <TextBlock Text="Region Detection"
+                               FontWeight="SemiBold"
+                               Margin="0,8,0,0" />
+                    <TextBlock Text="When opening an Inkarnate map, closed paths that look like regions can be imported as regions instead of walls."
+                               TextWrapping="Wrap"
+                               Opacity="0.75" />
+                    <CheckBox Content="Closed color paths (not texture/stamp)"
+                              IsChecked="{Binding DetectRegionsFromColorPaths}" />
+                    <CheckBox Content="Paths in region-named layers or groups"
+                              IsChecked="{Binding DetectRegionsFromNamedContainers}" />
+                    <CheckBox Content="Paths with region-like names"
+                              IsChecked="{Binding DetectRegionsFromPathNames}" />
                 </StackPanel>
 
                 <StackPanel Spacing="12" IsVisible="{Binding IsExportSelected}">
