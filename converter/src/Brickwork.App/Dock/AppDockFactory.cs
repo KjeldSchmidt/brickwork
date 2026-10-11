@@ -129,22 +129,23 @@ public sealed class AppDockFactory : Factory
 
         var leftSidebar = new ProportionalDock
         {
+            Column = 0,
             Orientation = Orientation.Vertical,
             VisibleDockables = CreateList<IDockable>(
                 importDock,
-                new ProportionalDockSplitter { CanResize = true, ResizePreview = true },
+                new ProportionalDockSplitter { CanResize = true, ResizePreview = false },
                 _wallsDock),
         };
 
         var toolsDock = new ToolDock
         {
+            Column = 1,
             ActiveDockable = toolPalette,
             VisibleDockables = CreateList<IDockable>(toolPalette),
             Alignment = Alignment.Left,
             GripMode = GripMode.Hidden,
             MinWidth = 40,
             MaxWidth = 40,
-            Proportion = 0.02,
         };
 
         var documentDock = new DocumentDock
@@ -155,19 +156,19 @@ public sealed class AppDockFactory : Factory
             CanCreateDocument = false,
         };
 
+        var leftChrome = new GridDock
+        {
+            Proportion = 0.28,
+            ColumnDefinitions = "*,40",
+            VisibleDockables = CreateList<IDockable>(leftSidebar, toolsDock),
+        };
+
         var mainLayout = new ProportionalDock
         {
             Orientation = Orientation.Horizontal,
             VisibleDockables = CreateList<IDockable>(
-                new ProportionalDock
-                {
-                    Proportion = 0.26,
-                    Orientation = Orientation.Vertical,
-                    VisibleDockables = CreateList<IDockable>(leftSidebar),
-                },
-                new ProportionalDockSplitter { CanResize = true, ResizePreview = true },
-                toolsDock,
-                new ProportionalDockSplitter { CanResize = true, ResizePreview = true },
+                leftChrome,
+                new ProportionalDockSplitter { CanResize = true, ResizePreview = false },
                 documentDock),
         };
 

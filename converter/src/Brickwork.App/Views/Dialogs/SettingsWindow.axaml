@@ -78,7 +78,7 @@
                     <TextBlock Text="Import" FontSize="18" FontWeight="SemiBold" />
                     <TextBlock Text="Wall simplification tolerance"
                                FontWeight="SemiBold" />
-                    <TextBlock Text="Applied when opening a source map. Lower values keep more detail; higher values remove more nodes."
+                    <TextBlock Text="Applied when opening a source map. Lower values keep more detail; higher values remove more noise."
                                TextWrapping="Wrap"
                                Opacity="0.75" />
                     <NumericUpDown Minimum="0"
