@@ -87,7 +87,7 @@ public static class FoundryRegionBuilder
         {
             RegionType.DifficultTerrain => "#cc7428",
             RegionType.GreaterDifficultTerrain => "#6d28cc",
-            _ => "#888888",
+            _ => "#1aa3a3",
         };
 
     private static int? WalkMovementCostFor(RegionType regionType) =>

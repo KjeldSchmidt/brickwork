@@ -512,6 +512,7 @@ public class FoundryExporterTests
         var other = Assert.Single(regions.EnumerateArray(), r => r.GetProperty("name").GetString() == "Other");
         Assert.Equal(1, other.GetProperty("shapes").GetArrayLength());
         Assert.Equal(0, other.GetProperty("behaviors").GetArrayLength());
+        Assert.Equal("#1aa3a3", other.GetProperty("color").GetString());
     }
 
     private static async Task<MapDocument> LoadPreparedBasicWallsMapAsync()

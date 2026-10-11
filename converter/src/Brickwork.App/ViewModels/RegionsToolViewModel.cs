@@ -107,7 +107,20 @@ public partial class RegionsToolViewModel : Tool
     public bool CanDelete(object? item) => item is RegionItemViewModel;
 
     public bool CanConvertToWall(object? item) =>
-        item is RegionItemViewModel regionItem && regionItem.Region.Points.Count >= 3;
+        GetConvertToWallTargets(item).Count > 0;
+
+    public IReadOnlyList<RegionItemViewModel> GetConvertToWallTargets(object? item)
+    {
+        if (item is not RegionItemViewModel)
+        {
+            return [];
+        }
+
+        return GetEditTargets(item)
+            .OfType<RegionItemViewModel>()
+            .Where(regionItem => regionItem.Region.Points.Count >= 3)
+            .ToList();
+    }
 
     public IReadOnlyList<object> GetEditTargets(object? item)
     {
@@ -161,25 +174,40 @@ public partial class RegionsToolViewModel : Tool
 
     public bool ConvertToWall(object? item)
     {
-        if (_session.Map is null || item is not RegionItemViewModel regionItem)
+        if (_session.Map is null)
         {
             return false;
         }
 
-        Wall? wall = null;
-        _session.Execute("Convert region to wall", () =>
+        var targets = GetConvertToWallTargets(item);
+        if (targets.Count == 0)
         {
-            RegionConversion.TryConvertRegionToWall(_session.Map, regionItem.Region, out wall);
-        });
+            return false;
+        }
 
-        if (wall is null)
+        var converted = new List<Wall>();
+        _session.Execute(
+            targets.Count == 1 ? "Convert region to wall" : "Convert regions to walls",
+            () =>
+            {
+                foreach (var regionItem in targets)
+                {
+                    if (RegionConversion.TryConvertRegionToWall(_session.Map, regionItem.Region, out var wall) &&
+                        wall is not null)
+                    {
+                        converted.Add(wall);
+                    }
+                }
+            });
+
+        if (converted.Count == 0)
         {
             return false;
         }
 
         ClearSelection();
         _session.ActiveMapTool = MapToolKind.WallEditing;
-        _session.RequestWallTreeFocus(wall);
+        _session.RequestWallTreeFocus(converted[^1]);
         return true;
     }
 

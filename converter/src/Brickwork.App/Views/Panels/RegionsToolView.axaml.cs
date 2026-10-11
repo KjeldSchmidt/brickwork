@@ -93,11 +93,16 @@ public partial class RegionsToolView : UserControl
     private void UpdateContextMenuHeaders(RegionsToolViewModel viewModel, object target)
     {
         var count = viewModel.GetEditTargets(target).Count;
-        var suffix = count > 1 ? $" ({count})" : string.Empty;
-        _renameMenuItem.Header = viewModel.CanRename(target) ? $"Rename{suffix}" : "Rename";
+        var convertCount = viewModel.GetConvertToWallTargets(target).Count;
+        _renameMenuItem.Header = viewModel.CanRename(target)
+            ? ContextMenuHeaders.Format("Rename", count)
+            : "Rename";
         _renameMenuItem.IsEnabled = viewModel.CanRename(target);
-        _convertMenuItem.IsEnabled = viewModel.CanConvertToWall(target) && count == 1;
-        _deleteMenuItem.Header = viewModel.CanDelete(target) ? $"Delete{suffix}" : "Delete";
+        _convertMenuItem.Header = ContextMenuHeaders.FormatConvert("Wall", convertCount);
+        _convertMenuItem.IsEnabled = convertCount > 0;
+        _deleteMenuItem.Header = viewModel.CanDelete(target)
+            ? ContextMenuHeaders.Format("Delete", count)
+            : "Delete";
         _deleteMenuItem.IsEnabled = viewModel.CanDelete(target);
     }
 

@@ -156,29 +156,57 @@ public partial class WallsToolViewModel : Tool
             or WallPortalItemViewModel;
 
     public bool CanConvertToRegion(object? item) =>
-        item is WallItemViewModel wallItem && wallItem.Wall.Points.Count >= 2;
+        GetConvertToRegionTargets(item).Count > 0;
+
+    public IReadOnlyList<WallItemViewModel> GetConvertToRegionTargets(object? item)
+    {
+        if (item is not WallItemViewModel)
+        {
+            return [];
+        }
+
+        return ResolveEditTargets(item)
+            .OfType<WallItemViewModel>()
+            .Where(wallItem => wallItem.Wall.Points.Count >= 2)
+            .ToList();
+    }
 
     public bool ConvertToRegion(object? item)
     {
-        if (_session.Map is null || item is not WallItemViewModel wallItem)
+        if (_session.Map is null)
         {
             return false;
         }
 
-        Region? region = null;
-        _session.Execute("Convert wall to region", () =>
+        var targets = GetConvertToRegionTargets(item);
+        if (targets.Count == 0)
         {
-            RegionConversion.TryConvertWallToRegion(_session.Map, wallItem.Wall, out region);
-        });
+            return false;
+        }
 
-        if (region is null)
+        var converted = new List<Region>();
+        _session.Execute(
+            targets.Count == 1 ? "Convert wall to region" : "Convert walls to regions",
+            () =>
+            {
+                foreach (var wallItem in targets)
+                {
+                    if (RegionConversion.TryConvertWallToRegion(_session.Map, wallItem.Wall, out var region) &&
+                        region is not null)
+                    {
+                        converted.Add(region);
+                    }
+                }
+            });
+
+        if (converted.Count == 0)
         {
             return false;
         }
 
         ClearSelection();
         _session.ActiveMapTool = MapToolKind.RegionEditing;
-        _session.RequestRegionTreeFocus(region);
+        _session.RequestRegionTreeFocus(converted[^1]);
         return true;
     }
 
