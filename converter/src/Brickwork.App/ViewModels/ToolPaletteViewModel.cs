@@ -19,7 +19,7 @@ public partial class ToolPaletteViewModel : Tool
                 MapToolKind.WallEditing,
                 "Wall Editing",
                 "V",
-                PackIconFontAwesome6Kind.PenSolid,
+                PackIconFontAwesome6Kind.DungeonSolid,
                 buttonHints:
                 [
                     new("Click Wall", "Change Wall Type"),
@@ -42,7 +42,7 @@ public partial class ToolPaletteViewModel : Tool
                 MapToolKind.RegionEditing,
                 "Region Editing",
                 "R",
-                PackIconFontAwesome6Kind.DrawPolygonSolid,
+                PackIconFontAwesome6Kind.HillRockslideSolid,
                 buttonHints:
                 [
                     new("Click Region", "Change Region Type"),
