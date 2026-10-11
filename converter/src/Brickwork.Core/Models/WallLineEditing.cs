@@ -40,7 +40,7 @@ public static class WallLineEditing
             return;
         }
 
-        portal.LineType = CyclePortalType(portal.LineType);
+        SetPortalLineType(portal, CyclePortalType(portal.LineType));
     }
 
     private static WallLineType CycleIn(WallLineType[] order, WallLineType current)
@@ -90,6 +90,32 @@ public static class WallLineEditing
         wall.LineType = WallLineType.Disabled;
     }
 
+    public static void SetPortalLineType(WallPortal portal, WallLineType lineType)
+    {
+        portal.LineType = lineType;
+        portal.IsActive = lineType != WallLineType.Disabled;
+    }
+
+    public static void SetPortalEnabled(WallPortal portal, bool enabled)
+    {
+        if (enabled)
+        {
+            portal.IsActive = true;
+            if (portal.LineType == WallLineType.Disabled)
+            {
+                portal.LineType = WallLineType.Door;
+            }
+
+            return;
+        }
+
+        portal.IsActive = false;
+        portal.LineType = WallLineType.Disabled;
+    }
+
+    public static bool IsPortalExportActive(WallPortal portal) =>
+        portal.IsActive && portal.LineType != WallLineType.Disabled;
+
     public static void ToggleActive(Wall wall, WallPortal? portal)
     {
         if (portal is null)
@@ -98,7 +124,7 @@ public static class WallLineEditing
             return;
         }
 
-        portal.IsActive = !portal.IsActive;
+        SetPortalEnabled(portal, !IsPortalExportActive(portal));
     }
 
     public static bool RemoveFromMap(MapDocument map, Wall wall)

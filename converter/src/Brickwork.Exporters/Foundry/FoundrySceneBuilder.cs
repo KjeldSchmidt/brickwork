@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Brickwork.Core.Export;
+using Brickwork.Core.Foundry;
 using Brickwork.Core.Models;
 
 namespace Brickwork.Exporters.Foundry;
@@ -24,8 +25,9 @@ internal static class FoundrySceneBuilder
         scene["width"] = preview.Width;
         scene["height"] = preview.Height;
 
-        var backgroundSrc = Path.ChangeExtension(map.SourceFileName ?? "map.ink", ".webp");
-        scene["levels"]![0]!["background"]!["src"] = backgroundSrc;
+        var backgroundSrc = FoundryPaths.BuildBackgroundSrc(map.FoundryMapsDirectory, map.SourceFileName);
+        scene["background"] = new JsonObject { ["src"] = backgroundSrc };
+        scene["thumb"] = backgroundSrc;
 
         var wallSegments = FoundryWallSegmentBuilder.BuildFromMap(map);
         scene["walls"] = new JsonArray(wallSegments.Select(ToWallJson).ToArray());

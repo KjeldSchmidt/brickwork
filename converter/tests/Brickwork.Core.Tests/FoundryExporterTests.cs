@@ -78,6 +78,40 @@ public class WallExportRunTests
     }
 
     [Fact]
+    public void BuildExportRuns_DisabledPortal_LeavesGapWithoutPortalRun()
+    {
+        var wall = new Wall
+        {
+            EntityId = 5,
+            Origin = new MapPoint(0, 0),
+            Scale = 1,
+            LineType = WallLineType.Solid,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(1000, 0),
+            ],
+            Portals =
+            [
+                new WallPortal
+                {
+                    Anchor = new MapPoint(500, 0),
+                    Width = 200,
+                    LineType = WallLineType.Disabled,
+                    // Stale flag as if type was set without syncing IsActive.
+                    IsActive = true,
+                },
+            ],
+        };
+
+        var runs = WallPathSegmentBuilder.BuildExportRuns(wall);
+
+        Assert.Equal(2, runs.Count);
+        Assert.All(runs, run => Assert.False(run.IsPortal));
+        Assert.All(runs, run => Assert.Equal(WallLineType.Solid, run.LineType));
+    }
+
+    [Fact]
     public void BuildExportRuns_InactiveWallWithActivePortal_StillProducesPortalRun()
     {
         var wall = new Wall
@@ -242,12 +276,14 @@ public class FoundryExporterTests
         Assert.Equal(map.Name, document.RootElement.GetProperty("name").GetString());
         Assert.Equal(2048, document.RootElement.GetProperty("width").GetInt32());
         Assert.Equal(1536, document.RootElement.GetProperty("height").GetInt32());
+        // Legacy root background.src — V14 migrateLevels copies this onto levels[0] on import.
         Assert.Equal(
             "basic-walls.webp",
-            document.RootElement.GetProperty("levels")[0]
-                .GetProperty("background")
-                .GetProperty("src")
-                .GetString());
+            document.RootElement.GetProperty("background").GetProperty("src").GetString());
+        Assert.Equal(
+            "basic-walls.webp",
+            document.RootElement.GetProperty("thumb").GetString());
+        Assert.False(document.RootElement.TryGetProperty("_stats", out _));
 
         var walls = document.RootElement.GetProperty("walls");
         Assert.True(walls.GetArrayLength() > 0);
@@ -404,6 +440,43 @@ public class FoundryExporterTests
 
         Assert.Single(segments, segment => segment.Door == 1);
         Assert.Equal(12, segments.Count(segment => segment.Sight == 10));
+    }
+
+    [Fact]
+    public async Task ExportAsync_UsesFoundryMapsDirectory_ForBackgroundSrc()
+    {
+        var map = await LoadPreparedBasicWallsMapAsync();
+        var data = Path.Combine(Path.GetTempPath(), "brickwork-foundry-export-" + Guid.NewGuid().ToString("N"), "Data");
+        var maps = Path.Combine(data, "maps");
+        Directory.CreateDirectory(maps);
+        map.FoundryMapsDirectory = maps;
+
+        try
+        {
+            await using var output = new MemoryStream();
+            await ServiceFactory.CreateConvertMapService()
+                .ConvertAsync(map, output, "foundry");
+
+            output.Position = 0;
+            using var document = await JsonDocument.ParseAsync(output);
+            Assert.Equal(
+                "maps/basic-walls.webp",
+                document.RootElement.GetProperty("background").GetProperty("src").GetString());
+            Assert.Equal(
+                "maps/basic-walls.webp",
+                document.RootElement.GetProperty("thumb").GetString());
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(Path.GetDirectoryName(data)!, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup.
+            }
+        }
     }
 
     [Fact]

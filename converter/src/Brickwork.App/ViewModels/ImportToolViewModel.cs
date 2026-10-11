@@ -165,6 +165,9 @@ public partial class ImportToolViewModel : Tool
         try
         {
             _session.Map!.SourceFileName ??= _session.SourceFileName;
+            _session.Map.FoundryMapsDirectory = string.IsNullOrWhiteSpace(_session.FoundryMapsPath)
+                ? null
+                : _session.FoundryMapsPath;
 
             await using var output = File.Create(outputPath);
             await _convertMapService

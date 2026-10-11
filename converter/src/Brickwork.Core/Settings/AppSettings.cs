@@ -1,3 +1,4 @@
+using Brickwork.Core.Foundry;
 using Brickwork.Core.Geometry;
 
 namespace Brickwork.Core.Settings;
@@ -9,6 +10,6 @@ public sealed class AppSettings
 
     public bool ShowDebugPanel { get; set; }
 
-    /// <summary>Placeholder for a future Foundry maps directory preference.</summary>
-    public string FoundryMapsPath { get; set; } = string.Empty;
+    /// <summary>Absolute Foundry maps folder; used as the base for Foundry background.src paths.</summary>
+    public string FoundryMapsPath { get; set; } = FoundryPaths.TryGetPreferredMapsDirectory() ?? string.Empty;
 }

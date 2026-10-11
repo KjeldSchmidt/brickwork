@@ -273,7 +273,11 @@ public static class WallPathSegmentBuilder
                          totalLength,
                          wall.IsClosed))
             {
-                intervals.Add(new PortalInterval(start, end, portal.LineType, portal.IsActive));
+                intervals.Add(new PortalInterval(
+                    start,
+                    end,
+                    portal.LineType,
+                    WallLineEditing.IsPortalExportActive(portal)));
             }
         }
 

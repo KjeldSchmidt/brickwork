@@ -1,5 +1,8 @@
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Brickwork.Core.Foundry;
 
 namespace Brickwork.App.ViewModels;
 
@@ -66,6 +69,46 @@ public partial class SettingsWindowViewModel : ObservableObject
 
     [RelayCommand]
     private void SelectGeneral() => SelectCategory(SettingsCategory.General);
+
+    [RelayCommand]
+    private async Task BrowseFoundryMapsPathAsync()
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+            desktop.MainWindow?.StorageProvider is not { } storageProvider)
+        {
+            return;
+        }
+
+        IStorageFolder? startLocation = null;
+        var startPath = !string.IsNullOrWhiteSpace(FoundryMapsPath) && Directory.Exists(FoundryMapsPath)
+            ? FoundryMapsPath
+            : FoundryPaths.TryGetPreferredMapsDirectory()
+              ?? FoundryPaths.TryGetDefaultDataDirectory()
+              ?? FoundryPaths.TryGetDefaultUserDataDirectory();
+
+        if (!string.IsNullOrWhiteSpace(startPath) && Directory.Exists(startPath))
+        {
+            startLocation = await storageProvider.TryGetFolderFromPathAsync(startPath).ConfigureAwait(true);
+        }
+
+        var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select Foundry maps folder",
+            AllowMultiple = false,
+            SuggestedStartLocation = startLocation,
+        }).ConfigureAwait(true);
+
+        if (folders.Count == 0)
+        {
+            return;
+        }
+
+        var path = folders[0].TryGetLocalPath();
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            FoundryMapsPath = path;
+        }
+    }
 
     partial void OnSelectedCategoryChanged(SettingsCategory value)
     {

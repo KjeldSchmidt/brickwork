@@ -1905,19 +1905,21 @@ public partial class WallPortalItemViewModel : ObservableObject
 
     public bool IsActive
     {
-        get => Portal.IsActive;
+        get => WallLineEditing.IsPortalExportActive(Portal);
         set
         {
-            if (Portal.IsActive == value)
+            var enabled = WallLineEditing.IsPortalExportActive(Portal);
+            if (enabled == value)
             {
                 return;
             }
 
-            _session.Execute("Set portal active", () =>
+            _session.Execute(value ? "Enable portal" : "Disable portal", () =>
             {
-                Portal.IsActive = value;
+                WallLineEditing.SetPortalEnabled(Portal, value);
             });
             OnPropertyChanged();
+            OnPropertyChanged(nameof(LineType));
         }
     }
 
@@ -1946,10 +1948,11 @@ public partial class WallPortalItemViewModel : ObservableObject
                 {
                     foreach (var portalItem in targets)
                     {
-                        portalItem.Portal.LineType = value.Value;
+                        WallLineEditing.SetPortalLineType(portalItem.Portal, value.Value);
                     }
                 });
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsActive));
         }
     }
 
@@ -2010,7 +2013,7 @@ internal static class WallTreeActiveState
                     WallLineEditing.SetWallEnabled(wall.Wall, enabled);
                     foreach (var portal in wall.Wall.Portals)
                     {
-                        portal.IsActive = enabled;
+                        WallLineEditing.SetPortalEnabled(portal, enabled);
                     }
 
                     break;
@@ -2035,7 +2038,7 @@ internal static class WallTreeActiveState
                     yield return wall.Wall.IsActive && wall.Wall.LineType != WallLineType.Disabled;
                     foreach (var portal in wall.Wall.Portals)
                     {
-                        yield return portal.IsActive;
+                        yield return WallLineEditing.IsPortalExportActive(portal);
                     }
 
                     break;

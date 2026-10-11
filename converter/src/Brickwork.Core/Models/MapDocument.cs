@@ -19,6 +19,12 @@ public sealed class MapDocument
     /// <summary>Original input file name (e.g. <c>basic-walls.ink</c>), used by exporters for asset paths.</summary>
     public string? SourceFileName { get; set; }
 
+    /// <summary>
+    /// Absolute folder where Foundry map images live. Used to build <c>background.src</c>
+    /// relative to the Foundry Data root.
+    /// </summary>
+    public string? FoundryMapsDirectory { get; set; }
+
     public GridInfo Grid { get; set; } = new();
 
     public IList<MapLayer> Layers { get; init; } = [];

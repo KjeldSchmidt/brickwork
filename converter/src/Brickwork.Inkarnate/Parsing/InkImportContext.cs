@@ -176,7 +176,7 @@ internal sealed class InkImportContext
         WallLineEditing.SetWallEnabled(wall, isActive);
         foreach (var portal in wall.Portals)
         {
-            portal.IsActive = isActive;
+            WallLineEditing.SetPortalEnabled(portal, isActive);
         }
     }
 

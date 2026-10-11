@@ -122,6 +122,48 @@ public class WallLineEditingTests
         Assert.Equal(WallLineType.Terrain, terrain.LineType);
         Assert.Equal(WallLineEditing.DefaultTerrainWallThickness, terrain.WallThickness);
     }
+
+    [Fact]
+    public void SetPortalLineType_Disabled_ClearsIsActive()
+    {
+        var portal = new WallPortal { LineType = WallLineType.Door, IsActive = true };
+
+        WallLineEditing.SetPortalLineType(portal, WallLineType.Disabled);
+
+        Assert.False(portal.IsActive);
+        Assert.Equal(WallLineType.Disabled, portal.LineType);
+        Assert.False(WallLineEditing.IsPortalExportActive(portal));
+    }
+
+    [Fact]
+    public void SetPortalEnabled_SyncsLineTypeWithCheckbox()
+    {
+        var portal = new WallPortal { LineType = WallLineType.SecretDoor, IsActive = true };
+
+        WallLineEditing.SetPortalEnabled(portal, enabled: false);
+        Assert.False(portal.IsActive);
+        Assert.Equal(WallLineType.Disabled, portal.LineType);
+
+        WallLineEditing.SetPortalEnabled(portal, enabled: true);
+        Assert.True(portal.IsActive);
+        Assert.Equal(WallLineType.Door, portal.LineType);
+    }
+
+    [Fact]
+    public void CycleType_PortalToDisabled_ClearsIsActive()
+    {
+        var wall = new Wall
+        {
+            EntityId = 5,
+            LineType = WallLineType.Solid,
+            Portals = [new WallPortal { Id = "gap-1", LineType = WallLineType.Window, IsActive = true }],
+        };
+
+        WallLineEditing.CycleType(wall, wall.Portals[0]);
+
+        Assert.Equal(WallLineType.Disabled, wall.Portals[0].LineType);
+        Assert.False(wall.Portals[0].IsActive);
+    }
 }
 
 public class WallHitTesterTests
