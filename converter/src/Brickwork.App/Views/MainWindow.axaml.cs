@@ -110,6 +110,40 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Menu HotKey/KeyBindings can miss when focus is in dock content; handle here too.
+        if (IsPrimaryModifier(e.KeyModifiers) && e.Key == Key.O && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+        {
+            if (viewModel.OpenSourceMapCommand.CanExecute(null))
+            {
+                viewModel.OpenSourceMapCommand.Execute(null);
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        if (IsPrimaryModifier(e.KeyModifiers) && e.Key == Key.E && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+        {
+            if (viewModel.ExportCommand.CanExecute(null))
+            {
+                viewModel.ExportCommand.Execute(null);
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        if (IsPrimaryModifier(e.KeyModifiers) && e.Key == Key.OemComma)
+        {
+            if (viewModel.OpenSettingsCommand.CanExecute(null))
+            {
+                viewModel.OpenSettingsCommand.Execute(null);
+                e.Handled = true;
+            }
+
+            return;
+        }
+
         if (e.KeyModifiers != KeyModifiers.None)
         {
             return;

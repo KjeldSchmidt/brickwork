@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Brickwork.App.ViewModels"
+        x:Class="Brickwork.App.Views.Dialogs.AboutWindow"
+        x:DataType="vm:AboutWindowViewModel"
+        Title="About Brickwork"
+        Width="420"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+    <StackPanel Margin="24" Spacing="14">
+        <TextBlock Text="{Binding AppVersionLabel}"
+                   FontSize="18"
+                   FontWeight="SemiBold" />
+        <TextBlock Text="Convert Inkarnate maps for virtual tabletops."
+                   TextWrapping="Wrap"
+                   Opacity="0.85" />
+        <Button Content="{Binding RepositoryUrl}"
+                Classes="muted"
+                HorizontalAlignment="Left"
+                Command="{Binding OpenRepositoryCommand}" />
+        <Button Content="Close"
+                HorizontalAlignment="Right"
+                MinWidth="88"
+                Click="OnCloseClick" />
+    </StackPanel>
+</Window>

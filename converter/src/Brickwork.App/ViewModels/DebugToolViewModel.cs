@@ -7,7 +7,7 @@ using Brickwork.Core.Models;
 
 namespace Brickwork.App.ViewModels;
 
-public partial class SettingsToolViewModel : Tool
+public partial class DebugToolViewModel : Tool
 {
     private readonly EditorSession _session;
 
@@ -38,16 +38,11 @@ public partial class SettingsToolViewModel : Tool
     [ObservableProperty]
     private string _selectedWallSummary = "Click a wall in the map or walls tree to inspect it.";
 
-    public SettingsToolViewModel(EditorSession session)
+    public DebugToolViewModel(EditorSession session)
     {
         _session = session;
         _session.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName is nameof(EditorSession.WallSimplificationTolerance))
-            {
-                OnPropertyChanged(nameof(WallSimplificationTolerance));
-            }
-
             if (args.PropertyName is nameof(EditorSession.Map) or nameof(EditorSession.SourceFilePath))
             {
                 RefreshFromSession();
@@ -62,14 +57,6 @@ public partial class SettingsToolViewModel : Tool
         };
         RefreshFromSession();
         RefreshSelectedWall();
-    }
-
-    public string AppVersionLabel => $"Brickwork {GitHubIssueReporter.GetAppVersion()}";
-
-    public double WallSimplificationTolerance
-    {
-        get => _session.WallSimplificationTolerance;
-        set => _session.WallSimplificationTolerance = value;
     }
 
     [RelayCommand(CanExecute = nameof(CanReportCompatibilityIssue))]

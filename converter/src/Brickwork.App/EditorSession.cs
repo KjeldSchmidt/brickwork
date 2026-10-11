@@ -56,6 +56,12 @@ public sealed partial class EditorSession : ObservableObject
     private double _wallSimplificationTolerance = WallSimplificationSettings.DefaultToleranceSceneUnits;
 
     [ObservableProperty]
+    private bool _showDebugPanel;
+
+    [ObservableProperty]
+    private string _foundryMapsPath = string.Empty;
+
+    [ObservableProperty]
     private MapToolKind _activeMapTool = MapToolKind.WallEditing;
 
     [ObservableProperty]

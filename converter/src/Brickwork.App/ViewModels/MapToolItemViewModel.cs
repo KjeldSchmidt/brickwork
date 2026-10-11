@@ -1,5 +1,6 @@
 using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
+using IconPacks.Avalonia.FontAwesome6;
 
 namespace Brickwork.App.ViewModels;
 
@@ -9,7 +10,7 @@ public sealed partial class MapToolItemViewModel : ObservableObject
         MapToolKind kind,
         string name,
         string hotkey,
-        string iconGeometry,
+        PackIconFontAwesome6Kind iconKind,
         string? description = null,
         IReadOnlyList<MapToolButtonHint>? buttonHints = null,
         Thickness? iconMargin = null)
@@ -17,7 +18,7 @@ public sealed partial class MapToolItemViewModel : ObservableObject
         Kind = kind;
         Name = name;
         Hotkey = hotkey;
-        IconGeometry = iconGeometry;
+        IconKind = iconKind;
         Description = description;
         ButtonHints = buttonHints ?? [];
         IconMargin = iconMargin ?? default;
@@ -29,7 +30,7 @@ public sealed partial class MapToolItemViewModel : ObservableObject
 
     public string Hotkey { get; }
 
-    public string IconGeometry { get; }
+    public PackIconFontAwesome6Kind IconKind { get; }
 
     public Thickness IconMargin { get; }
 

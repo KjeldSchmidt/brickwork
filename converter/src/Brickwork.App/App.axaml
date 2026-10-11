@@ -17,8 +17,8 @@
         <DataTemplate DataType="vm:RegionsToolViewModel">
             <panels:RegionsToolView />
         </DataTemplate>
-        <DataTemplate DataType="vm:SettingsToolViewModel">
-            <panels:SettingsToolView />
+        <DataTemplate DataType="vm:DebugToolViewModel">
+            <panels:DebugToolView />
         </DataTemplate>
         <DataTemplate DataType="vm:ToolPaletteViewModel">
             <panels:ToolPaletteView />
@@ -31,10 +31,28 @@
     <Application.Styles>
         <semi:SemiTheme Locale="en-US" />
         <dock:DockFluentTheme />
+        <StyleInclude Source="avares://IconPacks.Avalonia.FontAwesome6/FontAwesome6.axaml" />
 
         <Style Selector="ScrollViewer.tool-panel-scroll">
             <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
             <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        </Style>
+
+        <!-- Light Fluent-ish main menu bar (Avalonia Menu, not OS-native). -->
+        <Style Selector="Menu.main-menu">
+            <Setter Property="Background" Value="#1E2128" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="MinHeight" Value="28" />
+        </Style>
+
+        <Style Selector="Menu.main-menu > MenuItem">
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+
+        <Style Selector="Button.settings-gear">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
         <Style Selector="ToolTabStrip">

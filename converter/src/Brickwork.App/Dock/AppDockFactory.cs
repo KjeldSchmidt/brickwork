@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Dock.Model.Controls;
 using Dock.Model.Core;
 using Dock.Model.Mvvm;
@@ -15,11 +16,15 @@ public sealed class AppDockFactory : Factory
 
     private readonly EditorSession _session;
     private IRootDock? _rootDock;
+    private ToolDock? _wallsDock;
+    private DebugToolViewModel? _debugTool;
 
     public AppDockFactory(EditorSession session)
     {
         _session = session;
     }
+
+    public ImportToolViewModel? ImportTool { get; private set; }
 
     public override IRootDock CreateLayout()
     {
@@ -30,6 +35,7 @@ public sealed class AppDockFactory : Factory
             CanClose = false,
             CanPin = true,
         };
+        ImportTool = importTool;
 
         var wallsTool = new WallsToolViewModel(_session)
         {
@@ -47,10 +53,10 @@ public sealed class AppDockFactory : Factory
             CanPin = true,
         };
 
-        var settingsTool = new SettingsToolViewModel(_session)
+        _debugTool = new DebugToolViewModel(_session)
         {
-            Id = "SettingsTool",
-            Title = "Debug + Settings",
+            Id = "DebugTool",
+            Title = "Debug",
             CanClose = false,
             CanPin = true,
         };
@@ -82,10 +88,16 @@ public sealed class AppDockFactory : Factory
             Proportion = FileDockCompactProportion,
         };
 
-        var wallsDock = new ToolDock
+        var wallsDockables = new ObservableCollection<IDockable> { wallsTool, regionsTool };
+        if (_session.ShowDebugPanel)
+        {
+            wallsDockables.Add(_debugTool);
+        }
+
+        _wallsDock = new ToolDock
         {
             ActiveDockable = wallsTool,
-            VisibleDockables = CreateList<IDockable>(wallsTool, regionsTool, settingsTool),
+            VisibleDockables = wallsDockables,
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible,
             Proportion = WallsDockCompactProportion,
@@ -94,22 +106,25 @@ public sealed class AppDockFactory : Factory
         importTool.FileDockExpandedChanged = expanded =>
         {
             importDock.Proportion = expanded ? FileDockExpandedProportion : FileDockCompactProportion;
-            wallsDock.Proportion = expanded ? WallsDockExpandedProportion : WallsDockCompactProportion;
+            _wallsDock.Proportion = expanded ? WallsDockExpandedProportion : WallsDockCompactProportion;
         };
 
         _session.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName is not nameof(EditorSession.ActiveMapTool))
+            if (args.PropertyName is nameof(EditorSession.ActiveMapTool))
             {
-                return;
+                _wallsDock.ActiveDockable = _session.ActiveMapTool switch
+                {
+                    MapToolKind.WallEditing => wallsTool,
+                    MapToolKind.RegionEditing => regionsTool,
+                    _ => _wallsDock.ActiveDockable,
+                };
             }
 
-            wallsDock.ActiveDockable = _session.ActiveMapTool switch
+            if (args.PropertyName is nameof(EditorSession.ShowDebugPanel))
             {
-                MapToolKind.WallEditing => wallsTool,
-                MapToolKind.RegionEditing => regionsTool,
-                _ => wallsDock.ActiveDockable,
-            };
+                ApplyDebugPanelVisibility();
+            }
         };
 
         var leftSidebar = new ProportionalDock
@@ -118,7 +133,7 @@ public sealed class AppDockFactory : Factory
             VisibleDockables = CreateList<IDockable>(
                 importDock,
                 new ProportionalDockSplitter { CanResize = true, ResizePreview = true },
-                wallsDock),
+                _wallsDock),
         };
 
         var toolsDock = new ToolDock
@@ -173,7 +188,7 @@ public sealed class AppDockFactory : Factory
             ["ImportTool"] = () => _session,
             ["WallsTool"] = () => _session,
             ["RegionsTool"] = () => _session,
-            ["SettingsTool"] = () => _session,
+            ["DebugTool"] = () => _session,
             ["ToolPalette"] = () => _session,
             ["MapPreview"] = () => _session,
             ["Root"] = () => layout,
@@ -185,5 +200,30 @@ public sealed class AppDockFactory : Factory
         };
 
         base.InitLayout(layout);
+    }
+
+    private void ApplyDebugPanelVisibility()
+    {
+        if (_wallsDock?.VisibleDockables is null || _debugTool is null)
+        {
+            return;
+        }
+
+        var dockables = _wallsDock.VisibleDockables;
+        var isPresent = dockables.Contains(_debugTool);
+
+        if (_session.ShowDebugPanel && !isPresent)
+        {
+            dockables.Add(_debugTool);
+        }
+        else if (!_session.ShowDebugPanel && isPresent)
+        {
+            if (ReferenceEquals(_wallsDock.ActiveDockable, _debugTool))
+            {
+                _wallsDock.ActiveDockable = dockables.FirstOrDefault(d => !ReferenceEquals(d, _debugTool));
+            }
+
+            dockables.Remove(_debugTool);
+        }
     }
 }

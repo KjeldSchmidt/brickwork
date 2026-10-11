@@ -1,7 +1,9 @@
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Mvvm.Controls;
+using Brickwork.App.Views.Dialogs;
 using Brickwork.Composition;
 using Brickwork.Core.Services;
 
@@ -40,6 +42,23 @@ public partial class ImportToolViewModel : Tool
                 UpdateCompatibilityWarning();
             }
         };
+    }
+
+    [RelayCommand]
+    private void OpenImportSettings() => ShowSettings(SettingsCategory.Import);
+
+    [RelayCommand]
+    private void OpenExportSettings() => ShowSettings(SettingsCategory.Export);
+
+    private void ShowSettings(SettingsCategory category)
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+            desktop.MainWindow is null)
+        {
+            return;
+        }
+
+        SettingsWindow.Show(desktop.MainWindow, _session, category);
     }
 
     [RelayCommand(CanExecute = nameof(CanReportCompatibilityIssue))]

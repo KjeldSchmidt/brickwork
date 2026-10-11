@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace Brickwork.App.Views.Panels;
 
-public partial class SettingsToolView : UserControl
+public partial class DebugToolView : UserControl
 {
-    public SettingsToolView()
+    public DebugToolView()
     {
         InitializeComponent();
     }

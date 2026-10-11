@@ -1,30 +1,13 @@
 using System.Collections.ObjectModel;
-using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Mvvm.Controls;
+using IconPacks.Avalonia.FontAwesome6;
 
 namespace Brickwork.App.ViewModels;
 
 public partial class ToolPaletteViewModel : Tool
 {
-    // Pen / path edit glyph (viewBox ~0 0 24 24).
-    private const string WallEditingIconGeometry =
-        "M3 17.5 L3 21 L6.5 21 L17.5 10 L14 6.5 Z M18.5 9 L21 6.5 L17.5 3 L15 5.5 Z";
-
-    // Closed region / polygon glyph.
-    private const string RegionEditingIconGeometry =
-        "M4 8 L12 3 L20 8 L17 18 L7 18 Z";
-
-    private const string EraserIconGeometry =
-        "M16.2 3.2 L20.8 7.8 C21.5 8.5 21.5 9.6 20.8 10.3 L10.3 20.8 C9.9 21.2 9.4 21.4 8.8 21.4 H3.6 V16.2 C3.6 15.6 3.8 15.1 4.2 14.7 L14.7 4.2 C15.4 3.5 16.5 3.5 17.2 4.2 Z M6.4 16.6 L14.4 8.6";
-
-    private const string UndoIconGeometry =
-        "M12.5 5.5 C8.4 5.5 5 8.9 5 13 H2.5 L6.5 18 L10.5 13 H8 C8 10.5 10 8.5 12.5 8.5 C15 8.5 17 10.5 17 13 H20 C20 8.9 16.6 5.5 12.5 5.5 Z";
-
-    private const string RedoIconGeometry =
-        "M11.5 5.5 C15.6 5.5 19 8.9 19 13 H21.5 L17.5 18 L13.5 13 H16 C16 10.5 14 8.5 11.5 8.5 C9 8.5 7 10.5 7 13 H4 C4 8.9 7.4 5.5 11.5 5.5 Z";
-
     private readonly EditorSession _session;
 
     public ToolPaletteViewModel(EditorSession session)
@@ -36,7 +19,7 @@ public partial class ToolPaletteViewModel : Tool
                 MapToolKind.WallEditing,
                 "Wall Editing",
                 "V",
-                WallEditingIconGeometry,
+                PackIconFontAwesome6Kind.PenSolid,
                 buttonHints:
                 [
                     new("Click Wall", "Change Wall Type"),
@@ -54,13 +37,12 @@ public partial class ToolPaletteViewModel : Tool
                     new("Ctrl+C / X / V", "Copy / Cut / Paste"),
                     new("Delete", "Delete Selection"),
                     new("Right-Drag", "Pan Map"),
-                ],
-                iconMargin: new Thickness(2, 1, 0, 0)),
+                ]),
             new MapToolItemViewModel(
                 MapToolKind.RegionEditing,
                 "Region Editing",
                 "R",
-                RegionEditingIconGeometry,
+                PackIconFontAwesome6Kind.DrawPolygonSolid,
                 buttonHints:
                 [
                     new("Click Region", "Change Region Type"),
@@ -76,19 +58,17 @@ public partial class ToolPaletteViewModel : Tool
                     new("Ctrl+C / X / V", "Copy / Cut / Paste"),
                     new("Delete", "Delete Selection"),
                     new("Right-Drag", "Pan Map"),
-                ],
-                iconMargin: new Thickness(1, 1, 0, 0)),
+                ]),
             new MapToolItemViewModel(
                 MapToolKind.Eraser,
                 "Eraser",
                 "E",
-                EraserIconGeometry,
+                PackIconFontAwesome6Kind.EraserSolid,
                 buttonHints:
                 [
                     new("Click Wall or Region", "Delete"),
                     new("Right-Drag", "Pan Map"),
-                ],
-                iconMargin: new Thickness(1, 1, 0, 0)),
+                ]),
         ];
 
         SyncSelectionFromSession();
@@ -112,9 +92,9 @@ public partial class ToolPaletteViewModel : Tool
 
     public ObservableCollection<MapToolItemViewModel> Tools { get; }
 
-    public string UndoIconGeometryData => UndoIconGeometry;
+    public PackIconFontAwesome6Kind UndoIconKind => PackIconFontAwesome6Kind.ArrowRotateLeftSolid;
 
-    public string RedoIconGeometryData => RedoIconGeometry;
+    public PackIconFontAwesome6Kind RedoIconKind => PackIconFontAwesome6Kind.ArrowRotateRightSolid;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UndoCommand))]

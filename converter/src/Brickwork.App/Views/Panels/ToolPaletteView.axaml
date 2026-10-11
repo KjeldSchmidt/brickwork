@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
              xmlns:vm="using:Brickwork.App.ViewModels"
              x:Class="Brickwork.App.Views.Panels.ToolPaletteView"
              x:DataType="vm:ToolPaletteViewModel"
@@ -27,11 +28,10 @@
                     IsEnabled="{Binding CanUndo}"
                     Command="{Binding UndoCommand}"
                     ToolTip.Tip="{Binding UndoToolTip}">
-                <Path Width="16"
-                      Height="16"
-                      Stretch="Uniform"
-                      Fill="{Binding $parent[Button].Foreground}"
-                      Data="{Binding UndoIconGeometryData}" />
+                <iconPacks:PackIconFontAwesome6 Width="16"
+                                                Height="16"
+                                                Kind="{Binding UndoIconKind}"
+                                                Foreground="{Binding $parent[Button].Foreground}" />
             </Button>
             <Button Classes="tool-palette-button"
                     Width="32"
@@ -42,11 +42,10 @@
                     IsEnabled="{Binding CanRedo}"
                     Command="{Binding RedoCommand}"
                     ToolTip.Tip="{Binding RedoToolTip}">
-                <Path Width="16"
-                      Height="16"
-                      Stretch="Uniform"
-                      Fill="{Binding $parent[Button].Foreground}"
-                      Data="{Binding RedoIconGeometryData}" />
+                <iconPacks:PackIconFontAwesome6 Width="16"
+                                                Height="16"
+                                                Kind="{Binding RedoIconKind}"
+                                                Foreground="{Binding $parent[Button].Foreground}" />
             </Button>
         </StackPanel>
 
@@ -69,12 +68,11 @@
                             HorizontalAlignment="Center"
                             Command="{Binding $parent[ItemsControl].((vm:ToolPaletteViewModel)DataContext).SelectToolCommand}"
                             CommandParameter="{Binding Kind}">
-                        <Path Width="16"
-                              Height="16"
-                              Margin="{Binding IconMargin}"
-                              Stretch="Uniform"
-                              Fill="{Binding $parent[Button].Foreground}"
-                              Data="{Binding IconGeometry}" />
+                        <iconPacks:PackIconFontAwesome6 Width="16"
+                                                        Height="16"
+                                                        Margin="{Binding IconMargin}"
+                                                        Kind="{Binding IconKind}"
+                                                        Foreground="{Binding $parent[Button].Foreground}" />
                         <ToolTip.Tip>
                             <StackPanel Spacing="8" MaxWidth="280">
                                 <StackPanel Orientation="Horizontal" Spacing="8">

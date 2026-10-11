@@ -15,5 +15,37 @@
         <vm:MainWindowViewModel />
     </Design.DataContext>
 
-    <dock:DockControl Layout="{Binding Layout}" />
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenSourceMapCommand}" />
+        <KeyBinding Gesture="Ctrl+E" Command="{Binding ExportCommand}" />
+        <KeyBinding Gesture="Ctrl+OemComma" Command="{Binding OpenSettingsCommand}" />
+    </Window.KeyBindings>
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top" Classes="main-menu">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open…"
+                          InputGesture="Ctrl+O"
+                          HotKey="Ctrl+O"
+                          Command="{Binding OpenSourceMapCommand}" />
+                <MenuItem Header="_Export…"
+                          InputGesture="Ctrl+E"
+                          HotKey="Ctrl+E"
+                          Command="{Binding ExportCommand}" />
+                <MenuItem Header="_Settings…"
+                          InputGesture="Ctrl+,"
+                          HotKey="Ctrl+OemComma"
+                          Command="{Binding OpenSettingsCommand}" />
+                <Separator />
+                <MenuItem Header="E_xit"
+                          Command="{Binding ExitCommand}" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About Brickwork"
+                          Command="{Binding AboutCommand}" />
+            </MenuItem>
+        </Menu>
+
+        <dock:DockControl Layout="{Binding Layout}" />
+    </DockPanel>
 </Window>

@@ -1,0 +1,116 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Brickwork.App.ViewModels"
+        x:Class="Brickwork.App.Views.Dialogs.SettingsWindow"
+        x:DataType="vm:SettingsWindowViewModel"
+        Title="Settings"
+        Width="840"
+        Height="420"
+        MinWidth="720"
+        MinHeight="320"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+    <Window.Styles>
+        <Style Selector="Button.settings-nav">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="#C8D0DC" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.settings-nav /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="Button.settings-nav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#353945" />
+            <Setter Property="Foreground" Value="#E8EEF5" />
+        </Style>
+        <Style Selector="Button.settings-nav:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#3D4452" />
+        </Style>
+        <Style Selector="Button.settings-nav.active">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="Button.settings-nav.active /template/ ContentPresenter">
+            <Setter Property="Background" Value="#3D4656" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="Button.settings-nav.active:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#4A5364" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+    </Window.Styles>
+
+    <Grid ColumnDefinitions="160,*">
+        <Border Background="#252830"
+                BorderBrush="#4A5364"
+                BorderThickness="0,0,1,0"
+                Padding="8">
+            <StackPanel Spacing="2">
+                <Button Content="Import"
+                        Classes="settings-nav"
+                        Classes.active="{Binding IsImportSelected}"
+                        Command="{Binding SelectImportCommand}" />
+                <Button Content="Export"
+                        Classes="settings-nav"
+                        Classes.active="{Binding IsExportSelected}"
+                        Command="{Binding SelectExportCommand}" />
+                <Button Content="General"
+                        Classes="settings-nav"
+                        Classes.active="{Binding IsGeneralSelected}"
+                        Command="{Binding SelectGeneralCommand}" />
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Column="1"
+                      Margin="16"
+                      VerticalScrollBarVisibility="Auto">
+            <Panel>
+                <StackPanel Spacing="12" IsVisible="{Binding IsImportSelected}">
+                    <TextBlock Text="Import" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Text="Wall simplification tolerance"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Applied when opening a source map. Lower values keep more detail; higher values remove more nodes."
+                               TextWrapping="Wrap"
+                               Opacity="0.75" />
+                    <NumericUpDown Minimum="0"
+                                   Maximum="500"
+                                   Increment="1"
+                                   FormatString="0.##"
+                                   Value="{Binding WallSimplificationTolerance}"
+                                   HorizontalAlignment="Left"
+                                   Width="160" />
+                </StackPanel>
+
+                <StackPanel Spacing="12" IsVisible="{Binding IsExportSelected}">
+                    <TextBlock Text="Export" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Text="Foundry maps path"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Placeholder for a future default Foundry maps directory."
+                               TextWrapping="Wrap"
+                               Opacity="0.75" />
+                    <TextBox Text="{Binding FoundryMapsPath}"
+                             Watermark="e.g. C:\FoundryVTT\Data\maps"
+                             HorizontalAlignment="Stretch" />
+                </StackPanel>
+
+                <StackPanel Spacing="12" IsVisible="{Binding IsGeneralSelected}">
+                    <TextBlock Text="General" FontSize="18" FontWeight="SemiBold" />
+                    <CheckBox Content="Show debug panel"
+                              IsChecked="{Binding ShowDebugPanel}" />
+                    <TextBlock Text="When enabled, a Debug tab appears next to Walls and Regions with compatibility and source JSON tools."
+                               TextWrapping="Wrap"
+                               Opacity="0.75" />
+                </StackPanel>
+            </Panel>
+        </ScrollViewer>
+    </Grid>
+</Window>
