@@ -63,4 +63,24 @@ public class OldMapStoneWallTests
             segment.Points.All(point => Math.Abs(point.Y - bottomY) < 50)).ToList();
         Assert.NotEmpty(horizontalBottomSegments);
     }
+
+    [Fact]
+    public async Task ImportAsync_Wall500_PortalCentersLieOnCenterline()
+    {
+        // Inkarnate left three top portals ~20 units off the path; import must resnap them.
+        Assert.True(File.Exists(OldMapInkPath), $"Missing test resource: {OldMapInkPath}");
+
+        await using var input = File.OpenRead(OldMapInkPath);
+        var map = await new InkarnateImporter().ImportAsync(input);
+        var wall = map.Walls.Single(w => w.EntityId == 500);
+
+        Assert.True(wall.Portals.Count >= 3);
+        foreach (var portal in wall.Portals)
+        {
+            var scene = WallPathSegmentBuilder.PortalAnchorToScene(wall, portal);
+            var snapped = WallGeometryEditing.SnapToCenterline(wall, scene);
+            Assert.InRange(Math.Abs(scene.X - snapped.X), 0, 1e-3);
+            Assert.InRange(Math.Abs(scene.Y - snapped.Y), 0, 1e-3);
+        }
+    }
 }

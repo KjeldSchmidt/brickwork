@@ -17,6 +17,9 @@ public static class WallPointSimplifier
         {
             wall.Points.Add(point);
         }
+
+        // Inkarnate (and simplify) can leave portal anchors off the polyline; snap like drag does.
+        WallGeometryEditing.ResnapPortalAnchors(wall);
     }
 
     public static void ApplyAll(IEnumerable<Wall> walls, double tolerance)
