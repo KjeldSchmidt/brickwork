@@ -19,6 +19,29 @@ public class SceneTransformTests
     }
 
     [Fact]
+    public void FromMap_PrefersUnderlyingMapDimensions()
+    {
+        var map = new MapDocument
+        {
+            Scene = new SceneDimensions { Width = 100, Height = 100 },
+            Preview = new PreviewDimensions { Width = 200, Height = 200 },
+            UnderlyingMap = new UnderlyingMapInfo
+            {
+                FileName = "map.webp",
+                AbsolutePath = @"C:\maps\map.webp",
+                Width = 1400,
+                Height = 1400,
+            },
+        };
+
+        var transform = SceneTransform.FromMap(map);
+
+        Assert.NotNull(transform);
+        Assert.Equal(1400, transform.PreviewWidth);
+        Assert.Equal(1400, transform.PreviewHeight);
+    }
+
+    [Fact]
     public void SceneToPreview_ScalesCoordinates()
     {
         var transform = new SceneTransform

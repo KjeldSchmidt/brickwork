@@ -25,7 +25,10 @@ internal static class FoundrySceneBuilder
             grid["size"] = gridSize;
         }
 
-        var backgroundSrc = FoundryPaths.BuildBackgroundSrc(map.FoundryMapsDirectory, map.SourceFileName);
+        var backgroundSrc = FoundryPaths.BuildBackgroundSrc(
+            map.FoundryMapsDirectory,
+            map.SourceFileName,
+            map.Name);
         scene["background"] = new JsonObject { ["src"] = backgroundSrc };
         scene["thumb"] = backgroundSrc;
 

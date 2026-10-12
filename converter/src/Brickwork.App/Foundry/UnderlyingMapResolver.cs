@@ -7,9 +7,12 @@ namespace Brickwork.App.Foundry;
 /// <summary>Resolves a Foundry background image under the maps folder and reads its pixel size.</summary>
 public static class UnderlyingMapResolver
 {
-    public static UnderlyingMapInfo? TryResolve(string? mapsDirectory, string? sourceFileName)
+    public static UnderlyingMapInfo? TryResolve(
+        string? mapsDirectory,
+        string? sourceFileName,
+        string? mapTitle = null)
     {
-        var absolutePath = FoundryPaths.TryResolveBackgroundImagePath(mapsDirectory, sourceFileName);
+        var absolutePath = FoundryPaths.TryResolveBackgroundImagePath(mapsDirectory, sourceFileName, mapTitle);
         if (absolutePath is null)
         {
             return null;

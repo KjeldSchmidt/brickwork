@@ -116,18 +116,40 @@ public static class FoundryPaths
     }
 
     /// <summary>
+    /// Base name used to find/write a Foundry background image.
+    /// Inkarnate <c>.ink</c> sources use the map title (JSON <c>title</c>); other formats use the file stem.
+    /// </summary>
+    public static string ResolveBackgroundBaseName(string? sourceFileName, string? mapTitle = null)
+    {
+        if (IsInkarnateSource(sourceFileName) && !string.IsNullOrWhiteSpace(mapTitle))
+        {
+            var fromTitle = Path.GetFileName(mapTitle.Trim());
+            if (!string.IsNullOrWhiteSpace(fromTitle))
+            {
+                return fromTitle;
+            }
+        }
+
+        var baseName = Path.GetFileNameWithoutExtension(
+            string.IsNullOrWhiteSpace(sourceFileName) ? "map" : sourceFileName);
+        return string.IsNullOrWhiteSpace(baseName) ? "map" : baseName;
+    }
+
+    private static bool IsInkarnateSource(string? sourceFileName) =>
+        !string.IsNullOrWhiteSpace(sourceFileName) &&
+        sourceFileName.EndsWith(".ink", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Builds a Foundry <c>background.src</c> path under <paramref name="mapsDirectory"/>,
     /// expressed relative to the Foundry Data root when possible.
     /// Picks an existing image file by base name when the maps folder is readable; otherwise <c>.webp</c>.
     /// </summary>
-    public static string BuildBackgroundSrc(string? mapsDirectory, string? sourceFileName)
+    public static string BuildBackgroundSrc(
+        string? mapsDirectory,
+        string? sourceFileName,
+        string? mapTitle = null)
     {
-        var baseName = Path.GetFileNameWithoutExtension(
-            string.IsNullOrWhiteSpace(sourceFileName) ? "map" : sourceFileName);
-        if (string.IsNullOrWhiteSpace(baseName))
-        {
-            baseName = "map";
-        }
+        var baseName = ResolveBackgroundBaseName(sourceFileName, mapTitle);
 
         if (string.IsNullOrWhiteSpace(mapsDirectory))
         {
@@ -171,22 +193,20 @@ public static class FoundryPaths
     }
 
     /// <summary>
-    /// Absolute path of an existing Foundry background image for <paramref name="sourceFileName"/>
+    /// Absolute path of an existing Foundry background image for the source/map title
     /// under <paramref name="mapsDirectory"/>, or null when none is found.
     /// </summary>
-    public static string? TryResolveBackgroundImagePath(string? mapsDirectory, string? sourceFileName)
+    public static string? TryResolveBackgroundImagePath(
+        string? mapsDirectory,
+        string? sourceFileName,
+        string? mapTitle = null)
     {
         if (string.IsNullOrWhiteSpace(mapsDirectory))
         {
             return null;
         }
 
-        var baseName = Path.GetFileNameWithoutExtension(
-            string.IsNullOrWhiteSpace(sourceFileName) ? "map" : sourceFileName);
-        if (string.IsNullOrWhiteSpace(baseName))
-        {
-            baseName = "map";
-        }
+        var baseName = ResolveBackgroundBaseName(sourceFileName, mapTitle);
 
         string absoluteMaps;
         try

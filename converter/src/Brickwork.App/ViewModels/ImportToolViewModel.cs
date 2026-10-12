@@ -170,12 +170,22 @@ public partial class ImportToolViewModel : Tool
         }
 
         var sourceFileName = _session.Map.SourceFileName ?? _session.SourceFileName;
-        var underlying = UnderlyingMapResolver.TryResolve(_session.FoundryMapsPath, sourceFileName);
+        var previousPath = _session.Map.UnderlyingMap?.AbsolutePath;
+        var underlying = UnderlyingMapResolver.TryResolve(
+            _session.FoundryMapsPath,
+            sourceFileName,
+            _session.Map.Name);
         _session.Map.UnderlyingMap = underlying;
         UnderlyingMapStatus = underlying is { IsConnected: true }
             ? $"Foundry map: {underlying.FileName} ({underlying.Width}×{underlying.Height})"
             : "Foundry map: not found in maps folder";
         ShowUnderlyingMapStatus = true;
+
+        // Canvas size / background image depend on the connected Foundry map.
+        if (!string.Equals(previousPath, underlying?.AbsolutePath, StringComparison.OrdinalIgnoreCase))
+        {
+            _session.NotifyContentChanged();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanConvert))]
