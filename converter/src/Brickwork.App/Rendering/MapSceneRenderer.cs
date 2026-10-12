@@ -16,7 +16,8 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
 
     public void Render(SKCanvas canvas, MapDocument map, SKRect destinationBounds, MapRenderHighlight? highlight = null)
     {
-        canvas.Clear(SKColors.Black);
+        // Match MapPreviewDocumentView background (#FF1E1E1E) so overflow padding blends in.
+        canvas.Clear(new SKColor(0x1E, 0x1E, 0x1E));
 
         var previewImage = GetOrCreateImage(map);
         if (previewImage is not null)

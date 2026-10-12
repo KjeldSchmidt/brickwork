@@ -87,8 +87,11 @@ public partial class MapPreviewDocumentViewModel : Document
             if (args.PropertyName is nameof(EditorSession.ContentRevision))
             {
                 ContentRevision = _session.ContentRevision;
-                // Geometry may extend further past the image; grow the interactive canvas.
-                UpdateCanvasSize();
+                // Freeze overflow padding during drag so origin/offset don't shift mid-gesture.
+                if (!_session.IsGestureActive)
+                {
+                    UpdateCanvasSize();
+                }
             }
 
             if (args.PropertyName is nameof(EditorSession.HighlightRevision)

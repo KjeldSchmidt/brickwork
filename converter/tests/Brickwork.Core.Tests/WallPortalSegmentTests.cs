@@ -257,6 +257,42 @@ public class WallPortalSegmentTests
     }
 
     [Fact]
+    public void BuildPortalSegments_IncludesInteriorVerticesAlongInterval()
+    {
+        // Portal covers [200,800] on a 0→1000 line with vertices every 200 units.
+        var wall = new Wall
+        {
+            EntityId = 9,
+            Origin = new MapPoint(0, 0),
+            Scale = 1,
+            Points =
+            [
+                new MapPoint(0, 0),
+                new MapPoint(200, 0),
+                new MapPoint(400, 0),
+                new MapPoint(600, 0),
+                new MapPoint(800, 0),
+                new MapPoint(1000, 0),
+            ],
+            Portals =
+            [
+                new WallPortal
+                {
+                    Anchor = new MapPoint(500, 0),
+                    Width = 600,
+                },
+            ],
+        };
+
+        var portalSegment = Assert.Single(WallPathSegmentBuilder.BuildPortalSegments(wall));
+
+        Assert.Contains(portalSegment.Points, point => Math.Abs(point.X - 400) < 1e-6);
+        Assert.Contains(portalSegment.Points, point => Math.Abs(point.X - 600) < 1e-6);
+        Assert.InRange(portalSegment.Points[0].X, 199, 201);
+        Assert.InRange(portalSegment.Points[^1].X, 799, 801);
+    }
+
+    [Fact]
     public void BuildPortalSegments_ClosedWithGapCrossingSeam_ReturnsContinuousPolyline()
     {
         var wall = new Wall

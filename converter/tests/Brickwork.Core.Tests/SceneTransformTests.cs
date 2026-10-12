@@ -72,20 +72,20 @@ public class SceneTransformTests
     }
 
     [Fact]
-    public void ForMapPreview_PadsForOutOfBoundsWalls()
+    public void ForMapPreview_UsesFixedTenPercentPadding()
     {
         var map = new MapDocument
         {
-            Scene = new SceneDimensions { Width = 100, Height = 100 },
-            Preview = new PreviewDimensions { Width = 100, Height = 100 },
+            Scene = new SceneDimensions { Width = 100, Height = 200 },
+            Preview = new PreviewDimensions { Width = 100, Height = 200 },
             Walls =
             [
                 new Wall
                 {
                     Points =
                     [
-                        new MapPoint(-10, 10),
-                        new MapPoint(110, 10),
+                        new MapPoint(-50, 10),
+                        new MapPoint(200, 10),
                     ],
                 },
             ],
@@ -94,10 +94,12 @@ public class SceneTransformTests
         var transform = SceneTransform.ForMapPreview(map);
 
         Assert.NotNull(transform);
-        Assert.True(transform.OriginOffsetX >= 10 + SceneTransform.OverflowMargin);
-        Assert.True(transform.RightPadding >= 10 + SceneTransform.OverflowMargin);
-        Assert.True(transform.CanvasWidth > transform.PreviewWidth);
-        Assert.Equal(0, transform.SceneToPreview(new MapPoint(0, 0)).X - transform.OriginOffsetX, precision: 3);
+        Assert.Equal(10, transform.OriginOffsetX, precision: 3);
+        Assert.Equal(20, transform.OriginOffsetY, precision: 3);
+        Assert.Equal(10, transform.RightPadding, precision: 3);
+        Assert.Equal(20, transform.BottomPadding, precision: 3);
+        Assert.Equal(120, transform.CanvasWidth, precision: 3);
+        Assert.Equal(240, transform.CanvasHeight, precision: 3);
     }
 }
 

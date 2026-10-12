@@ -2,11 +2,8 @@ namespace Brickwork.Core.Models;
 
 public sealed class SceneTransform
 {
-    /// <summary>Minimum interactive padding around the preview image (preview pixels).</summary>
-    public const double DefaultPreviewPadding = 64d;
-
-    /// <summary>Extra margin beyond the farthest out-of-bounds overlay point (preview pixels).</summary>
-    public const double OverflowMargin = 24d;
+    /// <summary>Fixed interactive padding as a fraction of preview width/height on each side.</summary>
+    public const double PreviewPaddingFraction = 0.10d;
 
     public double SceneWidth { get; init; }
 
@@ -56,10 +53,10 @@ public sealed class SceneTransform
     }
 
     /// <summary>
-    /// Preview transform with padding so walls/regions that extend past the image
-    /// remain visible and pickable. Export code should keep using <see cref="FromMap"/>.
+    /// Preview transform with fixed 10% padding so walls/regions that extend slightly
+    /// past the image remain visible and pickable. Export code should keep using <see cref="FromMap"/>.
     /// </summary>
-    public static SceneTransform? ForMapPreview(MapDocument map, double minPadding = DefaultPreviewPadding)
+    public static SceneTransform? ForMapPreview(MapDocument map)
     {
         var transform = FromMap(map);
         if (transform is null)
@@ -67,50 +64,8 @@ public sealed class SceneTransform
             return null;
         }
 
-        var scaleX = transform.ScaleX;
-        var scaleY = transform.ScaleY;
-        var minSceneX = 0d;
-        var minSceneY = 0d;
-        var maxSceneX = transform.SceneWidth;
-        var maxSceneY = transform.SceneHeight;
-        var hasPoints = false;
-
-        foreach (var wall in map.Walls)
-        {
-            foreach (var point in wall.Points)
-            {
-                hasPoints = true;
-                minSceneX = Math.Min(minSceneX, point.X);
-                minSceneY = Math.Min(minSceneY, point.Y);
-                maxSceneX = Math.Max(maxSceneX, point.X);
-                maxSceneY = Math.Max(maxSceneY, point.Y);
-            }
-        }
-
-        foreach (var region in map.Regions)
-        {
-            foreach (var point in region.Points)
-            {
-                hasPoints = true;
-                minSceneX = Math.Min(minSceneX, point.X);
-                minSceneY = Math.Min(minSceneY, point.Y);
-                maxSceneX = Math.Max(maxSceneX, point.X);
-                maxSceneY = Math.Max(maxSceneY, point.Y);
-            }
-        }
-
-        var left = minPadding;
-        var top = minPadding;
-        var right = minPadding;
-        var bottom = minPadding;
-
-        if (hasPoints)
-        {
-            left = Math.Max(left, (-minSceneX * scaleX) + OverflowMargin);
-            top = Math.Max(top, (-minSceneY * scaleY) + OverflowMargin);
-            right = Math.Max(right, ((maxSceneX - transform.SceneWidth) * scaleX) + OverflowMargin);
-            bottom = Math.Max(bottom, ((maxSceneY - transform.SceneHeight) * scaleY) + OverflowMargin);
-        }
+        var padX = transform.PreviewWidth * PreviewPaddingFraction;
+        var padY = transform.PreviewHeight * PreviewPaddingFraction;
 
         return new SceneTransform
         {
@@ -118,10 +73,10 @@ public sealed class SceneTransform
             SceneHeight = transform.SceneHeight,
             PreviewWidth = transform.PreviewWidth,
             PreviewHeight = transform.PreviewHeight,
-            OriginOffsetX = left,
-            OriginOffsetY = top,
-            RightPadding = right,
-            BottomPadding = bottom,
+            OriginOffsetX = padX,
+            OriginOffsetY = padY,
+            RightPadding = padX,
+            BottomPadding = padY,
         };
     }
 

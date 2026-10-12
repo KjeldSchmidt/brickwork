@@ -41,7 +41,10 @@ public partial class RegionsToolViewModel : Tool
 
             if (args.PropertyName is nameof(EditorSession.ContentRevision))
             {
-                SyncWithRegionSet();
+                if (!_session.IsGestureActive)
+                {
+                    SyncWithRegionSet();
+                }
             }
 
             if (args.PropertyName is nameof(EditorSession.TreeFocusGeneration))
