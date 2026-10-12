@@ -35,6 +35,7 @@ public class AppSettingsStoreTests
             DetectRegionsFromColorPaths = false,
             DetectRegionsFromNamedContainers = false,
             DetectRegionsFromPathNames = true,
+            SkippedUpdateVersion = "1.2.0",
         });
 
         var loaded = store.Load();
@@ -45,6 +46,7 @@ public class AppSettingsStoreTests
         Assert.False(loaded.DetectRegionsFromColorPaths);
         Assert.False(loaded.DetectRegionsFromNamedContainers);
         Assert.True(loaded.DetectRegionsFromPathNames);
+        Assert.Equal("1.2.0", loaded.SkippedUpdateVersion);
         Assert.True(File.Exists(store.SettingsFilePath));
     }
 

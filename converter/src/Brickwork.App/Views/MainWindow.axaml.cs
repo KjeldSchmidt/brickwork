@@ -13,6 +13,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         KeyDown += OnKeyDown;
+        Opened += OnOpened;
+    }
+
+    private void OnOpened(object? sender, EventArgs e)
+    {
+        Opened -= OnOpened;
+        UpdateNotification.ScheduleStartupCheck(this);
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)

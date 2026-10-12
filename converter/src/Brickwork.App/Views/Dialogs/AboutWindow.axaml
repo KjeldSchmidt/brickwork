@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
         xmlns:vm="using:Brickwork.App.ViewModels"
         x:Class="Brickwork.App.Views.Dialogs.AboutWindow"
         x:DataType="vm:AboutWindowViewModel"
@@ -15,13 +16,33 @@
         <TextBlock Text="Convert Inkarnate maps for virtual tabletops."
                    TextWrapping="Wrap"
                    Opacity="0.85" />
-        <Button Content="{Binding RepositoryUrl}"
-                Classes="muted"
+        <Button Command="{Binding OpenRepositoryCommand}"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="0"
+                Cursor="Hand"
                 HorizontalAlignment="Left"
-                Command="{Binding OpenRepositoryCommand}" />
-        <Button Content="Close"
-                HorizontalAlignment="Right"
-                MinWidth="88"
-                Click="OnCloseClick" />
+                HorizontalContentAlignment="Left">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <iconPacks:PackIconFontAwesome6 Width="16"
+                                                Height="16"
+                                                Kind="GithubBrands"
+                                                VerticalAlignment="Center" />
+                <TextBlock Text="{Binding RepositoryUrl}"
+                           TextDecorations="Underline"
+                           Opacity="0.9"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+        </Button>
+        <StackPanel Spacing="8">
+            <Button Content="Check for updates"
+                    HorizontalAlignment="Left"
+                    Command="{Binding CheckForUpdatesCommand}"
+                    CommandParameter="{Binding $parent[Window]}" />
+            <TextBlock Text="{Binding UpdateStatusMessage}"
+                       TextWrapping="Wrap"
+                       Opacity="0.8"
+                       FontSize="12" />
+        </StackPanel>
     </StackPanel>
 </Window>

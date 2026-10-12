@@ -7,6 +7,11 @@ on:
         description: Release version (e.g. 0.1.0-beta.1)
         required: true
         type: string
+      mark_as_latest:
+        description: Mark this release as Latest (users get notified)
+        required: true
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -101,15 +106,25 @@ jobs:
             echo "No release assets found under artifacts/" >&2
             exit 1
           fi
+
+          # When not Latest, also mark prerelease so /releases/latest never returns it.
+          if [ "${{ inputs.mark_as_latest }}" = "true" ]; then
+            latest_flags=(--latest=true)
+          else
+            latest_flags=(--latest=false --prerelease)
+          fi
+
           if [ -f "$notes_file" ]; then
             gh release create "v${{ inputs.version }}" \
               --title "Brickwork v${{ inputs.version }}" \
               --notes-file "$notes_file" \
+              "${latest_flags[@]}" \
               "${assets[@]}"
           else
             echo "No patch notes at $notes_file; creating release with empty body."
             gh release create "v${{ inputs.version }}" \
               --title "Brickwork v${{ inputs.version }}" \
               --notes "" \
+              "${latest_flags[@]}" \
               "${assets[@]}"
           fi

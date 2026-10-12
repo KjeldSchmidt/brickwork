@@ -7,7 +7,12 @@ namespace Brickwork.App;
 
 public static class GitHubIssueReporter
 {
-    public const string RepositoryUrl = "https://github.com/KjeldSchmidt/inkarnate-uvtt2-converter";
+    public const string RepositoryOwner = "KjeldSchmidt";
+    public const string RepositoryName = "brickwork";
+    public const string RepositoryUrl = "https://github.com/" + RepositoryOwner + "/" + RepositoryName;
+    public const string ReleasesLatestApiUrl =
+        "https://api.github.com/repos/" + RepositoryOwner + "/" + RepositoryName + "/releases/latest";
+    public const string ReleasesUrl = RepositoryUrl + "/releases";
 
     /// <summary>Practical cross-browser limit for a pre-filled issues/new URL.</summary>
     public const int MaxIssueUrlLength = 7000;

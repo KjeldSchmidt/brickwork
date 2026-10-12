@@ -21,4 +21,10 @@ public sealed class AppSettings
 
     /// <summary>Import closed paths with region-like names as regions.</summary>
     public bool DetectRegionsFromPathNames { get; set; } = true;
+
+    /// <summary>
+    /// Highest release version the user chose to skip (e.g. 1.2.0).
+    /// Versions at or below this are not offered again by the startup notifier.
+    /// </summary>
+    public string? SkippedUpdateVersion { get; set; }
 }
