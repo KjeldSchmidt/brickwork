@@ -166,26 +166,71 @@ public static class FoundryPaths
     /// </summary>
     public static string ResolveBackgroundFileName(string mapsDirectory, string baseName)
     {
+        var existing = TryFindExistingBackgroundFileName(mapsDirectory, baseName);
+        return existing ?? baseName + ".webp";
+    }
+
+    /// <summary>
+    /// Absolute path of an existing Foundry background image for <paramref name="sourceFileName"/>
+    /// under <paramref name="mapsDirectory"/>, or null when none is found.
+    /// </summary>
+    public static string? TryResolveBackgroundImagePath(string? mapsDirectory, string? sourceFileName)
+    {
+        if (string.IsNullOrWhiteSpace(mapsDirectory))
+        {
+            return null;
+        }
+
+        var baseName = Path.GetFileNameWithoutExtension(
+            string.IsNullOrWhiteSpace(sourceFileName) ? "map" : sourceFileName);
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            baseName = "map";
+        }
+
+        string absoluteMaps;
         try
         {
-            if (Directory.Exists(mapsDirectory))
+            absoluteMaps = Path.GetFullPath(mapsDirectory);
+        }
+        catch
+        {
+            return null;
+        }
+
+        var fileName = TryFindExistingBackgroundFileName(absoluteMaps, baseName);
+        if (fileName is null)
+        {
+            return null;
+        }
+
+        return Path.Combine(absoluteMaps, fileName);
+    }
+
+    private static string? TryFindExistingBackgroundFileName(string mapsDirectory, string baseName)
+    {
+        try
+        {
+            if (!Directory.Exists(mapsDirectory))
             {
-                foreach (var extension in BackgroundImageExtensions)
+                return null;
+            }
+
+            foreach (var extension in BackgroundImageExtensions)
+            {
+                var candidate = baseName + extension;
+                if (File.Exists(Path.Combine(mapsDirectory, candidate)))
                 {
-                    var candidate = baseName + extension;
-                    if (File.Exists(Path.Combine(mapsDirectory, candidate)))
-                    {
-                        return candidate;
-                    }
+                    return candidate;
                 }
             }
         }
         catch
         {
-            // Unreadable directory (permissions, IO): fall back to default extension.
+            // Unreadable directory (permissions, IO).
         }
 
-        return baseName + ".webp";
+        return null;
     }
 
     private static string NormalizeFoundryPath(string path)

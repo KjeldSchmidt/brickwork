@@ -92,6 +92,29 @@ public class FoundryPathsTests
         Assert.Equal(Path.Combine(temp.Path, "FoundryVTT", "Data"), root);
     }
 
+    [Fact]
+    public void TryResolveBackgroundImagePath_WhenMissing_ReturnsNull()
+    {
+        using var temp = new TempDirectory();
+        Directory.CreateDirectory(temp.Path);
+
+        Assert.Null(FoundryPaths.TryResolveBackgroundImagePath(temp.Path, "missing.ink"));
+        Assert.Null(FoundryPaths.TryResolveBackgroundImagePath(null, "dungeon.ink"));
+    }
+
+    [Fact]
+    public void TryResolveBackgroundImagePath_WhenPresent_ReturnsAbsolutePath()
+    {
+        using var temp = new TempDirectory();
+        Directory.CreateDirectory(temp.Path);
+        var imagePath = Path.Combine(temp.Path, "dungeon.png");
+        File.WriteAllBytes(imagePath, [0x89, 0x50]);
+
+        var resolved = FoundryPaths.TryResolveBackgroundImagePath(temp.Path, "dungeon.ink");
+
+        Assert.Equal(Path.GetFullPath(imagePath), resolved);
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(

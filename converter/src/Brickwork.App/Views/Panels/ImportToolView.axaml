@@ -66,6 +66,11 @@
             <TextBlock Text="{Binding StatusMessage}"
                        TextWrapping="Wrap"
                        Opacity="0.85" />
+
+            <TextBlock Text="{Binding UnderlyingMapStatus}"
+                       TextWrapping="Wrap"
+                       Opacity="0.85"
+                       IsVisible="{Binding ShowUnderlyingMapStatus}" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

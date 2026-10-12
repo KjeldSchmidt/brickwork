@@ -22,9 +22,7 @@ public static class FoundryWallSegmentBuilder
 {
     public static IReadOnlyList<FoundryWallSegment> BuildFromMap(MapDocument map)
     {
-        var transform = SceneTransform.FromMap(map)
-            ?? throw new InvalidOperationException("Map preview and scene dimensions are required for Foundry export.");
-
+        var transform = FoundryExportCanvas.FromMap(map).Transform;
         var segments = new List<FoundryWallSegment>();
 
         foreach (var wall in map.Walls.Where(wall => wall.WallEnabled))

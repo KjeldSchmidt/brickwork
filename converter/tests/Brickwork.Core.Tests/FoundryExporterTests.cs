@@ -273,9 +273,14 @@ public class FoundryExporterTests
         output.Position = 0;
         using var document = await JsonDocument.ParseAsync(output);
 
+        var expectedCanvas = FoundryExportCanvas.FromMap(map);
+
         Assert.Equal(map.Name, document.RootElement.GetProperty("name").GetString());
-        Assert.Equal(2048, document.RootElement.GetProperty("width").GetInt32());
-        Assert.Equal(1536, document.RootElement.GetProperty("height").GetInt32());
+        Assert.Equal(expectedCanvas.Width, document.RootElement.GetProperty("width").GetInt32());
+        Assert.Equal(expectedCanvas.Height, document.RootElement.GetProperty("height").GetInt32());
+        Assert.Equal(
+            expectedCanvas.GridSize,
+            document.RootElement.GetProperty("grid").GetProperty("size").GetInt32());
         // Legacy root background.src — V14 migrateLevels copies this onto levels[0] on import.
         Assert.Equal(
             "basic-walls.webp",
@@ -291,6 +296,41 @@ public class FoundryExporterTests
         output.Position = 0;
         var json = await ReadStreamAsStringAsync(output);
         Assert.DoesNotContain("Placeholder export", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithUnderlyingMap_UsesImageDimensionsAndGridSize()
+    {
+        var map = await LoadPreparedBasicWallsMapAsync();
+        Assert.True(map.Grid.Columns > 0);
+        map.UnderlyingMap = new UnderlyingMapInfo
+        {
+            FileName = "basic-walls.png",
+            AbsolutePath = @"C:\maps\basic-walls.png",
+            Width = map.Grid.Columns * 120,
+            Height = map.Grid.Rows * 120,
+        };
+
+        await using var output = new MemoryStream();
+        await ServiceFactory.CreateConvertMapService()
+            .ConvertAsync(map, output, "foundry");
+
+        output.Position = 0;
+        using var document = await JsonDocument.ParseAsync(output);
+
+        Assert.Equal(map.Grid.Columns * 120, document.RootElement.GetProperty("width").GetInt32());
+        Assert.Equal(map.Grid.Rows * 120, document.RootElement.GetProperty("height").GetInt32());
+        Assert.Equal(120, document.RootElement.GetProperty("grid").GetProperty("size").GetInt32());
+
+        var segments = FoundryWallSegmentBuilder.BuildFromMap(map);
+        var canvas = FoundryExportCanvas.FromMap(map);
+        Assert.All(segments, segment =>
+        {
+            Assert.InRange(segment.X0, 0, canvas.Width);
+            Assert.InRange(segment.Y0, 0, canvas.Height);
+            Assert.InRange(segment.X1, 0, canvas.Width);
+            Assert.InRange(segment.Y1, 0, canvas.Height);
+        });
     }
 
     [Fact]
@@ -586,6 +626,20 @@ public class FoundryRegionBuilderTests
         var points = Assert.Single(region.Shapes).Points;
 
         Assert.Equal([20, 40, 60, 40, 60, 80], points);
+    }
+
+    [Fact]
+    public void BuildFromMap_WithGrid_ScalesToFoundryCanvas()
+    {
+        var map = CreateMap(sceneWidth: 100, sceneHeight: 100, previewWidth: 200, previewHeight: 200);
+        map.Grid = new GridInfo { Columns = 10, Rows = 10, CellSize = 10 };
+        map.Regions.Add(CreateRegion(1, RegionType.DifficultTerrain, (10, 20), (30, 20), (30, 40)));
+
+        var region = Assert.Single(FoundryRegionBuilder.BuildFromMap(map));
+        var points = Assert.Single(region.Shapes).Points;
+
+        // Canvas is 10*100 × 10*100 = 1000×1000 (not preview 200×200).
+        Assert.Equal([100, 200, 300, 200, 300, 400], points);
     }
 
     private static MapDocument CreateMap(

@@ -14,9 +14,7 @@ public static class FoundryRegionBuilder
 {
     public static IReadOnlyList<FoundryRegion> BuildFromMap(MapDocument map)
     {
-        var transform = SceneTransform.FromMap(map)
-            ?? throw new InvalidOperationException("Map preview and scene dimensions are required for Foundry export.");
-
+        var transform = FoundryExportCanvas.FromMap(map).Transform;
         var regions = new List<FoundryRegion>();
 
         foreach (var regionType in Enum.GetValues<RegionType>())
