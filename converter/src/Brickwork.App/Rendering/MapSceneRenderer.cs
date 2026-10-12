@@ -12,7 +12,7 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
     private const float TickHalfLength = 4f;
     private const float TickHalfThickness = 2f;
 
-    private readonly Dictionary<MapDocument, CachedMapImage> _imageCache = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<MapDocument, SKImage> _imageCache = new(ReferenceEqualityComparer.Instance);
 
     public void Render(SKCanvas canvas, MapDocument map, SKRect destinationBounds, MapRenderHighlight? highlight = null)
     {
@@ -376,17 +376,17 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             return;
         }
 
-        if (_imageCache.Remove(map, out var cached))
+        if (_imageCache.Remove(map, out var image))
         {
-            cached.Image.Dispose();
+            image.Dispose();
         }
     }
 
     public void ClearCache()
     {
-        foreach (var cached in _imageCache.Values)
+        foreach (var image in _imageCache.Values)
         {
-            cached.Image.Dispose();
+            image.Dispose();
         }
 
         _imageCache.Clear();
@@ -769,57 +769,9 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
 
     private SKImage? GetOrCreateImage(MapDocument map)
     {
-        var sourceKey = ResolveImageSourceKey(map);
         if (_imageCache.TryGetValue(map, out var cached))
         {
-            if (cached.SourceKey == sourceKey)
-            {
-                return cached.Image;
-            }
-
-            cached.Image.Dispose();
-            _imageCache.Remove(map);
-        }
-
-        var image = LoadMapImage(map);
-        if (image is not null)
-        {
-            _imageCache[map] = new CachedMapImage(sourceKey, image);
-        }
-
-        return image;
-    }
-
-    private static string? ResolveImageSourceKey(MapDocument map)
-    {
-        if (map.UnderlyingMap is { IsConnected: true, AbsolutePath: { Length: > 0 } path })
-        {
-            return "file:" + path;
-        }
-
-        if (map.PreviewImagePng is { Length: > 0 } pngBytes)
-        {
-            return "preview:" + pngBytes.Length;
-        }
-
-        return null;
-    }
-
-    private static SKImage? LoadMapImage(MapDocument map)
-    {
-        if (map.UnderlyingMap is { IsConnected: true, AbsolutePath: { Length: > 0 } path })
-        {
-            try
-            {
-                if (File.Exists(path))
-                {
-                    return SKImage.FromEncodedData(path);
-                }
-            }
-            catch
-            {
-                // Fall back to embedded preview below.
-            }
+            return cached;
         }
 
         if (map.PreviewImagePng is not { Length: > 0 } pngBytes)
@@ -828,8 +780,12 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         }
 
         using var data = SKData.CreateCopy(pngBytes);
-        return SKImage.FromEncodedData(data);
-    }
+        var image = SKImage.FromEncodedData(data);
+        if (image is not null)
+        {
+            _imageCache[map] = image;
+        }
 
-    private readonly record struct CachedMapImage(string? SourceKey, SKImage Image);
+        return image;
+    }
 }

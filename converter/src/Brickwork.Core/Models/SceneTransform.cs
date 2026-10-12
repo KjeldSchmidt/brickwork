@@ -37,25 +37,8 @@ public sealed class SceneTransform
 
     public static SceneTransform? FromMap(MapDocument map)
     {
-        if (map.Scene is not { Width: > 0, Height: > 0 } scene)
-        {
-            return null;
-        }
-
-        // Prefer the Foundry background when connected so the interactive canvas matches export.
-        int previewWidth;
-        int previewHeight;
-        if (map.UnderlyingMap is { IsConnected: true, Width: > 0, Height: > 0 } underlying)
-        {
-            previewWidth = underlying.Width;
-            previewHeight = underlying.Height;
-        }
-        else if (map.Preview is { Width: > 0, Height: > 0 } preview)
-        {
-            previewWidth = preview.Width;
-            previewHeight = preview.Height;
-        }
-        else
+        if (map.Preview is not { Width: > 0, Height: > 0 } preview ||
+            map.Scene is not { Width: > 0, Height: > 0 } scene)
         {
             return null;
         }
@@ -64,8 +47,8 @@ public sealed class SceneTransform
         {
             SceneWidth = scene.Width,
             SceneHeight = scene.Height,
-            PreviewWidth = previewWidth,
-            PreviewHeight = previewHeight,
+            PreviewWidth = preview.Width,
+            PreviewHeight = preview.Height,
         };
     }
 

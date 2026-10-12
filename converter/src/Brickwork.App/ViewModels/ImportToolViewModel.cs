@@ -1,4 +1,5 @@
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,11 +9,15 @@ using Brickwork.App.Views.Dialogs;
 using Brickwork.Composition;
 using Brickwork.Core.Services;
 using Brickwork.Inkarnate;
+using IconPacks.Avalonia.FontAwesome6;
 
 namespace Brickwork.App.ViewModels;
 
 public partial class ImportToolViewModel : Tool
 {
+    private static readonly IBrush UnderlyingMapMissingBrush = new SolidColorBrush(Color.Parse("#9CA3AF"));
+    private static readonly IBrush UnderlyingMapFoundBrush = new SolidColorBrush(Color.Parse("#22C55E"));
+
     private readonly EditorSession _session;
     private readonly ConvertMapService _convertMapService = ServiceFactory.CreateGuiConvertMapService();
     private readonly IReadOnlyList<ExportFormatChoice> _exportFormatChoices;
@@ -21,10 +26,16 @@ public partial class ImportToolViewModel : Tool
     private string _statusMessage = "Ready.";
 
     [ObservableProperty]
-    private string _underlyingMapStatus = string.Empty;
+    private string _underlyingMapTooltip = string.Empty;
 
     [ObservableProperty]
     private bool _showUnderlyingMapStatus;
+
+    [ObservableProperty]
+    private PackIconFontAwesome6Kind _underlyingMapLinkIconKind = PackIconFontAwesome6Kind.LinkSlashSolid;
+
+    [ObservableProperty]
+    private IBrush _underlyingMapLinkBrush = UnderlyingMapMissingBrush;
 
     [ObservableProperty]
     private bool _showCompatibilityWarning;
@@ -164,28 +175,33 @@ public partial class ImportToolViewModel : Tool
     {
         if (_session.Map is null)
         {
-            UnderlyingMapStatus = string.Empty;
+            UnderlyingMapTooltip = string.Empty;
             ShowUnderlyingMapStatus = false;
             return;
         }
 
         var sourceFileName = _session.Map.SourceFileName ?? _session.SourceFileName;
-        var previousPath = _session.Map.UnderlyingMap?.AbsolutePath;
         var underlying = UnderlyingMapResolver.TryResolve(
             _session.FoundryMapsPath,
             sourceFileName,
             _session.Map.Name);
         _session.Map.UnderlyingMap = underlying;
-        UnderlyingMapStatus = underlying is { IsConnected: true }
-            ? $"Foundry map: {underlying.FileName} ({underlying.Width}×{underlying.Height})"
-            : "Foundry map: not found in maps folder";
-        ShowUnderlyingMapStatus = true;
 
-        // Canvas size / background image depend on the connected Foundry map.
-        if (!string.Equals(previousPath, underlying?.AbsolutePath, StringComparison.OrdinalIgnoreCase))
+        if (underlying is { IsConnected: true })
         {
-            _session.NotifyContentChanged();
+            UnderlyingMapLinkIconKind = PackIconFontAwesome6Kind.LinkSolid;
+            UnderlyingMapLinkBrush = UnderlyingMapFoundBrush;
+            UnderlyingMapTooltip =
+                $"Found map image {underlying.FileName} with dimensions {underlying.Width}×{underlying.Height}";
         }
+        else
+        {
+            UnderlyingMapLinkIconKind = PackIconFontAwesome6Kind.LinkSlashSolid;
+            UnderlyingMapLinkBrush = UnderlyingMapMissingBrush;
+            UnderlyingMapTooltip = "No map image found in maps folder. You will have to manually select the map image again in FoundryVTT. You can change the maps folder in the settings.";
+        }
+
+        ShowUnderlyingMapStatus = true;
     }
 
     [RelayCommand(CanExecute = nameof(CanConvert))]

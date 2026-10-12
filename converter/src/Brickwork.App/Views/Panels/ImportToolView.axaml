@@ -6,7 +6,7 @@
              x:DataType="vm:ImportToolViewModel"
              Classes="tool-panel">
     <ScrollViewer Classes="tool-panel-scroll">
-        <StackPanel Margin="12" Spacing="12">
+        <StackPanel Margin="12,6" Spacing="8">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <Button Grid.Column="0"
                         Content="Open Original Map"
@@ -63,14 +63,25 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="{Binding StatusMessage}"
-                       TextWrapping="Wrap"
-                       Opacity="0.85" />
-
-            <TextBlock Text="{Binding UnderlyingMapStatus}"
-                       TextWrapping="Wrap"
-                       Opacity="0.85"
-                       IsVisible="{Binding ShowUnderlyingMapStatus}" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StatusMessage}"
+                           TextWrapping="Wrap"
+                           Opacity="0.85"
+                           VerticalAlignment="Center" />
+                <Panel Grid.Column="1"
+                       Width="36"
+                       MinWidth="36"
+                       IsVisible="{Binding ShowUnderlyingMapStatus}">
+                    <iconPacks:PackIconFontAwesome6 Width="14"
+                                                    Height="14"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Kind="{Binding UnderlyingMapLinkIconKind}"
+                                                    Foreground="{Binding UnderlyingMapLinkBrush}"
+                                                    ToolTip.Tip="{Binding UnderlyingMapTooltip}" />
+                </Panel>
+            </Grid>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
