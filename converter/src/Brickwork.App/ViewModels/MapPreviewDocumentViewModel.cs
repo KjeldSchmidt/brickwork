@@ -87,6 +87,8 @@ public partial class MapPreviewDocumentViewModel : Document
             if (args.PropertyName is nameof(EditorSession.ContentRevision))
             {
                 ContentRevision = _session.ContentRevision;
+                // Geometry may extend further past the image; grow the interactive canvas.
+                UpdateCanvasSize();
             }
 
             if (args.PropertyName is nameof(EditorSession.HighlightRevision)
@@ -119,6 +121,18 @@ public partial class MapPreviewDocumentViewModel : Document
         Map = _session.Map;
         HasMap = Map is not null;
         ShowPlaceholder = !HasMap;
+        UpdateCanvasSize();
+    }
+
+    private void UpdateCanvasSize()
+    {
+        if (Map is not null && SceneTransform.ForMapPreview(Map) is { } transform)
+        {
+            PreviewWidth = transform.CanvasWidth;
+            PreviewHeight = transform.CanvasHeight;
+            return;
+        }
+
         PreviewWidth = Map?.Preview?.Width ?? 2048;
         PreviewHeight = Map?.Preview?.Height ?? 1536;
     }
@@ -344,7 +358,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return;
@@ -423,7 +437,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return false;
@@ -502,7 +516,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return;
@@ -562,7 +576,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return false;
@@ -600,7 +614,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return false;
@@ -644,7 +658,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return false;
@@ -680,7 +694,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return;
@@ -697,7 +711,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return;
@@ -714,7 +728,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return;
@@ -734,7 +748,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return;
@@ -754,7 +768,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return false;
@@ -770,7 +784,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return false;
@@ -801,7 +815,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return false;
@@ -853,7 +867,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return false;
@@ -1002,7 +1016,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return false;
@@ -1125,7 +1139,7 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
-        var transform = SceneTransform.FromMap(Map);
+        var transform = SceneTransform.ForMapPreview(Map);
         if (transform is null)
         {
             return false;

@@ -12,7 +12,7 @@ public static class WallMarqueePicker
         double right,
         double bottom)
     {
-        var transform = SceneTransform.FromMap(map);
+        var transform = SceneTransform.ForMapPreview(map);
         if (transform is null || right - left < 1e-6 || bottom - top < 1e-6)
         {
             return [];

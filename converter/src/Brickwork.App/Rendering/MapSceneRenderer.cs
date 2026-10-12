@@ -24,11 +24,22 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             canvas.DrawImage(previewImage, destinationBounds);
         }
 
-        var transform = SceneTransform.FromMap(map);
-        if (transform is null)
+        var baseTransform = SceneTransform.FromMap(map);
+        if (baseTransform is null)
         {
             return;
         }
+
+        // Overlay coordinates use the same origin as the image destination (overflow padding).
+        var transform = new SceneTransform
+        {
+            SceneWidth = baseTransform.SceneWidth,
+            SceneHeight = baseTransform.SceneHeight,
+            PreviewWidth = baseTransform.PreviewWidth,
+            PreviewHeight = baseTransform.PreviewHeight,
+            OriginOffsetX = destinationBounds.Left,
+            OriginOffsetY = destinationBounds.Top,
+        };
 
         var showWallHandles = highlight?.ShowWallHandles == true;
         var showRegionHandles = highlight?.ShowRegionHandles == true;

@@ -13,7 +13,7 @@ public static class WallHitTester
         MapPoint previewPoint,
         double tolerancePreviewPixels)
     {
-        var transform = SceneTransform.FromMap(map);
+        var transform = SceneTransform.ForMapPreview(map);
         if (transform is null)
         {
             return null;

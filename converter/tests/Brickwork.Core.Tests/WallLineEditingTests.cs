@@ -199,7 +199,11 @@ public class WallHitTesterTests
             Walls = [wall],
         };
 
-        var hit = WallHitTester.Pick(map, new MapPoint(500, 0), tolerancePreviewPixels: 8);
+        var transform = SceneTransform.ForMapPreview(map)!;
+        var hit = WallHitTester.Pick(
+            map,
+            transform.SceneToPreview(new MapPoint(500, 0)),
+            tolerancePreviewPixels: 8);
 
         Assert.NotNull(hit);
         Assert.Equal("gap-1", hit!.Portal!.Id);

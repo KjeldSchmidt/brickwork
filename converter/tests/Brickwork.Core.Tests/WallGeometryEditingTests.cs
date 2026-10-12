@@ -356,8 +356,12 @@ public class WallVertexHitTesterTests
             Walls = [wall],
         };
 
-        // Midpoint (500,0), half thickness 20 → positive endpoint at (500, 20).
-        var hit = WallVertexHitTester.Pick(map, new MapPoint(500, 20), tolerancePreviewPixels: 8);
+        // Midpoint (500,0), half thickness 20 → positive endpoint at (500, 20) in scene/preview units.
+        var transform = SceneTransform.ForMapPreview(map)!;
+        var hit = WallVertexHitTester.Pick(
+            map,
+            transform.SceneToPreview(new MapPoint(500, 20)),
+            tolerancePreviewPixels: 8);
 
         Assert.NotNull(hit);
         Assert.Equal(TerrainThicknessEndpoint.Positive, hit!.TerrainThicknessEndpoint);
