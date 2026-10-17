@@ -27,7 +27,7 @@ public partial class RegionsToolViewModel : Tool
 
     public string EmptyMessage => _session.Map is null
         ? "Open a Source Map to see regions"
-        : "No regions yet. Use the Region tool (R) and Middle-Drag Empty to draw one.";
+        : "No regions yet. Use the Region tool (R) and Double-Click Empty to draw one.";
 
     public RegionsToolViewModel(EditorSession session)
     {

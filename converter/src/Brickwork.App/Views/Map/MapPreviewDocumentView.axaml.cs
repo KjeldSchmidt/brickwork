@@ -25,12 +25,11 @@ public partial class MapPreviewDocumentView : UserControl
 
     private Point? _middlePressPosition;
     private bool _middleDragMoved;
-    private bool _middleArmedForWall;
-    private bool _middleArmedForRegion;
     private bool _middleArmedForPortal;
     private bool _portalResizeFromMiddle;
-    private bool _middleStartedWallThisPress;
-    private bool _middleStartedRegionThisPress;
+    private int _leftClickCount;
+    private bool _leftStartedDrawingThisPress;
+    private bool _drawingLeftClickActive;
     private bool _eraserStrokeActive;
 
     public MapPreviewDocumentView()
@@ -109,6 +108,7 @@ public partial class MapPreviewDocumentView : UserControl
         _lastFittedMap = null;
         CancelMarquee();
         ResetMiddleState();
+        ResetDrawingClickState();
         _eraserStrokeActive = false;
         ScheduleInitialFit();
     }
@@ -125,6 +125,7 @@ public partial class MapPreviewDocumentView : UserControl
             _rightDragMoved = false;
             CancelMarquee();
             ResetMiddleState();
+            ResetDrawingClickState();
             _eraserStrokeActive = false;
 
             if (sender is MapPreviewDocumentViewModel { HasMap: false })
@@ -151,17 +152,27 @@ public partial class MapPreviewDocumentView : UserControl
         if (properties.IsLeftButtonPressed)
         {
             var pressPosition = e.GetPosition(MapViewport);
+            var previewPress = ToPreviewPoint(pressPosition);
             _leftPressPosition = pressPosition;
+            _leftClickCount = e.ClickCount;
+            _leftStartedDrawingThisPress = false;
+            _drawingLeftClickActive = false;
             _rightPressScreenPosition = null;
             _rightDragMoved = false;
             _marqueeActive = false;
             _marqueeAddToSelection = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
-            // While drawing, left-click finishes (middle-click places vertices).
+            // While drawing: single-click places a vertex (on release); double-click finishes.
             if (viewModel.IsDrawingWall)
             {
-                viewModel.TryFinishDrawingWall(ToPreviewPoint(pressPosition));
-                _leftPressPosition = null;
+                _drawingLeftClickActive = true;
+                if (e.ClickCount >= 2)
+                {
+                    viewModel.TryFinishDrawingWall(previewPress);
+                    _leftPressPosition = null;
+                    _drawingLeftClickActive = false;
+                }
+
                 e.Pointer.Capture(MapViewport);
                 e.Handled = true;
                 return;
@@ -169,16 +180,46 @@ public partial class MapPreviewDocumentView : UserControl
 
             if (viewModel.IsDrawingRegion)
             {
-                viewModel.TryFinishDrawingRegion(ToPreviewPoint(pressPosition));
-                _leftPressPosition = null;
+                _drawingLeftClickActive = true;
+                if (e.ClickCount >= 2)
+                {
+                    viewModel.TryFinishDrawingRegion(previewPress);
+                    _leftPressPosition = null;
+                    _drawingLeftClickActive = false;
+                }
+
                 e.Pointer.Capture(MapViewport);
                 e.Handled = true;
                 return;
             }
 
+            // Double-click empty space starts a new wall/region.
+            if (e.ClickCount >= 2)
+            {
+                if (viewModel.IsWallEditingToolActive &&
+                    viewModel.TryStartDrawingWall(previewPress))
+                {
+                    _leftStartedDrawingThisPress = true;
+                    _drawingLeftClickActive = true;
+                    e.Pointer.Capture(MapViewport);
+                    e.Handled = true;
+                    return;
+                }
+
+                if (viewModel.IsRegionEditingToolActive &&
+                    viewModel.TryStartDrawingRegion(previewPress))
+                {
+                    _leftStartedDrawingThisPress = true;
+                    _drawingLeftClickActive = true;
+                    e.Pointer.Capture(MapViewport);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
             if (viewModel.IsEraserToolActive)
             {
-                _eraserStrokeActive = viewModel.TryBeginEraserStroke(ToPreviewPoint(pressPosition));
+                _eraserStrokeActive = viewModel.TryBeginEraserStroke(previewPress);
                 if (_eraserStrokeActive)
                 {
                     _leftPressPosition = null;
@@ -189,7 +230,6 @@ public partial class MapPreviewDocumentView : UserControl
                 return;
             }
 
-            var previewPress = ToPreviewPoint(pressPosition);
             _vertexDragActive = viewModel.TryBeginVertexDrag(previewPress);
             if (_vertexDragActive)
             {
@@ -227,7 +267,8 @@ public partial class MapPreviewDocumentView : UserControl
 
         if (properties.IsMiddleButtonPressed)
         {
-            if (!viewModel.IsWallEditingToolActive && !viewModel.IsRegionEditingToolActive)
+            // Middle-click is only used for portal create / resize while wall editing.
+            if (!viewModel.IsWallEditingToolActive || viewModel.IsDrawing)
             {
                 return;
             }
@@ -236,29 +277,7 @@ public partial class MapPreviewDocumentView : UserControl
             _middlePressPosition = pressPosition;
             _middleDragMoved = false;
             _portalResizeFromMiddle = false;
-            _middleStartedWallThisPress = false;
-            _middleStartedRegionThisPress = false;
-            _middleArmedForWall = false;
-            _middleArmedForRegion = false;
-            _middleArmedForPortal = false;
-
-            // While drawing, middle-click places the next vertex (handled on release).
-            var previewPoint = ToPreviewPoint(pressPosition);
-            if (viewModel.IsWallEditingToolActive)
-            {
-                if (viewModel.HasWallAt(previewPoint))
-                {
-                    _middleArmedForPortal = true;
-                }
-                else
-                {
-                    _middleArmedForWall = true;
-                }
-            }
-            else if (viewModel.IsRegionEditingToolActive && !viewModel.HasRegionAt(previewPoint))
-            {
-                _middleArmedForRegion = true;
-            }
+            _middleArmedForPortal = viewModel.HasWallAt(ToPreviewPoint(pressPosition));
 
             e.Pointer.Capture(MapViewport);
             e.Handled = true;
@@ -352,39 +371,14 @@ public partial class MapPreviewDocumentView : UserControl
                         return;
                     }
                 }
-                else if (_middleArmedForWall)
-                {
-                    _middleStartedWallThisPress = viewModel.TryStartDrawingWall(ToPreviewPoint(middlePress));
-                    _middleArmedForWall = false;
-                }
-                else if (_middleArmedForRegion)
-                {
-                    _middleStartedRegionThisPress = viewModel.TryStartDrawingRegion(ToPreviewPoint(middlePress));
-                    _middleArmedForRegion = false;
-                }
-            }
-
-            if (viewModel.IsDrawingWall)
-            {
-                viewModel.UpdateDrawingWallPreview(ToPreviewPoint(current));
-                e.Handled = true;
-                return;
-            }
-
-            if (viewModel.IsDrawingRegion)
-            {
-                viewModel.UpdateDrawingRegionPreview(ToPreviewPoint(current));
-                e.Handled = true;
-                return;
             }
         }
 
-        if (viewModel.IsDrawingWall && _middlePressPosition is null)
+        if (viewModel.IsDrawingWall)
         {
             viewModel.UpdateDrawingWallPreview(ToPreviewPoint(e.GetPosition(MapViewport)));
         }
-
-        if (viewModel.IsDrawingRegion && _middlePressPosition is null)
+        else if (viewModel.IsDrawingRegion)
         {
             viewModel.UpdateDrawingRegionPreview(ToPreviewPoint(e.GetPosition(MapViewport)));
         }
@@ -450,68 +444,8 @@ public partial class MapPreviewDocumentView : UserControl
             if (_portalResizeFromMiddle)
             {
                 viewModel.EndVertexDrag();
-                ResetMiddleState();
-                if (e.Pointer.Captured == MapViewport)
-                {
-                    e.Pointer.Capture(null);
-                }
-
-                e.Handled = true;
-                return;
             }
-
-            if (viewModel.IsDrawingWall)
-            {
-                if (_middleStartedWallThisPress)
-                {
-                    // Release after the drag that started the wall — keep rubber-banding.
-                    viewModel.UpdateDrawingWallPreview(ToPreviewPoint(releasePosition));
-                }
-                else if (!_middleDragMoved)
-                {
-                    viewModel.CommitDrawingWallVertex(ToPreviewPoint(releasePosition));
-                }
-                else
-                {
-                    viewModel.UpdateDrawingWallPreview(ToPreviewPoint(releasePosition));
-                }
-
-                ResetMiddleState();
-                if (e.Pointer.Captured == MapViewport)
-                {
-                    e.Pointer.Capture(null);
-                }
-
-                e.Handled = true;
-                return;
-            }
-
-            if (viewModel.IsDrawingRegion)
-            {
-                if (_middleStartedRegionThisPress)
-                {
-                    viewModel.UpdateDrawingRegionPreview(ToPreviewPoint(releasePosition));
-                }
-                else if (!_middleDragMoved)
-                {
-                    viewModel.CommitDrawingRegionVertex(ToPreviewPoint(releasePosition));
-                }
-                else
-                {
-                    viewModel.UpdateDrawingRegionPreview(ToPreviewPoint(releasePosition));
-                }
-
-                ResetMiddleState();
-                if (e.Pointer.Captured == MapViewport)
-                {
-                    e.Pointer.Capture(null);
-                }
-
-                e.Handled = true;
-                return;
-            }
-
-            if (_middleArmedForPortal && !_middleDragMoved)
+            else if (_middleArmedForPortal && !_middleDragMoved)
             {
                 viewModel.TryAddPortalAt(ToPreviewPoint(releasePosition));
             }
@@ -554,6 +488,56 @@ public partial class MapPreviewDocumentView : UserControl
 
         if (e.InitialPressMouseButton != MouseButton.Left)
         {
+            return;
+        }
+
+        if (_drawingLeftClickActive || _leftStartedDrawingThisPress)
+        {
+            var releasePosition = e.GetPosition(MapViewport);
+            var previewRelease = ToPreviewPoint(releasePosition);
+            var noDrag = _leftPressPosition is { } drawingPress &&
+                         Math.Abs(releasePosition.X - drawingPress.X) <= ClickMoveThreshold &&
+                         Math.Abs(releasePosition.Y - drawingPress.Y) <= ClickMoveThreshold;
+
+            if (_leftStartedDrawingThisPress)
+            {
+                // Double-click that started drawing — keep rubber-banding from the start point.
+                if (viewModel.IsDrawingWall)
+                {
+                    viewModel.UpdateDrawingWallPreview(previewRelease);
+                }
+                else if (viewModel.IsDrawingRegion)
+                {
+                    viewModel.UpdateDrawingRegionPreview(previewRelease);
+                }
+            }
+            else if (viewModel.IsDrawingWall && noDrag && _leftClickCount < 2)
+            {
+                viewModel.CommitDrawingWallVertex(previewRelease);
+            }
+            else if (viewModel.IsDrawingRegion && noDrag && _leftClickCount < 2)
+            {
+                viewModel.CommitDrawingRegionVertex(previewRelease);
+            }
+            else if (viewModel.IsDrawingWall)
+            {
+                viewModel.UpdateDrawingWallPreview(previewRelease);
+            }
+            else if (viewModel.IsDrawingRegion)
+            {
+                viewModel.UpdateDrawingRegionPreview(previewRelease);
+            }
+
+            _drawingLeftClickActive = false;
+            _leftStartedDrawingThisPress = false;
+            _leftClickCount = 0;
+            _leftPressPosition = null;
+            if (e.Pointer.Captured == MapViewport)
+            {
+                e.Pointer.Capture(null);
+            }
+
+            e.Handled = true;
             return;
         }
 
@@ -644,12 +628,15 @@ public partial class MapPreviewDocumentView : UserControl
     {
         _middlePressPosition = null;
         _middleDragMoved = false;
-        _middleArmedForWall = false;
-        _middleArmedForRegion = false;
         _middleArmedForPortal = false;
         _portalResizeFromMiddle = false;
-        _middleStartedWallThisPress = false;
-        _middleStartedRegionThisPress = false;
+    }
+
+    private void ResetDrawingClickState()
+    {
+        _leftClickCount = 0;
+        _leftStartedDrawingThisPress = false;
+        _drawingLeftClickActive = false;
     }
 
     private void UpdateMarqueeRect(Point origin, Point current)

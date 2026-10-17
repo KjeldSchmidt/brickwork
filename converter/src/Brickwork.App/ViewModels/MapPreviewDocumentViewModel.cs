@@ -823,12 +823,16 @@ public partial class MapPreviewDocumentViewModel : Document
 
         if (close)
         {
-            _drawingWall.Points.RemoveAt(_drawingWall.Points.Count - 1);
+            // Drop rubber-band tip and any double-click commit that landed on the start node.
+            CollapseTrailingPointsNearStart(_drawingWall.Points, transform, firstPreview, minRemaining: 2);
             _drawingWall.IsClosed = true;
         }
         else
         {
             _drawingWall.Points[^1] = scenePoint;
+            // Double-click finish often commits the tip on the first click of the pair;
+            // drop a trailing duplicate so open walls don't end with a zero-length segment.
+            CollapseTrailingDuplicatePreviewPoint(_drawingWall.Points, transform, previewPoint);
         }
 
         if (_drawingWall.Points.Count < 2)
@@ -875,11 +879,13 @@ public partial class MapPreviewDocumentViewModel : Document
         var scenePoint = transform.PreviewToScene(previewPoint);
         if (snapClose)
         {
-            _drawingRegion.Points.RemoveAt(_drawingRegion.Points.Count - 1);
+            // Drop rubber-band tip and any double-click commit that landed on the start node.
+            CollapseTrailingPointsNearStart(_drawingRegion.Points, transform, firstPreview, minRemaining: 3);
         }
         else
         {
             _drawingRegion.Points[^1] = scenePoint;
+            CollapseTrailingDuplicatePreviewPoint(_drawingRegion.Points, transform, previewPoint);
         }
 
         if (_drawingRegion.Points.Count < 3)
@@ -1038,6 +1044,41 @@ public partial class MapPreviewDocumentViewModel : Document
         return dx * dx + dy * dy;
     }
 
+    private static void CollapseTrailingDuplicatePreviewPoint(
+        IList<MapPoint> points,
+        SceneTransform transform,
+        MapPoint previewPoint)
+    {
+        if (points.Count < 2)
+        {
+            return;
+        }
+
+        var previousPreview = transform.SceneToPreview(points[^2]);
+        if (DistanceSquared(previousPreview, previewPoint) <= 8d * 8d)
+        {
+            points.RemoveAt(points.Count - 1);
+        }
+    }
+
+    private static void CollapseTrailingPointsNearStart(
+        IList<MapPoint> points,
+        SceneTransform transform,
+        MapPoint firstPreview,
+        int minRemaining)
+    {
+        while (points.Count > minRemaining)
+        {
+            var tipPreview = transform.SceneToPreview(points[^1]);
+            if (DistanceSquared(tipPreview, firstPreview) > 8d * 8d)
+            {
+                break;
+            }
+
+            points.RemoveAt(points.Count - 1);
+        }
+    }
+
     public bool TryRemoveVertexAt(MapPoint previewPoint)
     {
         if (Map is null)
@@ -1135,6 +1176,12 @@ public partial class MapPreviewDocumentViewModel : Document
 
         if (_session.ActiveMapTool == MapToolKind.RegionEditing)
         {
+            // Near an existing node (including when remove is blocked at 3 points): do not insert.
+            if (RegionVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null)
+            {
+                return false;
+            }
+
             var regionHit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
             if (regionHit is null)
             {
@@ -1157,6 +1204,12 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         if (_session.ActiveMapTool != MapToolKind.WallEditing)
+        {
+            return false;
+        }
+
+        // Near an existing node/portal handle: never insert a duplicate beside it.
+        if (WallVertexHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null)
         {
             return false;
         }
