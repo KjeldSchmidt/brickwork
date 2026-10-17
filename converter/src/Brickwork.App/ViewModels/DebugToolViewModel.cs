@@ -52,6 +52,11 @@ public partial class DebugToolViewModel : Tool
                 or nameof(EditorSession.FocusedPortal)
                 or nameof(EditorSession.ContentRevision))
             {
+                if (args.PropertyName is nameof(EditorSession.ContentRevision) && _session.IsGestureActive)
+                {
+                    return;
+                }
+
                 RefreshSelectedWall();
             }
         };

@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Brickwork.App.ViewModels;
 
 namespace Brickwork.App.Views.Dialogs;
@@ -17,6 +16,4 @@ public partial class AboutWindow : Window
         var dialog = new AboutWindow();
         await dialog.ShowDialog(owner).ConfigureAwait(true);
     }
-
-    private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 }

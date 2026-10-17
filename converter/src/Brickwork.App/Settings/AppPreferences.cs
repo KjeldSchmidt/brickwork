@@ -56,6 +56,8 @@ public sealed class AppPreferences
 
     public void Save()
     {
+        // Preserve update-dismiss state written directly via AppSettingsStore.
+        var existing = _store.Load();
         _store.Save(new AppSettings
         {
             WallSimplificationTolerance = _session.WallSimplificationTolerance,
@@ -64,6 +66,7 @@ public sealed class AppPreferences
             DetectRegionsFromColorPaths = _session.DetectRegionsFromColorPaths,
             DetectRegionsFromNamedContainers = _session.DetectRegionsFromNamedContainers,
             DetectRegionsFromPathNames = _session.DetectRegionsFromPathNames,
+            SkippedUpdateVersion = existing.SkippedUpdateVersion,
         });
     }
 }

@@ -12,20 +12,23 @@ internal static class FoundrySceneBuilder
 
     public static async Task WriteAsync(MapDocument map, Stream destination, CancellationToken cancellationToken)
     {
-        var preview = map.Preview
-            ?? throw new InvalidOperationException("Map preview dimensions are required for Foundry export.");
-
-        if (preview.Width <= 0 || preview.Height <= 0)
-        {
-            throw new InvalidOperationException("Map preview dimensions must be positive for Foundry export.");
-        }
+        var canvas = FoundryExportCanvas.FromMap(map);
 
         var scene = LoadTemplate();
         scene["name"] = map.Name;
-        scene["width"] = preview.Width;
-        scene["height"] = preview.Height;
+        scene["width"] = canvas.Width;
+        scene["height"] = canvas.Height;
 
-        var backgroundSrc = FoundryPaths.BuildBackgroundSrc(map.FoundryMapsDirectory, map.SourceFileName);
+        if (canvas.GridSize is int gridSize &&
+            scene["grid"] is JsonObject grid)
+        {
+            grid["size"] = gridSize;
+        }
+
+        var backgroundSrc = FoundryPaths.BuildBackgroundSrc(
+            map.FoundryMapsDirectory,
+            map.SourceFileName,
+            map.Name);
         scene["background"] = new JsonObject { ["src"] = backgroundSrc };
         scene["thumb"] = backgroundSrc;
 

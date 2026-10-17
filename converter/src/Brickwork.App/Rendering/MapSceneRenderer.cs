@@ -16,7 +16,8 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
 
     public void Render(SKCanvas canvas, MapDocument map, SKRect destinationBounds, MapRenderHighlight? highlight = null)
     {
-        canvas.Clear(SKColors.Black);
+        // Match MapPreviewDocumentView background (#FF1E1E1E) so overflow padding blends in.
+        canvas.Clear(new SKColor(0x1E, 0x1E, 0x1E));
 
         var previewImage = GetOrCreateImage(map);
         if (previewImage is not null)
@@ -24,11 +25,22 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             canvas.DrawImage(previewImage, destinationBounds);
         }
 
-        var transform = SceneTransform.FromMap(map);
-        if (transform is null)
+        var baseTransform = SceneTransform.FromMap(map);
+        if (baseTransform is null)
         {
             return;
         }
+
+        // Overlay coordinates use the same origin as the image destination (overflow padding).
+        var transform = new SceneTransform
+        {
+            SceneWidth = baseTransform.SceneWidth,
+            SceneHeight = baseTransform.SceneHeight,
+            PreviewWidth = baseTransform.PreviewWidth,
+            PreviewHeight = baseTransform.PreviewHeight,
+            OriginOffsetX = destinationBounds.Left,
+            OriginOffsetY = destinationBounds.Top,
+        };
 
         var showWallHandles = highlight?.ShowWallHandles == true;
         var showRegionHandles = highlight?.ShowRegionHandles == true;
@@ -115,7 +127,7 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         }
     }
 
-    public void ReleaseMap(MapDocument map) => _imageCache.Remove(map);
+    public void ReleaseMap(MapDocument map) => Invalidate(map);
 
     private static void DrawRegion(
         SKCanvas canvas,

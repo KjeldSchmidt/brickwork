@@ -51,6 +51,56 @@ public class SceneTransformTests
         Assert.Equal(4096, scenePoint.X, precision: 3);
         Assert.Equal(3072, scenePoint.Y, precision: 3);
     }
+
+    [Fact]
+    public void SceneToPreview_IncludesOriginOffset()
+    {
+        var transform = new SceneTransform
+        {
+            SceneWidth = 100,
+            SceneHeight = 100,
+            PreviewWidth = 100,
+            PreviewHeight = 100,
+            OriginOffsetX = 40,
+            OriginOffsetY = 20,
+        };
+
+        var previewPoint = transform.SceneToPreview(new MapPoint(0, 0));
+
+        Assert.Equal(40, previewPoint.X, precision: 3);
+        Assert.Equal(20, previewPoint.Y, precision: 3);
+    }
+
+    [Fact]
+    public void ForMapPreview_UsesFixedTenPercentPadding()
+    {
+        var map = new MapDocument
+        {
+            Scene = new SceneDimensions { Width = 100, Height = 200 },
+            Preview = new PreviewDimensions { Width = 100, Height = 200 },
+            Walls =
+            [
+                new Wall
+                {
+                    Points =
+                    [
+                        new MapPoint(-50, 10),
+                        new MapPoint(200, 10),
+                    ],
+                },
+            ],
+        };
+
+        var transform = SceneTransform.ForMapPreview(map);
+
+        Assert.NotNull(transform);
+        Assert.Equal(10, transform.OriginOffsetX, precision: 3);
+        Assert.Equal(20, transform.OriginOffsetY, precision: 3);
+        Assert.Equal(10, transform.RightPadding, precision: 3);
+        Assert.Equal(20, transform.BottomPadding, precision: 3);
+        Assert.Equal(120, transform.CanvasWidth, precision: 3);
+        Assert.Equal(240, transform.CanvasHeight, precision: 3);
+    }
 }
 
 public class InkPreviewImageReaderTests

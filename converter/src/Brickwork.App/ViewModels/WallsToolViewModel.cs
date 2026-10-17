@@ -46,7 +46,11 @@ public partial class WallsToolViewModel : Tool
 
             if (args.PropertyName is nameof(EditorSession.ContentRevision))
             {
-                SyncTreeWithWallSet();
+                // Skip tree rebuilds during drag; CompleteGesture fires a final ContentRevision.
+                if (!_session.IsGestureActive)
+                {
+                    SyncTreeWithWallSet();
+                }
             }
 
             if (args.PropertyName is nameof(EditorSession.TreeFocusGeneration))

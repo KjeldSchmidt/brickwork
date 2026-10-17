@@ -675,21 +675,20 @@ public static class WallPathSegmentBuilder
     {
         var polyline = new List<MapPoint> { InterpolateAtLength(points, isClosed, intervalStart) };
         var totalLength = WallPolylineEdges.TotalLength(points, isClosed);
+        var arcLengths = WallPolylineEdges.ComputeArcLengths(points, isClosed);
 
-        foreach (var point in points)
+        // Walk vertices by precomputed arc length (O(N)) instead of closest-point per vertex (O(N²)).
+        for (var i = 0; i < points.Count; i++)
         {
-            var vertexLength = FindArcLengthAtClosestPoint(
-                points,
-                isClosed,
-                WallPolylineEdges.ComputeArcLengths(points, isClosed),
-                point);
-
-            if (vertexLength > intervalStart + Epsilon && vertexLength < intervalEnd - Epsilon)
+            var vertexLength = arcLengths[i];
+            if (vertexLength <= intervalStart + Epsilon || vertexLength >= intervalEnd - Epsilon)
             {
-                if (!PointsEqual(polyline[^1], point))
-                {
-                    polyline.Add(point);
-                }
+                continue;
+            }
+
+            if (!PointsEqual(polyline[^1], points[i]))
+            {
+                polyline.Add(points[i]);
             }
         }
 

@@ -92,6 +92,68 @@ public class FoundryPathsTests
         Assert.Equal(Path.Combine(temp.Path, "FoundryVTT", "Data"), root);
     }
 
+    [Fact]
+    public void ResolveBackgroundBaseName_InkUsesMapTitle()
+    {
+        Assert.Equal("Cool Dungeon", FoundryPaths.ResolveBackgroundBaseName("backup-123.ink", "Cool Dungeon"));
+        Assert.Equal("backup-123", FoundryPaths.ResolveBackgroundBaseName("backup-123.ink", null));
+        Assert.Equal("scene", FoundryPaths.ResolveBackgroundBaseName("scene.uvtt", "Ignored Title"));
+    }
+
+    [Fact]
+    public void BuildBackgroundSrc_InkUsesMapTitle()
+    {
+        using var temp = new TempDirectory();
+        var data = Path.Combine(temp.Path, "FoundryVTT", "Data");
+        var maps = Path.Combine(data, "maps");
+        Directory.CreateDirectory(maps);
+        File.WriteAllBytes(Path.Combine(maps, "Cool Dungeon.webp"), [0x52, 0x49]);
+
+        var src = FoundryPaths.BuildBackgroundSrc(maps, "offline-backup.ink", "Cool Dungeon");
+
+        Assert.Equal("maps/Cool%20Dungeon.webp", src);
+    }
+
+    [Fact]
+    public void TryResolveBackgroundImagePath_WhenMissing_ReturnsNull()
+    {
+        using var temp = new TempDirectory();
+        Directory.CreateDirectory(temp.Path);
+
+        Assert.Null(FoundryPaths.TryResolveBackgroundImagePath(temp.Path, "missing.ink"));
+        Assert.Null(FoundryPaths.TryResolveBackgroundImagePath(null, "dungeon.ink"));
+    }
+
+    [Fact]
+    public void TryResolveBackgroundImagePath_WhenPresent_ReturnsAbsolutePath()
+    {
+        using var temp = new TempDirectory();
+        Directory.CreateDirectory(temp.Path);
+        var imagePath = Path.Combine(temp.Path, "dungeon.png");
+        File.WriteAllBytes(imagePath, [0x89, 0x50]);
+
+        var resolved = FoundryPaths.TryResolveBackgroundImagePath(temp.Path, "dungeon.ink");
+
+        Assert.Equal(Path.GetFullPath(imagePath), resolved);
+    }
+
+    [Fact]
+    public void TryResolveBackgroundImagePath_InkUsesMapTitle()
+    {
+        using var temp = new TempDirectory();
+        Directory.CreateDirectory(temp.Path);
+        var imagePath = Path.Combine(temp.Path, "Cool Dungeon.png");
+        File.WriteAllBytes(imagePath, [0x89, 0x50]);
+
+        var resolved = FoundryPaths.TryResolveBackgroundImagePath(
+            temp.Path,
+            "offline-backup.ink",
+            "Cool Dungeon");
+
+        Assert.Equal(Path.GetFullPath(imagePath), resolved);
+        Assert.Null(FoundryPaths.TryResolveBackgroundImagePath(temp.Path, "offline-backup.ink", "Other"));
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(

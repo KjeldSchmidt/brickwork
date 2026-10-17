@@ -116,18 +116,40 @@ public static class FoundryPaths
     }
 
     /// <summary>
+    /// Base name used to find/write a Foundry background image.
+    /// Inkarnate <c>.ink</c> sources use the map title (JSON <c>title</c>); other formats use the file stem.
+    /// </summary>
+    public static string ResolveBackgroundBaseName(string? sourceFileName, string? mapTitle = null)
+    {
+        if (IsInkarnateSource(sourceFileName) && !string.IsNullOrWhiteSpace(mapTitle))
+        {
+            var fromTitle = Path.GetFileName(mapTitle.Trim());
+            if (!string.IsNullOrWhiteSpace(fromTitle))
+            {
+                return fromTitle;
+            }
+        }
+
+        var baseName = Path.GetFileNameWithoutExtension(
+            string.IsNullOrWhiteSpace(sourceFileName) ? "map" : sourceFileName);
+        return string.IsNullOrWhiteSpace(baseName) ? "map" : baseName;
+    }
+
+    private static bool IsInkarnateSource(string? sourceFileName) =>
+        !string.IsNullOrWhiteSpace(sourceFileName) &&
+        sourceFileName.EndsWith(".ink", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Builds a Foundry <c>background.src</c> path under <paramref name="mapsDirectory"/>,
     /// expressed relative to the Foundry Data root when possible.
     /// Picks an existing image file by base name when the maps folder is readable; otherwise <c>.webp</c>.
     /// </summary>
-    public static string BuildBackgroundSrc(string? mapsDirectory, string? sourceFileName)
+    public static string BuildBackgroundSrc(
+        string? mapsDirectory,
+        string? sourceFileName,
+        string? mapTitle = null)
     {
-        var baseName = Path.GetFileNameWithoutExtension(
-            string.IsNullOrWhiteSpace(sourceFileName) ? "map" : sourceFileName);
-        if (string.IsNullOrWhiteSpace(baseName))
-        {
-            baseName = "map";
-        }
+        var baseName = ResolveBackgroundBaseName(sourceFileName, mapTitle);
 
         if (string.IsNullOrWhiteSpace(mapsDirectory))
         {
@@ -166,26 +188,69 @@ public static class FoundryPaths
     /// </summary>
     public static string ResolveBackgroundFileName(string mapsDirectory, string baseName)
     {
+        var existing = TryFindExistingBackgroundFileName(mapsDirectory, baseName);
+        return existing ?? baseName + ".webp";
+    }
+
+    /// <summary>
+    /// Absolute path of an existing Foundry background image for the source/map title
+    /// under <paramref name="mapsDirectory"/>, or null when none is found.
+    /// </summary>
+    public static string? TryResolveBackgroundImagePath(
+        string? mapsDirectory,
+        string? sourceFileName,
+        string? mapTitle = null)
+    {
+        if (string.IsNullOrWhiteSpace(mapsDirectory))
+        {
+            return null;
+        }
+
+        var baseName = ResolveBackgroundBaseName(sourceFileName, mapTitle);
+
+        string absoluteMaps;
         try
         {
-            if (Directory.Exists(mapsDirectory))
+            absoluteMaps = Path.GetFullPath(mapsDirectory);
+        }
+        catch
+        {
+            return null;
+        }
+
+        var fileName = TryFindExistingBackgroundFileName(absoluteMaps, baseName);
+        if (fileName is null)
+        {
+            return null;
+        }
+
+        return Path.Combine(absoluteMaps, fileName);
+    }
+
+    private static string? TryFindExistingBackgroundFileName(string mapsDirectory, string baseName)
+    {
+        try
+        {
+            if (!Directory.Exists(mapsDirectory))
             {
-                foreach (var extension in BackgroundImageExtensions)
+                return null;
+            }
+
+            foreach (var extension in BackgroundImageExtensions)
+            {
+                var candidate = baseName + extension;
+                if (File.Exists(Path.Combine(mapsDirectory, candidate)))
                 {
-                    var candidate = baseName + extension;
-                    if (File.Exists(Path.Combine(mapsDirectory, candidate)))
-                    {
-                        return candidate;
-                    }
+                    return candidate;
                 }
             }
         }
         catch
         {
-            // Unreadable directory (permissions, IO): fall back to default extension.
+            // Unreadable directory (permissions, IO).
         }
 
-        return baseName + ".webp";
+        return null;
     }
 
     private static string NormalizeFoundryPath(string path)

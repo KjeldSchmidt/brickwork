@@ -94,6 +94,9 @@ public sealed partial class EditorSession : ObservableObject
     /// <summary>Scene-space nudge applied on each paste (stacks for repeated pastes).</summary>
     public const double PasteOffsetSceneUnits = 40d;
 
+    /// <summary>True while a drag/edit gesture is open (history coalesced until dispose).</summary>
+    public bool IsGestureActive => _activeGesture is not null;
+
     public void NotifyContentChanged()
     {
         ContentRevision++;

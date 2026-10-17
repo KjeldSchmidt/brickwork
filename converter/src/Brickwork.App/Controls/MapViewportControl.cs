@@ -229,9 +229,22 @@ public class MapViewportControl : Control
             canvas.Save();
             canvas.ClipRect(new SKRect(0, 0, (float)_bounds.Width, (float)_bounds.Height));
 
-            var previewWidth = _map.Preview?.Width ?? (int)_bounds.Width;
-            var previewHeight = _map.Preview?.Height ?? (int)_bounds.Height;
-            var destination = new SKRect(0, 0, previewWidth, previewHeight);
+            var transform = SceneTransform.ForMapPreview(_map);
+            SKRect destination;
+            if (transform is not null)
+            {
+                destination = new SKRect(
+                    (float)transform.OriginOffsetX,
+                    (float)transform.OriginOffsetY,
+                    (float)(transform.OriginOffsetX + transform.PreviewWidth),
+                    (float)(transform.OriginOffsetY + transform.PreviewHeight));
+            }
+            else
+            {
+                var previewWidth = _map.Preview?.Width ?? (int)_bounds.Width;
+                var previewHeight = _map.Preview?.Height ?? (int)_bounds.Height;
+                destination = new SKRect(0, 0, previewWidth, previewHeight);
+            }
 
             _renderer.Render(canvas, _map, destination, _highlight);
             canvas.Restore();

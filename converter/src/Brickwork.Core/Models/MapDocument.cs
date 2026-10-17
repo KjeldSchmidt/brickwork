@@ -25,6 +25,12 @@ public sealed class MapDocument
     /// </summary>
     public string? FoundryMapsDirectory { get; set; }
 
+    /// <summary>
+    /// Full-resolution Foundry background matched by source base name under the maps folder.
+    /// Null when no matching image was found.
+    /// </summary>
+    public UnderlyingMapInfo? UnderlyingMap { get; set; }
+
     public GridInfo Grid { get; set; } = new();
 
     public IList<MapLayer> Layers { get; init; } = [];
@@ -52,6 +58,20 @@ public sealed class PreviewDimensions
     public int Width { get; set; }
 
     public int Height { get; set; }
+}
+
+/// <summary>Resolved Foundry background image used as the export canvas when connected.</summary>
+public sealed class UnderlyingMapInfo
+{
+    public required string FileName { get; init; }
+
+    public required string AbsolutePath { get; init; }
+
+    public int Width { get; init; }
+
+    public int Height { get; init; }
+
+    public bool IsConnected => Width > 0 && Height > 0 && !string.IsNullOrWhiteSpace(FileName);
 }
 
 public sealed class GridInfo

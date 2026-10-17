@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Brickwork.App.Views.Dialogs.UpdateAvailableWindow"
+        Title="Update available"
+        Width="480"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+    <StackPanel Margin="24" Spacing="12">
+        <TextBlock x:Name="MessageText"
+                   TextWrapping="Wrap"
+                   FontSize="14" />
+        <TextBlock Text="Download the new build from GitHub Releases, then replace your current Brickwork binary."
+                   TextWrapping="Wrap"
+                   Opacity="0.75"
+                   FontSize="12" />
+        <TextBlock x:Name="NotesHeading"
+                   Text="Release notes"
+                   FontWeight="SemiBold"
+                   IsVisible="False" />
+        <Border x:Name="NotesBorder"
+                IsVisible="False"
+                MaxHeight="280"
+                Background="#18000000"
+                CornerRadius="6"
+                Padding="10">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <TextBlock x:Name="NotesText"
+                           TextWrapping="Wrap"
+                           Opacity="0.9"
+                           FontSize="12" />
+            </ScrollViewer>
+        </Border>
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,4,0,0">
+            <Button Content="Later"
+                    MinWidth="88"
+                    Click="OnLaterClick" />
+            <Button Content="Skip this release"
+                    MinWidth="88"
+                    Click="OnSkipClick" />
+            <Button Content="Download"
+                    Classes="primary"
+                    MinWidth="88"
+                    Click="OnDownloadClick" />
+        </StackPanel>
+    </StackPanel>
+</Window>
