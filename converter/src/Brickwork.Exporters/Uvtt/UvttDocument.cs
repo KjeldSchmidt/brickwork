@@ -26,7 +26,7 @@ internal sealed class UvttDocument
     public UvttEnvironment Environment { get; set; } = new();
 
     [JsonPropertyName("lights")]
-    public List<object> Lights { get; set; } = [];
+    public List<UvttLight> Lights { get; set; } = [];
 
     [JsonPropertyName("image")]
     public string Image { get; set; } = string.Empty;
@@ -69,6 +69,26 @@ internal sealed class UvttPortal
 
     [JsonPropertyName("freestanding")]
     public bool Freestanding { get; set; }
+}
+
+internal sealed class UvttLight
+{
+    [JsonPropertyName("position")]
+    public UvttPoint Position { get; set; } = new();
+
+    /// <summary>Radius in grid squares.</summary>
+    [JsonPropertyName("range")]
+    public double Range { get; set; }
+
+    [JsonPropertyName("intensity")]
+    public double Intensity { get; set; } = 1;
+
+    /// <summary>Color as <c>aarrggbb</c> hex.</summary>
+    [JsonPropertyName("color")]
+    public string Color { get; set; } = "ffffffff";
+
+    [JsonPropertyName("shadows")]
+    public bool Shadows { get; set; } = true;
 }
 
 internal sealed class UvttEnvironment

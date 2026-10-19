@@ -38,6 +38,8 @@ public partial class WallsToolView : UserControl
     public WallsToolView()
     {
         InitializeComponent();
+        // NumericUpDown handles Enter itself (to commit the typed text), so listen to handled events too.
+        OffsetBox.AddHandler(KeyDownEvent, OnOffsetKeyDown, RoutingStrategies.Bubble, handledEventsToo: true);
         ToolTip.SetTip(
             _convertMenuItem,
             "Replace this wall with a region. Open walls use the terrain-style thickness outline; closed walls use the closed path itself.");
@@ -632,4 +634,23 @@ public partial class WallsToolView : UserControl
             viewModel.ClearTreeHover();
         }
     }
+
+    private void OnOffsetKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || DataContext is not WallsToolViewModel viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.ApplyWallOffsetCommand.CanExecute(null))
+        {
+            viewModel.ApplyWallOffsetCommand.Execute(null);
+        }
+
+        // Leave the number box so Ctrl+Z undoes the offset instead of editing the text.
+        Focus();
+        e.Handled = true;
+    }
+
+    private void OnApplyOffsetClick(object? sender, RoutedEventArgs e) => Focus();
 }

@@ -43,6 +43,12 @@ public sealed class Wall
 
     public IList<WallPortal> Portals { get; init; } = [];
 
+    /// <summary>Current parallel offset from <see cref="OffsetBasePoints"/>; see <c>WallOffset</c>.</summary>
+    public double Offset { get; set; }
+
+    /// <summary>Points before <see cref="Offset"/> was applied; empty when the wall is not offset.</summary>
+    public IList<MapPoint> OffsetBasePoints { get; init; } = [];
+
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? "Wall" : Name;
 
     public double SceneThickness => WallThickness * Scale;

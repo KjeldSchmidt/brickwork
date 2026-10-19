@@ -133,6 +133,8 @@ public sealed class MapEntityClipboard
             GroupId = wall.GroupId,
             Points = wall.Points.ToList(),
             Portals = wall.Portals.Select(ClonePortal).ToList(),
+            Offset = wall.Offset,
+            OffsetBasePoints = wall.OffsetBasePoints.ToList(),
         };
 
     private static Region CloneRegion(Region region, int? entityId = null) =>

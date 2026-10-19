@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Avalonia.Input;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Mvvm.Controls;
 using Brickwork.Core.Geometry;
 using Brickwork.Core.Models;
@@ -16,6 +17,7 @@ public partial class WallsToolViewModel : Tool
     private int? _selectionAnchorWallId;
     private object? _treeSelectionAnchor;
     private IReadOnlyList<object>? _renameTargets;
+    private HashSet<int> _lastOffsetSelection = [];
 
     [ObservableProperty]
     private ObservableCollection<WallLayerNodeViewModel> _layers = [];
@@ -25,6 +27,21 @@ public partial class WallsToolViewModel : Tool
 
     [ObservableProperty]
     private int _treeRevision;
+
+    /// <summary>
+    /// Scene-unit offset that <see cref="ApplyWallOffsetCommand"/> sets, measured from each wall's original
+    /// path (not added to its current offset); positive grows closed walls outward, 0 restores the path.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ApplyWallOffsetCommand))]
+    private decimal? _offsetDistance = 25m;
+
+    /// <summary>
+    /// When on, a positive offset moves every closed wall away from the floor: outer rings grow,
+    /// rings nested inside them (holes, pillars) shrink. When off, positive always grows.
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoOffsetDirection = true;
 
     public bool HasLayers => Layers.Count > 0;
 
@@ -42,6 +59,15 @@ public partial class WallsToolViewModel : Tool
             if (args.PropertyName is nameof(EditorSession.Map))
             {
                 RebuildLayers();
+            }
+
+            if (args.PropertyName is nameof(EditorSession.Map)
+                or nameof(EditorSession.ContentRevision)
+                or nameof(EditorSession.HighlightRevision))
+            {
+                OnPropertyChanged(nameof(ApplyWallOffsetLabel));
+                ApplyWallOffsetCommand.NotifyCanExecuteChanged();
+                SyncOffsetDistanceWithSelection();
             }
 
             if (args.PropertyName is nameof(EditorSession.ContentRevision))
@@ -212,6 +238,84 @@ public partial class WallsToolViewModel : Tool
         _session.ActiveMapTool = MapToolKind.RegionEditing;
         _session.RequestRegionTreeFocus(converted[^1]);
         return true;
+    }
+
+    public string ApplyWallOffsetLabel => _session.SelectedWallEntityIds.Count switch
+    {
+        0 => "Apply to all walls",
+        1 => "Apply to selected wall",
+        var count => $"Apply to {count} selected walls",
+    };
+
+    private IReadOnlyList<Wall> GetWallOffsetTargets()
+    {
+        if (_session.Map is null)
+        {
+            return [];
+        }
+
+        var selected = _session.SelectedWallEntityIds;
+        return _session.Map.Walls
+            .Where(wall => wall.Points.Count >= 2 && (selected.Count == 0 || selected.Contains(wall.EntityId)))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Shows the selected walls' current offset when the selection changes, so the box reflects
+    /// what Apply would replace. Left alone on hover or when the walls have different offsets.
+    /// </summary>
+    private void SyncOffsetDistanceWithSelection()
+    {
+        if (_lastOffsetSelection.SetEquals(_session.SelectedWallEntityIds))
+        {
+            return;
+        }
+
+        _lastOffsetSelection = _session.SelectedWallEntityIds.ToHashSet();
+        var offsets = GetWallOffsetTargets().Select(wall => wall.Offset * OffsetSign(wall)).Distinct().ToList();
+        if (_lastOffsetSelection.Count > 0 && offsets.Count == 1)
+        {
+            OffsetDistance = Math.Round((decimal)offsets[0], 2);
+        }
+    }
+
+    private bool CanApplyWallOffset() =>
+        OffsetDistance is not null && GetWallOffsetTargets().Count > 0;
+
+    [RelayCommand(CanExecute = nameof(CanApplyWallOffset))]
+    private void ApplyWallOffset()
+    {
+        if (OffsetDistance is not decimal offset)
+        {
+            return;
+        }
+
+        var targets = GetWallOffsetTargets();
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        // Decide directions before moving anything, so nesting is judged on the original paths.
+        var signs = targets.ToDictionary(wall => wall, OffsetSign);
+        _session.Execute(
+            targets.Count == 1 ? "Offset wall" : "Offset walls",
+            () =>
+            {
+                foreach (var wall in targets)
+                {
+                    WallOffset.Apply(wall, (double)offset * signs[wall]);
+                }
+            });
+    }
+
+    private int OffsetSign(Wall wall) =>
+        AutoOffsetDirection && _session.Map is { } map ? WallNesting.AwayFromFloorSign(map, wall) : 1;
+
+    partial void OnAutoOffsetDirectionChanged(bool value)
+    {
+        _lastOffsetSelection = [];
+        SyncOffsetDistanceWithSelection();
     }
 
     public IReadOnlyList<object> GetEditTargets(object? item)

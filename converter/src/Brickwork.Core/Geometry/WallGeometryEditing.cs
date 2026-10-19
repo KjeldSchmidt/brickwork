@@ -29,6 +29,7 @@ public static class WallGeometryEditing
         }
 
         MapPointTransforms.Translate(wall.Points, dx, dy);
+        MapPointTransforms.Translate(wall.OffsetBasePoints, dx, dy);
         wall.PathOrigin = new MapPoint(wall.PathOrigin.X + dx, wall.PathOrigin.Y + dy);
         wall.Origin = new MapPoint(wall.Origin.X + dx, wall.Origin.Y + dy);
         wall.RotationPivot = new MapPoint(wall.RotationPivot.X + dx, wall.RotationPivot.Y + dy);

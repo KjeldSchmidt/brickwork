@@ -53,6 +53,14 @@ public sealed class AppDockFactory : Factory
             CanPin = true,
         };
 
+        var lightsTool = new LightsToolViewModel(_session)
+        {
+            Id = "LightsTool",
+            Title = "Lights",
+            CanClose = false,
+            CanPin = true,
+        };
+
         _debugTool = new DebugToolViewModel(_session)
         {
             Id = "DebugTool",
@@ -88,7 +96,7 @@ public sealed class AppDockFactory : Factory
             Proportion = FileDockCompactProportion,
         };
 
-        var wallsDockables = new ObservableCollection<IDockable> { wallsTool, regionsTool };
+        var wallsDockables = new ObservableCollection<IDockable> { wallsTool, regionsTool, lightsTool };
         if (_session.ShowDebugPanel)
         {
             wallsDockables.Add(_debugTool);
@@ -189,6 +197,7 @@ public sealed class AppDockFactory : Factory
             ["ImportTool"] = () => _session,
             ["WallsTool"] = () => _session,
             ["RegionsTool"] = () => _session,
+            ["LightsTool"] = () => _session,
             ["DebugTool"] = () => _session,
             ["ToolPalette"] = () => _session,
             ["MapPreview"] = () => _session,

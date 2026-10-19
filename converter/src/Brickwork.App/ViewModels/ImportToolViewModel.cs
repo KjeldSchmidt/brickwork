@@ -7,6 +7,7 @@ using Dock.Model.Mvvm.Controls;
 using Brickwork.App.Foundry;
 using Brickwork.App.Views.Dialogs;
 using Brickwork.Composition;
+using Brickwork.Core.Editing;
 using Brickwork.Core.Services;
 using Brickwork.Inkarnate;
 using IconPacks.Avalonia.FontAwesome6;
@@ -142,16 +143,9 @@ public partial class ImportToolViewModel : Tool
         try
         {
             await using var input = File.OpenRead(path);
-            var importer = ServiceFactory.CreateImporterForPath(
-                path,
-                new InkarnateImportOptions
-                {
-                    WallSimplificationTolerance = _session.WallSimplificationTolerance,
-                    DetectRegionsFromColorPaths = _session.DetectRegionsFromColorPaths,
-                    DetectRegionsFromNamedContainers = _session.DetectRegionsFromNamedContainers,
-                    DetectRegionsFromPathNames = _session.DetectRegionsFromPathNames,
-                });
+            var importer = ServiceFactory.CreateImporterForPath(path, _session.CreateImportOptions());
             var map = await importer.ImportAsync(input).ConfigureAwait(true);
+            MapReimportMerger.RecordImportedIds(map);
             map.SourceFileName = Path.GetFileName(path);
             _session.SourceFilePath = path;
             _session.Map = map;

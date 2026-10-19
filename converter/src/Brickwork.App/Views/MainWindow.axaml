@@ -40,6 +40,15 @@
                 <MenuItem Header="E_xit"
                           Command="{Binding ExitCommand}" />
             </MenuItem>
+            <MenuItem Header="_Edit">
+                <!-- Shortcuts are handled in MainWindow.OnKeyDown so they also respect text-box focus. -->
+                <MenuItem Header="{Binding UndoHeader}"
+                          InputGesture="Ctrl+Z"
+                          Command="{Binding UndoCommand}" />
+                <MenuItem Header="{Binding RedoHeader}"
+                          InputGesture="Ctrl+Shift+Z"
+                          Command="{Binding RedoCommand}" />
+            </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="_About Brickwork"
                           Command="{Binding AboutCommand}" />
