@@ -82,7 +82,7 @@
                                                    Value="{Binding BrightRadius}"
                                                    Minimum="0"
                                                    Maximum="1000"
-                                                   Increment="5"
+                                                   Increment="1"
                                                    FormatString="0.##"
                                                    ShowButtonSpinner="False"
                                                    Watermark="mixed" />
@@ -92,7 +92,7 @@
                                                    Value="{Binding DimRadius}"
                                                    Minimum="0"
                                                    Maximum="1000"
-                                                   Increment="5"
+                                                   Increment="1"
                                                    FormatString="0.##"
                                                    ShowButtonSpinner="False"
                                                    Watermark="mixed" />
