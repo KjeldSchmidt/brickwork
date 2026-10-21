@@ -125,6 +125,37 @@ public class FoundryPathsTests
     }
 
     [Fact]
+    public void BuildBackgroundSrc_ImageInSubfolder_IncludesSubfolder()
+    {
+        using var temp = new TempDirectory();
+        var data = Path.Combine(temp.Path, "FoundryVTT", "Data");
+        var maps = Path.Combine(data, "Uploads", "Maps", "Inkarnate");
+        var oskar = Path.Combine(maps, "Oskar");
+        Directory.CreateDirectory(oskar);
+        File.WriteAllBytes(Path.Combine(oskar, "Hochhorst Ebnen.webp"), [0x52, 0x49]);
+
+        var src = FoundryPaths.BuildBackgroundSrc(maps, "backup.ink", "Hochhorst Ebnen");
+
+        Assert.Equal("Uploads/Maps/Inkarnate/Oskar/Hochhorst%20Ebnen.webp", src);
+    }
+
+    [Fact]
+    public void TryResolveBackgroundImagePath_PrefersShallowestMatch()
+    {
+        using var temp = new TempDirectory();
+        var deep = Path.Combine(temp.Path, "a", "b");
+        Directory.CreateDirectory(deep);
+        File.WriteAllBytes(Path.Combine(deep, "dungeon.webp"), [0x52, 0x49]);
+        var shallow = Path.Combine(temp.Path, "z", "dungeon.png");
+        Directory.CreateDirectory(Path.GetDirectoryName(shallow)!);
+        File.WriteAllBytes(shallow, [0x89, 0x50]);
+
+        var resolved = FoundryPaths.TryResolveBackgroundImagePath(temp.Path, "dungeon.ink");
+
+        Assert.Equal(Path.GetFullPath(shallow), resolved);
+    }
+
+    [Fact]
     public void TryResolveBackgroundImagePath_WhenPresent_ReturnsAbsolutePath()
     {
         using var temp = new TempDirectory();

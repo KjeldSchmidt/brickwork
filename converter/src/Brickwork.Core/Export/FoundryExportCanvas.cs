@@ -7,7 +7,8 @@ namespace Brickwork.Core.Export;
 /// </summary>
 public sealed class FoundryExportCanvas
 {
-    public const int FallbackGridSize = 100;
+    /// <summary>Default pixels per grid square when no Foundry map image sets the scale.</summary>
+    public const int DefaultGridSize = 150;
 
     public int Width { get; init; }
 
@@ -18,6 +19,12 @@ public sealed class FoundryExportCanvas
 
     public SceneTransform Transform { get; init; } = null!;
 
+    /// <summary>
+    /// Foundry squares per map grid cell (1 unless the export grid has a different square count);
+    /// distances given in map squares, like light radii, are multiplied by this.
+    /// </summary>
+    public double SquaresPerMapCell { get; init; } = 1;
+
     public static FoundryExportCanvas FromMap(MapDocument map)
     {
         ArgumentNullException.ThrowIfNull(map);
@@ -25,6 +32,16 @@ public sealed class FoundryExportCanvas
         if (map.Scene is not { Width: > 0, Height: > 0 } scene)
         {
             throw new InvalidOperationException("Map scene dimensions are required for Foundry export.");
+        }
+
+        if (map.FoundryExportGrid is { IsValid: true } exportGrid)
+        {
+            return Create(
+                scene,
+                exportGrid.Columns * exportGrid.PixelsPerSquare,
+                exportGrid.Rows * exportGrid.PixelsPerSquare,
+                exportGrid.PixelsPerSquare,
+                map.Grid is { Columns: > 0 } ? exportGrid.Columns / (double)map.Grid.Columns : 1);
         }
 
         if (map.UnderlyingMap is { IsConnected: true, Width: > 0, Height: > 0 } underlying &&
@@ -36,9 +53,10 @@ public sealed class FoundryExportCanvas
 
         if (map.Grid is { Columns: > 0, Rows: > 0 })
         {
-            var width = map.Grid.Columns * FallbackGridSize;
-            var height = map.Grid.Rows * FallbackGridSize;
-            return Create(scene, width, height, FallbackGridSize);
+            var gridSize = map.FoundryGridSize > 0 ? map.FoundryGridSize : DefaultGridSize;
+            var width = map.Grid.Columns * gridSize;
+            var height = map.Grid.Rows * gridSize;
+            return Create(scene, width, height, gridSize);
         }
 
         if (map.Preview is { Width: > 0, Height: > 0 } preview)
@@ -54,12 +72,14 @@ public sealed class FoundryExportCanvas
         SceneDimensions scene,
         int canvasWidth,
         int canvasHeight,
-        int? gridSize) =>
+        int? gridSize,
+        double squaresPerMapCell = 1) =>
         new()
         {
             Width = canvasWidth,
             Height = canvasHeight,
             GridSize = gridSize,
+            SquaresPerMapCell = squaresPerMapCell,
             Transform = new SceneTransform
             {
                 SceneWidth = scene.Width,

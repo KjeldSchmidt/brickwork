@@ -3,7 +3,7 @@ using Brickwork.Core.Models;
 namespace Brickwork.Core.Editing;
 
 /// <summary>
-/// Deep snapshot of editable map content (layers + walls + regions + groups) for undo/redo.
+/// Deep snapshot of editable map content (layers + walls + regions + groups + lights) for undo/redo.
 /// Restore updates existing instances in place so UI bindings keep working.
 /// </summary>
 public sealed class DocumentContentMemento
@@ -12,12 +12,16 @@ public sealed class DocumentContentMemento
         IReadOnlyList<MapLayer> layers,
         IReadOnlyList<Wall> walls,
         IReadOnlyList<Region> regions,
-        IReadOnlyList<EntityGroup> groups)
+        IReadOnlyList<EntityGroup> groups,
+        IReadOnlyList<LightSource> lights,
+        IReadOnlySet<int> importedEntityIds)
     {
+        ImportedEntityIds = importedEntityIds;
         Layers = layers;
         Walls = walls;
         Regions = regions;
         Groups = groups;
+        Lights = lights;
     }
 
     public IReadOnlyList<MapLayer> Layers { get; }
@@ -28,12 +32,18 @@ public sealed class DocumentContentMemento
 
     public IReadOnlyList<EntityGroup> Groups { get; }
 
+    public IReadOnlyList<LightSource> Lights { get; }
+
+    public IReadOnlySet<int> ImportedEntityIds { get; }
+
     public static DocumentContentMemento Capture(MapDocument map) =>
         new(
             map.Layers.Select(CloneLayer).ToList(),
             map.Walls.Select(CloneWall).ToList(),
             map.Regions.Select(CloneRegion).ToList(),
-            map.Groups.Select(CloneGroup).ToList());
+            map.Groups.Select(CloneGroup).ToList(),
+            map.Lights.Select(CloneLight).ToList(),
+            map.ImportedEntityIds.ToHashSet());
 
     public void RestoreTo(MapDocument map)
     {
@@ -41,6 +51,9 @@ public sealed class DocumentContentMemento
         RestoreWalls(map);
         RestoreRegions(map);
         RestoreGroups(map);
+        RestoreLights(map);
+        map.ImportedEntityIds.Clear();
+        map.ImportedEntityIds.UnionWith(ImportedEntityIds);
     }
 
     public bool ContentEquals(DocumentContentMemento other)
@@ -48,7 +61,9 @@ public sealed class DocumentContentMemento
         if (Layers.Count != other.Layers.Count ||
             Walls.Count != other.Walls.Count ||
             Regions.Count != other.Regions.Count ||
-            Groups.Count != other.Groups.Count)
+            Groups.Count != other.Groups.Count ||
+            Lights.Count != other.Lights.Count ||
+            !ImportedEntityIds.SetEquals(other.ImportedEntityIds))
         {
             return false;
         }
@@ -80,6 +95,14 @@ public sealed class DocumentContentMemento
         for (var i = 0; i < Groups.Count; i++)
         {
             if (!GroupEquals(Groups[i], other.Groups[i]))
+            {
+                return false;
+            }
+        }
+
+        for (var i = 0; i < Lights.Count; i++)
+        {
+            if (!LightEquals(Lights[i], other.Lights[i]))
             {
                 return false;
             }
@@ -214,6 +237,47 @@ public sealed class DocumentContentMemento
         }
     }
 
+    private void RestoreLights(MapDocument map)
+    {
+        var targetById = Lights.ToDictionary(light => light.EntityId);
+        for (var index = map.Lights.Count - 1; index >= 0; index--)
+        {
+            if (!targetById.ContainsKey(map.Lights[index].EntityId))
+            {
+                map.Lights.RemoveAt(index);
+            }
+        }
+
+        var existingById = map.Lights.ToDictionary(light => light.EntityId);
+        foreach (var source in Lights)
+        {
+            if (existingById.TryGetValue(source.EntityId, out var existing))
+            {
+                CopyLightInto(source, existing);
+            }
+            else
+            {
+                map.Lights.Add(CloneLight(source));
+            }
+        }
+    }
+
+    private static void CopyLightInto(LightSource source, LightSource target)
+    {
+        target.Name = source.Name;
+        target.SourceName = source.SourceName;
+        target.LayerId = source.LayerId;
+        target.GroupId = source.GroupId;
+        target.IsActive = source.IsActive;
+        target.Position = source.Position;
+        target.BrightRadius = source.BrightRadius;
+        target.DimRadius = source.DimRadius;
+        target.Color = source.Color;
+        target.Animation = source.Animation;
+        target.AnimationSpeed = source.AnimationSpeed;
+        target.AnimationIntensity = source.AnimationIntensity;
+    }
+
     private static void CopyLayerInto(MapLayer source, MapLayer target)
     {
         target.Name = source.Name;
@@ -241,6 +305,9 @@ public sealed class DocumentContentMemento
         target.GroupId = source.GroupId;
         ReplacePoints(target.Points, source.Points);
         SyncPortals(source.Portals, target.Portals);
+        target.Offset = source.Offset;
+        ReplacePoints(target.OffsetBasePoints, source.OffsetBasePoints);
+        target.Trunk = source.Trunk;
     }
 
     private static void CopyRegionInto(Region source, Region target)
@@ -353,6 +420,9 @@ public sealed class DocumentContentMemento
             GroupId = wall.GroupId,
             Points = wall.Points.ToList(),
             Portals = wall.Portals.Select(ClonePortal).ToList(),
+            Offset = wall.Offset,
+            OffsetBasePoints = wall.OffsetBasePoints.ToList(),
+            Trunk = wall.Trunk,
         };
 
     private static Region CloneRegion(Region region) =>
@@ -378,6 +448,13 @@ public sealed class DocumentContentMemento
             IsActive = portal.IsActive,
             LineType = portal.LineType,
         };
+
+    private static LightSource CloneLight(LightSource light)
+    {
+        var clone = new LightSource { EntityId = light.EntityId };
+        CopyLightInto(light, clone);
+        return clone;
+    }
 
     private static EntityGroup CloneGroup(EntityGroup group) =>
         new()
@@ -417,7 +494,10 @@ public sealed class DocumentContentMemento
         a.WallThickness.Equals(b.WallThickness) &&
         a.GroupId == b.GroupId &&
         a.Points.SequenceEqual(b.Points) &&
-        PortalListsEqual(a.Portals, b.Portals);
+        PortalListsEqual(a.Portals, b.Portals) &&
+        a.Offset.Equals(b.Offset) &&
+        a.OffsetBasePoints.SequenceEqual(b.OffsetBasePoints) &&
+        a.Trunk == b.Trunk;
 
     private static bool RegionEquals(Region a, Region b) =>
         a.EntityId == b.EntityId &&
@@ -464,4 +544,19 @@ public sealed class DocumentContentMemento
         a.RotationPivot.Equals(b.RotationPivot) &&
         a.Angle.Equals(b.Angle) &&
         a.MemberIds.SequenceEqual(b.MemberIds);
+
+    private static bool LightEquals(LightSource a, LightSource b) =>
+        a.EntityId == b.EntityId &&
+        a.Name == b.Name &&
+        a.SourceName == b.SourceName &&
+        a.LayerId == b.LayerId &&
+        a.GroupId == b.GroupId &&
+        a.IsActive == b.IsActive &&
+        a.Position.Equals(b.Position) &&
+        a.BrightRadius.Equals(b.BrightRadius) &&
+        a.DimRadius.Equals(b.DimRadius) &&
+        a.Color == b.Color &&
+        a.Animation == b.Animation &&
+        a.AnimationSpeed == b.AnimationSpeed &&
+        a.AnimationIntensity == b.AnimationIntensity;
 }

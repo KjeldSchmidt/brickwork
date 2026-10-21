@@ -7,4 +7,11 @@
     <RootNamespace>Brickwork.Core</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Built-in tree trunk adjustments; update by pasting from Settings > Import > "Copy tree-trunk library". -->
+    <EmbeddedResource Include="..\..\..\resources\tree-trunks.json"
+                      LogicalName="Brickwork.Core.TreeTrunkDefaults.json"
+                      Link="Settings\tree-trunks.json" />
+  </ItemGroup>
+
 </Project>

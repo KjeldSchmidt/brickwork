@@ -93,7 +93,17 @@ internal static class InkSvgPathParser
             .ToList();
     }
 
-    public static IList<MapPoint> ParseToLocalPoints(string pathData)
+    public static IList<MapPoint> ParseToLocalPoints(string pathData) =>
+        ParseToLocalSubpaths(pathData).SelectMany(subpath => subpath).ToList();
+
+    /// <summary>
+    /// Point counts of each subpath (one per <c>M</c> command) in the order
+    /// <see cref="ParseToLocalPoints"/> concatenates them.
+    /// </summary>
+    public static IReadOnlyList<int> ParseSubpathPointCounts(string pathData) =>
+        ParseToLocalSubpaths(pathData).Select(subpath => subpath.Count).ToList();
+
+    public static IReadOnlyList<IList<MapPoint>> ParseToLocalSubpaths(string pathData)
     {
         if (string.IsNullOrWhiteSpace(pathData))
         {
@@ -106,6 +116,7 @@ internal static class InkSvgPathParser
             return [];
         }
 
+        var subpaths = new List<IList<MapPoint>>();
         var points = new List<MapPoint>();
         using var iterator = path.CreateIterator(false);
         var coords = new SKPoint[4];
@@ -118,9 +129,11 @@ internal static class InkSvgPathParser
             switch (verb)
             {
                 case SKPathVerb.Done:
-                    RemoveClosingDuplicate(points);
-                    return points;
+                    FinishSubpath(subpaths, points);
+                    return subpaths;
                 case SKPathVerb.Move:
+                    FinishSubpath(subpaths, points);
+                    points = [];
                     current = coords[0];
                     hasCurrent = true;
                     TryAddLocalPoint(points, current);
@@ -169,6 +182,15 @@ internal static class InkSvgPathParser
                 case SKPathVerb.Close:
                     break;
             }
+        }
+    }
+
+    private static void FinishSubpath(List<IList<MapPoint>> subpaths, List<MapPoint> points)
+    {
+        RemoveClosingDuplicate(points);
+        if (points.Count > 0)
+        {
+            subpaths.Add(points);
         }
     }
 

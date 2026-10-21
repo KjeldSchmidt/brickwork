@@ -1,0 +1,184 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Brickwork.App.ViewModels"
+             x:Class="Brickwork.App.Views.Panels.TreesToolView"
+             x:DataType="vm:TreesToolViewModel"
+             Classes="tool-panel"
+             Focusable="True">
+    <UserControl.Styles>
+        <Style Selector="TreeViewItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="TreeViewItem CheckBox">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="NumericUpDown.tree-scale">
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </UserControl.Styles>
+    <ScrollViewer Classes="tool-panel-scroll">
+        <Grid Margin="12">
+            <TextBlock Text="{Binding EmptyMessage}"
+                       Opacity="0.6"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding ShowEmptyMessage}" />
+
+            <StackPanel Spacing="8" IsVisible="{Binding HasTrees}">
+                <TextBlock Text="{Binding Summary}"
+                           Opacity="0.75"
+                           TextWrapping="Wrap" />
+
+                <TreeView ItemsSource="{Binding Kinds}"
+                          SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}">
+                    <TreeView.Styles>
+                        <Style Selector="TreeViewItem" x:DataType="vm:TreeGroupViewModel">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                        </Style>
+                    </TreeView.Styles>
+                    <TreeView.DataTemplates>
+                        <TreeDataTemplate DataType="vm:TreeKindViewModel"
+                                          ItemsSource="{Binding Children}">
+                            <StackPanel Spacing="4" Margin="0,2">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <CheckBox IsChecked="{Binding IsActive}"
+                                              IsThreeState="False"
+                                              VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Header}"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="24,0,0,0">
+                                    <TextBlock Text="Scale ×" FontSize="12" VerticalAlignment="Center" />
+                                    <NumericUpDown Classes="tree-scale"
+                                                   Width="58"
+                                                   Value="{Binding Scale}"
+                                                   Minimum="0.1"
+                                                   Maximum="10"
+                                                   Increment="0.1"
+                                                   FormatString="0.##"
+                                                   ShowButtonSpinner="False"
+                                                   Watermark="mixed"
+                                                   ToolTip.Tip="Scale factor for these trunks: 1 is the size from Settings → Import, 2 doubles it. Remembered for this tree image on all maps."
+                                                   VerticalAlignment="Center" />
+                                    <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasSingleVersion}">
+                                        <TextBlock Text="→" FontSize="12" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                        <NumericUpDown Classes="tree-scale"
+                                                   Width="58"
+                                                   Value="{Binding OffsetX}"
+                                                   Minimum="-5"
+                                                   Maximum="5"
+                                                   Increment="0.05"
+                                                   FormatString="0.##"
+                                                   ShowButtonSpinner="False"
+                                                   Watermark="mixed"
+                                                   ToolTip.Tip="Moves the trunk right (negative: left), in grid squares, as seen in the tree image before it is rotated. Remembered for this tree image on all maps."
+                                                   VerticalAlignment="Center" />
+                                        <TextBlock Text="↓" FontSize="12" VerticalAlignment="Center" />
+                                        <NumericUpDown Classes="tree-scale"
+                                                   Width="58"
+                                                   Value="{Binding OffsetY}"
+                                                   Minimum="-5"
+                                                   Maximum="5"
+                                                   Increment="0.05"
+                                                   FormatString="0.##"
+                                                   ShowButtonSpinner="False"
+                                                   Watermark="mixed"
+                                                   ToolTip.Tip="Moves the trunk down (negative: up), in grid squares, as seen in the tree image before it is rotated. Remembered for this tree image on all maps."
+                                                   VerticalAlignment="Center" />
+                                        <Button Content="Reset"
+                                                Padding="6,0"
+                                                Height="24"
+                                                FontSize="12"
+                                                Command="{Binding ResetAdjustmentCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </TreeDataTemplate>
+
+                        <TreeDataTemplate DataType="vm:TreeVersionViewModel"
+                                          ItemsSource="{Binding Children}">
+                            <StackPanel Spacing="4" Margin="0,2">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <CheckBox IsChecked="{Binding IsActive}"
+                                              IsThreeState="False"
+                                              VerticalAlignment="Center" />
+                                    <Border Width="40"
+                                            Height="40"
+                                            CornerRadius="4"
+                                            ClipToBounds="True"
+                                            Background="#20FFFFFF">
+                                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                    </Border>
+                                    <TextBlock Text="{Binding Header}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="24,0,0,0">
+                                    <TextBlock Text="Scale ×" FontSize="12" VerticalAlignment="Center" />
+                                    <NumericUpDown Classes="tree-scale"
+                                                   Width="58"
+                                                   Value="{Binding Scale}"
+                                                   Minimum="0.1"
+                                                   Maximum="10"
+                                                   Increment="0.1"
+                                                   FormatString="0.##"
+                                                   ShowButtonSpinner="False"
+                                                   Watermark="mixed"
+                                                   ToolTip.Tip="Scale factor for these trunks: 1 is the size from Settings → Import, 2 doubles it. Remembered for this tree image on all maps."
+                                                   VerticalAlignment="Center" />
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="→" FontSize="12" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                        <NumericUpDown Classes="tree-scale"
+                                                   Width="58"
+                                                   Value="{Binding OffsetX}"
+                                                   Minimum="-5"
+                                                   Maximum="5"
+                                                   Increment="0.05"
+                                                   FormatString="0.##"
+                                                   ShowButtonSpinner="False"
+                                                   Watermark="mixed"
+                                                   ToolTip.Tip="Moves the trunk right (negative: left), in grid squares, as seen in the tree image before it is rotated. Remembered for this tree image on all maps."
+                                                   VerticalAlignment="Center" />
+                                        <TextBlock Text="↓" FontSize="12" VerticalAlignment="Center" />
+                                        <NumericUpDown Classes="tree-scale"
+                                                   Width="58"
+                                                   Value="{Binding OffsetY}"
+                                                   Minimum="-5"
+                                                   Maximum="5"
+                                                   Increment="0.05"
+                                                   FormatString="0.##"
+                                                   ShowButtonSpinner="False"
+                                                   Watermark="mixed"
+                                                   ToolTip.Tip="Moves the trunk down (negative: up), in grid squares, as seen in the tree image before it is rotated. Remembered for this tree image on all maps."
+                                                   VerticalAlignment="Center" />
+                                        <Button Content="Reset"
+                                                Padding="6,0"
+                                                Height="24"
+                                                FontSize="12"
+                                                Command="{Binding ResetAdjustmentCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </TreeDataTemplate>
+
+                        <DataTemplate DataType="vm:TreeItemViewModel">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <CheckBox IsChecked="{Binding IsActive}"
+                                          VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding DisplayName}"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding PositionText}"
+                                           Opacity="0.55"
+                                           FontSize="12"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </TreeView.DataTemplates>
+                </TreeView>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

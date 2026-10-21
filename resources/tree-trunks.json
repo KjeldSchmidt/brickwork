@@ -1,0 +1,118 @@
+{
+  "versions": {
+    "asset:11799093": {
+      "name": "Palm Tree",
+      "scale": 0.5,
+      "offsetX": -0.1,
+      "offsetY": 0.2
+    },
+    "asset:11799094": {
+      "name": "Palm Tree",
+      "scale": 0.6,
+      "offsetX": 0.15,
+      "offsetY": -0.2
+    },
+    "asset:11799095": {
+      "name": "Palm Tree",
+      "scale": 0.6,
+      "offsetX": 0.1,
+      "offsetY": -0.2
+    },
+    "asset:11799097": {
+      "name": "Palm Tree",
+      "scale": 0.7,
+      "offsetX": -0.05,
+      "offsetY": 0.15
+    },
+    "asset:6425039": {
+      "name": "Palm Tree",
+      "scale": 0.636,
+      "offsetX": 0.387,
+      "offsetY": 0.071
+    },
+    "asset:6425041": {
+      "name": "Palm Tree",
+      "scale": 0.553,
+      "offsetX": 0.089,
+      "offsetY": -0.151
+    },
+    "asset:6425042": {
+      "name": "Palm Tree",
+      "scale": 0.74,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "asset:6425043": {
+      "name": "Palm Tree",
+      "scale": 0.518,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "asset:6425044": {
+      "name": "Palm Tree",
+      "scale": 0.551,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "asset:6428110": {
+      "name": "Banana Tree",
+      "scale": 0.3,
+      "offsetX": 0.1,
+      "offsetY": 0.1
+    },
+    "asset:6428111": {
+      "name": "Banana Tree",
+      "scale": 0.41,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "asset:6428112": {
+      "name": "Banana Tree",
+      "scale": 0.4,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "asset:6428113": {
+      "name": "Banana Tree",
+      "scale": 0.3,
+      "offsetX": 0.1,
+      "offsetY": 0
+    },
+    "asset:6428114": {
+      "name": "Banana Tree",
+      "scale": 0.4,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "asset:6461462": {
+      "name": "Jungle Tree",
+      "scale": 0.398,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "asset:6461463": {
+      "name": "Jungle Tree",
+      "scale": 0.398,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "asset:6461464": {
+      "name": "Jungle Tree",
+      "scale": 0.404,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "asset:6461465": {
+      "name": "Jungle Tree",
+      "scale": 0.338,
+      "offsetX": 0,
+      "offsetY": 0
+    },
+    "asset:6461466": {
+      "name": "Jungle Tree",
+      "scale": 0.492,
+      "offsetX": 0,
+      "offsetY": 0
+    }
+  }
+}

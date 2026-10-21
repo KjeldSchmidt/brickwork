@@ -290,6 +290,11 @@ public class FoundryExporterTests
             document.RootElement.GetProperty("thumb").GetString());
         Assert.False(document.RootElement.TryGetProperty("_stats", out _));
 
+        var initial = document.RootElement.GetProperty("initial");
+        Assert.Equal(1d, initial.GetProperty("scale").GetDouble());
+        Assert.Equal(JsonValueKind.Null, initial.GetProperty("x").ValueKind);
+        Assert.Equal(JsonValueKind.Null, initial.GetProperty("y").ValueKind);
+
         var walls = document.RootElement.GetProperty("walls");
         Assert.True(walls.GetArrayLength() > 0);
 
@@ -633,6 +638,7 @@ public class FoundryRegionBuilderTests
     {
         var map = CreateMap(sceneWidth: 100, sceneHeight: 100, previewWidth: 200, previewHeight: 200);
         map.Grid = new GridInfo { Columns = 10, Rows = 10, CellSize = 10 };
+        map.FoundryGridSize = 100;
         map.Regions.Add(CreateRegion(1, RegionType.DifficultTerrain, (10, 20), (30, 20), (30, 40)));
 
         var region = Assert.Single(FoundryRegionBuilder.BuildFromMap(map));

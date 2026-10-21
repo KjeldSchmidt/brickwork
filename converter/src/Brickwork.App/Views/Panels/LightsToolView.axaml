@@ -1,0 +1,184 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Brickwork.App.Converters"
+             xmlns:models="using:Brickwork.Core.Models"
+             xmlns:vm="using:Brickwork.App.ViewModels"
+             x:Class="Brickwork.App.Views.Panels.LightsToolView"
+             x:DataType="vm:LightsToolViewModel"
+             Classes="tool-panel"
+             Focusable="True">
+    <UserControl.Resources>
+        <conv:LightAnimationDisplayConverter x:Key="LightAnimationDisplayConverter" />
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="ComboBox.light-animation">
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TreeViewItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="TreeViewItem CheckBox">
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="NumericUpDown.light-radius">
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="TextBox.light-color">
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="4,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+    <ScrollViewer Classes="tool-panel-scroll">
+        <Grid Margin="12">
+            <TextBlock Text="{Binding EmptyMessage}"
+                       Opacity="0.6"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding ShowEmptyMessage}" />
+
+            <StackPanel Spacing="8" IsVisible="{Binding HasLights}">
+                <TextBlock Text="{Binding Summary}"
+                           Opacity="0.75"
+                           TextWrapping="Wrap" />
+                <CheckBox Content="Show light radii on map"
+                          IsChecked="{Binding ShowLightRadii}" />
+
+                <TreeView ItemsSource="{Binding Kinds}"
+                          SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}"
+                          PointerExited="OnTreePointerExited">
+                    <TreeView.Styles>
+                        <Style Selector="TreeViewItem" x:DataType="vm:LightKindViewModel">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                        </Style>
+                    </TreeView.Styles>
+                    <TreeView.DataTemplates>
+                        <TreeDataTemplate DataType="vm:LightKindViewModel"
+                                          ItemsSource="{Binding Children}">
+                            <StackPanel Spacing="4" Margin="0,4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <CheckBox IsChecked="{Binding IsActive}"
+                                              IsThreeState="False"
+                                              VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Header}"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <Grid ColumnDefinitions="Auto,70,Auto,70,Auto,Auto,82"
+                                      ColumnSpacing="4"
+                                      Margin="24,0,0,0">
+                                    <TextBlock Grid.Column="0" Text="Bright" VerticalAlignment="Center" FontSize="12" />
+                                    <NumericUpDown Grid.Column="1"
+                                                   Classes="light-radius"
+                                                   Value="{Binding BrightRadius}"
+                                                   Minimum="0"
+                                                   Maximum="200"
+                                                   Increment="1"
+                                                   FormatString="0.##"
+                                                   ShowButtonSpinner="False"
+                                                   Watermark="mixed" />
+                                    <TextBlock Grid.Column="2" Text="Dim" VerticalAlignment="Center" FontSize="12" />
+                                    <NumericUpDown Grid.Column="3"
+                                                   Classes="light-radius"
+                                                   Value="{Binding DimRadius}"
+                                                   Minimum="0"
+                                                   Maximum="200"
+                                                   Increment="1"
+                                                   FormatString="0.##"
+                                                   ShowButtonSpinner="False"
+                                                   Watermark="mixed" />
+                                    <TextBlock Grid.Column="4" Text="Color" VerticalAlignment="Center" FontSize="12" />
+                                    <Border Grid.Column="5"
+                                            Width="16"
+                                            Height="16"
+                                            CornerRadius="8"
+                                            BorderBrush="#808080"
+                                            BorderThickness="1"
+                                            Background="{Binding ColorBrush}"
+                                            VerticalAlignment="Center" />
+                                    <TextBox Grid.Column="6"
+                                             Classes="light-color"
+                                             Text="{Binding Color}"
+                                             Watermark="#rrggbb" />
+                                </Grid>
+                                <Grid ColumnDefinitions="Auto,96,Auto,Auto,52,Auto,52"
+                                      ColumnSpacing="4"
+                                      Margin="24,0,0,0">
+                                    <TextBlock Grid.Column="0" Text="Animation" VerticalAlignment="Center" FontSize="12" />
+                                    <ComboBox Grid.Column="1"
+                                              Classes="light-animation"
+                                              HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding AnimationOptions}"
+                                              SelectedItem="{Binding Animation}"
+                                              PlaceholderText="mixed">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate DataType="models:LightAnimation">
+                                                <TextBlock Text="{Binding Converter={StaticResource LightAnimationDisplayConverter}}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <Button Grid.Column="2"
+                                            Content="Auto"
+                                            Padding="6,0"
+                                            Height="24"
+                                            FontSize="12"
+                                            ToolTip.Tip="Pick the animation from the name: torches and fires flicker strongly, lanterns and candles gently, glowing things pulse."
+                                            Command="{Binding DetectAnimationCommand}" />
+                                    <TextBlock Grid.Column="3" Text="Speed" VerticalAlignment="Center" FontSize="12"
+                                               IsVisible="{Binding HasAnimation}" />
+                                    <NumericUpDown Grid.Column="4"
+                                                   Classes="light-radius"
+                                                   Value="{Binding AnimationSpeed}"
+                                                   Minimum="1"
+                                                   Maximum="10"
+                                                   Increment="1"
+                                                   FormatString="0"
+                                                   ShowButtonSpinner="False"
+                                                   Watermark="mixed"
+                                                   IsVisible="{Binding HasAnimation}" />
+                                    <TextBlock Grid.Column="5" Text="Intensity" VerticalAlignment="Center" FontSize="12"
+                                               IsVisible="{Binding HasAnimation}" />
+                                    <NumericUpDown Grid.Column="6"
+                                                   Classes="light-radius"
+                                                   Value="{Binding AnimationIntensity}"
+                                                   Minimum="1"
+                                                   Maximum="10"
+                                                   Increment="1"
+                                                   FormatString="0"
+                                                   ShowButtonSpinner="False"
+                                                   Watermark="mixed"
+                                                   IsVisible="{Binding HasAnimation}" />
+                                </Grid>
+                            </StackPanel>
+                        </TreeDataTemplate>
+
+                        <DataTemplate DataType="vm:LightItemViewModel">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6"
+                                        Background="Transparent"
+                                        PointerEntered="OnLightPointerEntered">
+                                <CheckBox IsChecked="{Binding IsActive}"
+                                          VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding DisplayName}"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding PositionText}"
+                                           Opacity="0.55"
+                                           FontSize="12"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </TreeView.DataTemplates>
+                </TreeView>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

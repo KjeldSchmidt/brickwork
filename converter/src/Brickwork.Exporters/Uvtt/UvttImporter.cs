@@ -114,6 +114,23 @@ public sealed class UvttImporter : IMapImporter
             AddPortalWall(map, portal, origin, cellSize, defaultLayer.Id, ref entityId);
         }
 
+        foreach (var light in document.Lights)
+        {
+            map.Lights.Add(new LightSource
+            {
+                EntityId = entityId++,
+                Name = "Light",
+                LayerId = defaultLayer.Id,
+                Position = UvttCoordinateTransform.GridToScene(
+                    UvttCoordinateTransform.FromUvttPoint(light.Position),
+                    origin,
+                    cellSize),
+                BrightRadius = light.Range / 2d,
+                DimRadius = light.Range,
+                Color = ReadLightColor(light.Color),
+            });
+        }
+
         return map;
     }
 
@@ -205,5 +222,12 @@ public sealed class UvttImporter : IMapImporter
         }
 
         return new PreviewDimensions { Width = width, Height = height };
+    }
+
+    /// <summary>UVTT colors are <c>aarrggbb</c>; the alpha byte is dropped.</summary>
+    private static string ReadLightColor(string? argb)
+    {
+        var hex = argb?.Trim().TrimStart('#');
+        return LightColors.Normalize(hex is { Length: 8 } ? hex[2..] : hex);
     }
 }

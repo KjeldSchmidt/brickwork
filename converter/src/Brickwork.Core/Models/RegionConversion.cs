@@ -109,7 +109,9 @@ public static class RegionConversion
     {
         var maxWall = map.Walls.Count == 0 ? 0 : map.Walls.Max(wall => wall.EntityId);
         var maxRegion = map.Regions.Count == 0 ? 0 : map.Regions.Max(region => region.EntityId);
-        return Math.Max(maxWall, maxRegion) + 1;
+        var maxLight = map.Lights.Count == 0 ? 0 : map.Lights.Max(light => light.EntityId);
+        var maxGroup = map.Groups.Count == 0 ? 0 : map.Groups.Max(group => group.GroupId);
+        return Math.Max(Math.Max(maxWall, maxRegion), Math.Max(maxLight, maxGroup)) + 1;
     }
 
     private static IReadOnlyList<MapPoint> BuildOpenWallBoundary(Wall wall)

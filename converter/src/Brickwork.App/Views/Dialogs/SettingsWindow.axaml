@@ -5,7 +5,7 @@
         x:DataType="vm:SettingsWindowViewModel"
         Title="Settings"
         Width="840"
-        Height="420"
+        Height="600"
         MinWidth="720"
         MinHeight="320"
         WindowStartupLocation="CenterOwner"
@@ -100,6 +100,115 @@
                               IsChecked="{Binding DetectRegionsFromNamedContainers}" />
                     <CheckBox Content="Paths with region-like names"
                               IsChecked="{Binding DetectRegionsFromPathNames}" />
+                    <TextBlock Text="Light Detection"
+                               FontWeight="SemiBold"
+                               Margin="0,8,0,0" />
+                    <TextBlock Text="When opening an Inkarnate map, stamps whose names contain one of these words (e.g. &quot;Hand Lantern Lit&quot;) become lights. Exclude words win, so &quot;Oil Lantern Broken&quot; stays a plain object."
+                               TextWrapping="Wrap"
+                               Opacity="0.75" />
+                    <CheckBox Content="Create lights from light-like stamps"
+                              IsChecked="{Binding DetectLightsFromStamps}" />
+                    <CheckBox Content="Animate lights by name (torch, candle, glowing, …)"
+                              IsChecked="{Binding DetectLightAnimations}"
+                              IsEnabled="{Binding DetectLightsFromStamps}" />
+                    <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8"
+                          IsEnabled="{Binding DetectLightsFromStamps}">
+                        <TextBlock Text="Light words" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding LightKeywords}"
+                                 TextWrapping="Wrap" />
+                        <TextBlock Grid.Row="1" Text="Exclude words" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="1"
+                                 Grid.Column="1"
+                                 Text="{Binding LightExcludeKeywords}"
+                                 TextWrapping="Wrap" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding DetectLightsFromStamps}">
+                        <TextBlock Text="Default radius (squares): bright" VerticalAlignment="Center" />
+                        <NumericUpDown Minimum="0" Maximum="200" Increment="1" FormatString="0.#"
+                                       Value="{Binding LightBrightRadius}" Width="110" />
+                        <TextBlock Text="dim" VerticalAlignment="Center" />
+                        <NumericUpDown Minimum="0" Maximum="200" Increment="1" FormatString="0.#"
+                                       Value="{Binding LightDimRadius}" Width="110" />
+                        <Button Content="Reset words" Command="{Binding ResetLightKeywordsCommand}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding DetectLightsFromStamps}"
+                                ToolTip.Tip="Color for detected lights as #rrggbb. Black (#000000) means no colorization: Foundry gets no light color.">
+                        <TextBlock Text="Default color" VerticalAlignment="Center" />
+                        <TextBox Text="{Binding LightColor}" Watermark="#000000" Width="110" />
+                    </StackPanel>
+
+                    <TextBlock Text="Tree Trunks"
+                               FontWeight="SemiBold"
+                               Margin="0,8,0,0" />
+                    <TextBlock Text="Stamps whose names contain one of these words (e.g. &quot;Palm Tree&quot;) get a small X of two walls at their centre, where the trunk is. They appear in the Walls panel as one group per tree kind."
+                               TextWrapping="Wrap"
+                               Opacity="0.75" />
+                    <CheckBox Content="Add trunk walls for tree-like stamps"
+                              IsChecked="{Binding DetectTreesFromStamps}" />
+                    <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8"
+                          IsEnabled="{Binding DetectTreesFromStamps}">
+                        <TextBlock Text="Tree words" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding TreeKeywords}"
+                                 TextWrapping="Wrap" />
+                        <TextBlock Grid.Row="1" Text="Exclude words" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="1"
+                                 Grid.Column="1"
+                                 Text="{Binding TreeExcludeKeywords}"
+                                 TextWrapping="Wrap" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding DetectTreesFromStamps}">
+                        <TextBlock Text="Trunk size (squares)" VerticalAlignment="Center" />
+                        <NumericUpDown Minimum="0.05" Maximum="10" Increment="0.1" FormatString="0.##"
+                                       Value="{Binding TreeTrunkSize}" Width="110" />
+                        <Button Content="Reset words" Command="{Binding ResetTreeKeywordsCommand}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding DetectTreesFromStamps}"
+                                ToolTip.Tip="How much a trunk grows with its tree, compared with a typical tree of the same kind. 50%: a tree twice as large gets a trunk 1.5 times as large, a half-size tree 0.75 times. 0%: every trunk the same size. 100%: trunks grow as fast as trees.">
+                        <TextBlock Text="Trunk growth with tree size (%)" VerticalAlignment="Center" />
+                        <NumericUpDown Minimum="0" Maximum="100" Increment="10" FormatString="0"
+                                       Value="{Binding TreeTrunkGrowthPercent}" Width="110" />
+                    </StackPanel>
+
+                    <TextBlock Text="Tree versions: scale and trunk offset per tree image are set in the Trees tab and saved when Brickwork closes. Brickwork ships built-in values; yours are kept on top."
+                               TextWrapping="Wrap"
+                               Opacity="0.75" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Copy tree-trunk library"
+                                Command="{Binding CopyTreeLibraryCommand}"
+                                ToolTip.Tip="Copies all tree version adjustments (built-in plus yours) as JSON, to share them or to update Brickwork's built-in list (resources/tree-trunks.json in the repository)." />
+                        <TextBlock Text="{Binding TreeLibraryStatus}"
+                                   VerticalAlignment="Center"
+                                   Opacity="0.85" />
+                    </StackPanel>
+
+                    <Border BorderBrush="#4A5364"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="12"
+                            Margin="0,8,0,0">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Apply to open map" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding OpenMapDescription}"
+                                       TextWrapping="Wrap"
+                                       Opacity="0.75" />
+                            <CheckBox Content="Walls and regions (simplification tolerance, region detection, tree trunks)"
+                                      IsChecked="{Binding ApplyWallsAndRegions}"
+                                      ToolTip.Tip="Wall shapes are re-read from the source. Wall types, names, on/off states, door settings and offsets are kept; point edits are replaced. Walls you drew or deleted stay that way." />
+                            <CheckBox Content="Lights (light words, animations, default radii for new lights)"
+                                      IsChecked="{Binding ApplyLights}"
+                                      ToolTip.Tip="Stamps are matched again. Lights you changed keep their settings; new matches are added with the defaults; lights that no longer match are removed." />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="Apply to open map"
+                                        Command="{Binding ApplyToOpenMapCommand}" />
+                                <TextBlock Text="{Binding ApplyStatus}"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           Opacity="0.85" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel Spacing="12" IsVisible="{Binding IsExportSelected}">
@@ -118,6 +227,14 @@
                                 MinWidth="88"
                                 Command="{Binding BrowseFoundryMapsPathCommand}" />
                     </Grid>
+                    <TextBlock Text="Pixels per grid square"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Default for the Foundry export dialog, where the grid squares and pixels per square of the scene are chosen."
+                               TextWrapping="Wrap"
+                               Opacity="0.75" />
+                    <NumericUpDown Minimum="50" Maximum="1000" Increment="10" FormatString="0"
+                                   Value="{Binding FoundryGridSize}" Width="110"
+                                   HorizontalAlignment="Left" />
                 </StackPanel>
 
                 <StackPanel Spacing="12" IsVisible="{Binding IsGeneralSelected}">

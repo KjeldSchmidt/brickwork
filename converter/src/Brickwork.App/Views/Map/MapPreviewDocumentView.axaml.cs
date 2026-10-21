@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Brickwork.App.ViewModels;
 using Brickwork.Core.Models;
@@ -31,6 +32,7 @@ public partial class MapPreviewDocumentView : UserControl
     private bool _leftStartedDrawingThisPress;
     private bool _drawingLeftClickActive;
     private bool _eraserStrokeActive;
+    private bool _trunkOffsetDragActive;
 
     public MapPreviewDocumentView()
     {
@@ -41,6 +43,8 @@ public partial class MapPreviewDocumentView : UserControl
         MapViewport.AddHandler(InputElement.PointerMovedEvent, OnMapViewportPointerMoved, handledEventsToo: true);
         MapViewport.AddHandler(InputElement.PointerReleasedEvent, OnMapViewportPointerReleased, handledEventsToo: true);
         MapViewport.AddHandler(InputElement.PointerExitedEvent, OnMapViewportPointerExited, handledEventsToo: true);
+        // Tunnel so Shift+scroll on tree trunks is seen before the zoom border zooms or scrolls.
+        MapZoom.AddHandler(InputElement.PointerWheelChangedEvent, OnMapPointerWheel, RoutingStrategies.Tunnel);
         KeyDown += OnKeyDown;
     }
 
@@ -230,6 +234,16 @@ public partial class MapPreviewDocumentView : UserControl
                 return;
             }
 
+            // Trees tab: Shift+drag on a selected trunk moves its version's trunk offset.
+            if (e.KeyModifiers.HasFlag(KeyModifiers.Shift) && viewModel.TryBeginTrunkOffsetDrag(previewPress))
+            {
+                _trunkOffsetDragActive = true;
+                _leftPressPosition = null;
+                e.Pointer.Capture(MapViewport);
+                e.Handled = true;
+                return;
+            }
+
             _vertexDragActive = viewModel.TryBeginVertexDrag(previewPress);
             if (_vertexDragActive)
             {
@@ -300,6 +314,17 @@ public partial class MapPreviewDocumentView : UserControl
 
             viewModel.DragVertexTo(ToPreviewPoint(e.GetPosition(MapViewport)));
             e.Handled = true;
+            return;
+        }
+
+        if (_trunkOffsetDragActive)
+        {
+            if (e.GetCurrentPoint(MapViewport).Properties.IsLeftButtonPressed)
+            {
+                viewModel.DragTrunkOffsetTo(ToPreviewPoint(e.GetPosition(MapViewport)));
+                e.Handled = true;
+            }
+
             return;
         }
 
@@ -541,6 +566,19 @@ public partial class MapPreviewDocumentView : UserControl
             return;
         }
 
+        if (_trunkOffsetDragActive)
+        {
+            viewModel.EndTrunkOffsetDrag();
+            _trunkOffsetDragActive = false;
+            if (e.Pointer.Captured == MapViewport)
+            {
+                e.Pointer.Capture(null);
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         if (_vertexDragActive)
         {
             viewModel.EndVertexDrag();
@@ -610,7 +648,10 @@ public partial class MapPreviewDocumentView : UserControl
             if (Math.Abs(delta.X) <= ClickMoveThreshold && Math.Abs(delta.Y) <= ClickMoveThreshold)
             {
                 var shiftToggle = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
-                viewModel.HandlePrimaryClick(ToPreviewPoint(leftReleasePosition), shiftToggle);
+                viewModel.HandlePrimaryClick(
+                    ToPreviewPoint(leftReleasePosition),
+                    shiftToggle,
+                    isDoubleClick: _leftClickCount >= 2);
                 e.Handled = true;
             }
         }
@@ -622,6 +663,22 @@ public partial class MapPreviewDocumentView : UserControl
         }
 
         _leftPressPosition = null;
+    }
+
+    private void OnMapPointerWheel(object? sender, PointerWheelEventArgs e)
+    {
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Shift) ||
+            DataContext is not MapPreviewDocumentViewModel { HasMap: true } viewModel)
+        {
+            return;
+        }
+
+        // macOS turns Shift+wheel into horizontal scrolling, so accept either axis.
+        var notches = Math.Abs(e.Delta.Y) > Math.Abs(e.Delta.X) ? e.Delta.Y : e.Delta.X;
+        if (viewModel.TryScaleSelectedTrunks(notches))
+        {
+            e.Handled = true;
+        }
     }
 
     private void ResetMiddleState()

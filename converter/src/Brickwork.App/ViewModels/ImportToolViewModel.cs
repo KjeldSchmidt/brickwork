@@ -7,6 +7,8 @@ using Dock.Model.Mvvm.Controls;
 using Brickwork.App.Foundry;
 using Brickwork.App.Views.Dialogs;
 using Brickwork.Composition;
+using Brickwork.Core.Editing;
+using Brickwork.Core.Models;
 using Brickwork.Core.Services;
 using Brickwork.Inkarnate;
 using IconPacks.Avalonia.FontAwesome6;
@@ -142,16 +144,9 @@ public partial class ImportToolViewModel : Tool
         try
         {
             await using var input = File.OpenRead(path);
-            var importer = ServiceFactory.CreateImporterForPath(
-                path,
-                new InkarnateImportOptions
-                {
-                    WallSimplificationTolerance = _session.WallSimplificationTolerance,
-                    DetectRegionsFromColorPaths = _session.DetectRegionsFromColorPaths,
-                    DetectRegionsFromNamedContainers = _session.DetectRegionsFromNamedContainers,
-                    DetectRegionsFromPathNames = _session.DetectRegionsFromPathNames,
-                });
+            var importer = ServiceFactory.CreateImporterForPath(path, _session.CreateImportOptions());
             var map = await importer.ImportAsync(input).ConfigureAwait(true);
+            MapReimportMerger.RecordImportedIds(map);
             map.SourceFileName = Path.GetFileName(path);
             _session.SourceFilePath = path;
             _session.Map = map;
@@ -225,6 +220,24 @@ public partial class ImportToolViewModel : Tool
         }
 
         var (outputPath, formatId) = exportTarget.Value;
+
+        if (formatId == "foundry" && _session.Map.Grid is { Columns: > 0, Rows: > 0 } mapGrid &&
+            Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
+        {
+            // Start from the last export of this map, else the map grid with the configured pixels.
+            var initial = _session.Map.FoundryExportGrid is { IsValid: true } previous
+                ? previous
+                : new FoundryExportGrid(mapGrid.Columns, mapGrid.Rows, _session.FoundryGridSize);
+            var grid = await FoundryExportDialog.ShowAsync(owner, mapGrid, initial).ConfigureAwait(true);
+            if (grid is null)
+            {
+                StatusMessage = "Export cancelled.";
+                return;
+            }
+
+            _session.Map.FoundryExportGrid = grid;
+        }
+
         StatusMessage = "Converting...";
 
         try
@@ -233,6 +246,7 @@ public partial class ImportToolViewModel : Tool
             _session.Map.FoundryMapsDirectory = string.IsNullOrWhiteSpace(_session.FoundryMapsPath)
                 ? null
                 : _session.FoundryMapsPath;
+            _session.Map.FoundryGridSize = _session.FoundryGridSize;
 
             await using var output = File.Create(outputPath);
             await _convertMapService

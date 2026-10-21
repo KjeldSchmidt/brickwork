@@ -144,6 +144,21 @@ cd converter && just cli analyze -i ../resources/test-maps/empty-backup.ink --su
 
 CLI export formats: `foundry`, `uvtt1`
 
+### Built-in tree trunk values
+
+Brickwork ships per-version tree trunk adjustments (scale and trunk offset per
+Inkarnate tree image) in [`resources/tree-trunks.json`](resources/tree-trunks.json);
+the file is embedded into the app at build time. To update it:
+
+1. Adjust tree versions in the Trees tab (fields, Shift+scroll, Shift+drag).
+2. Open Settings → Import and click **Copy tree-trunk library**. This copies the
+   built-in values plus your own changes as JSON.
+3. Paste the result over `resources/tree-trunks.json` and commit.
+
+Each user's own changes live in `tree-trunks.json` next to `settings.json` and
+only hold where they differ from the built-in values, so updated built-in values
+reach everyone who hasn't changed that tree version themselves.
+
 ### Releases
 
 Create a release from GitHub Actions → **Release** → Run workflow, and enter a version such as `0.1.0-beta.1`.

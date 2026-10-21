@@ -183,8 +183,8 @@ public static class FoundryPaths
     }
 
     /// <summary>
-    /// Returns the on-disk image file name for <paramref name="baseName"/> in
-    /// <paramref name="mapsDirectory"/>, or <c>{baseName}.webp</c> if none exist / unreadable.
+    /// Returns the on-disk image path (relative to <paramref name="mapsDirectory"/>, possibly in a
+    /// subfolder) for <paramref name="baseName"/>, or <c>{baseName}.webp</c> if none exist / unreadable.
     /// </summary>
     public static string ResolveBackgroundFileName(string mapsDirectory, string baseName)
     {
@@ -227,27 +227,48 @@ public static class FoundryPaths
         return Path.Combine(absoluteMaps, fileName);
     }
 
+    /// <summary>How many folder levels below the maps folder are searched for a background image.</summary>
+    private const int MaxBackgroundSearchDepth = 6;
+
+    /// <summary>
+    /// Finds the image for <paramref name="baseName"/> in <paramref name="mapsDirectory"/> or its
+    /// subfolders (shallowest first; hidden folders skipped). Returns a path relative to the maps folder.
+    /// </summary>
     private static string? TryFindExistingBackgroundFileName(string mapsDirectory, string baseName)
     {
-        try
+        if (!Directory.Exists(mapsDirectory))
         {
-            if (!Directory.Exists(mapsDirectory))
-            {
-                return null;
-            }
+            return null;
+        }
 
-            foreach (var extension in BackgroundImageExtensions)
+        var level = new List<string> { mapsDirectory };
+        for (var depth = 0; depth <= MaxBackgroundSearchDepth && level.Count > 0; depth++)
+        {
+            var next = new List<string>();
+            foreach (var directory in level)
             {
-                var candidate = baseName + extension;
-                if (File.Exists(Path.Combine(mapsDirectory, candidate)))
+                foreach (var extension in BackgroundImageExtensions)
                 {
-                    return candidate;
+                    var candidate = Path.Combine(directory, baseName + extension);
+                    if (File.Exists(candidate))
+                    {
+                        return Path.GetRelativePath(mapsDirectory, candidate);
+                    }
+                }
+
+                try
+                {
+                    next.AddRange(Directory.EnumerateDirectories(directory)
+                        .Where(child => !Path.GetFileName(child).StartsWith('.'))
+                        .Order(StringComparer.OrdinalIgnoreCase));
+                }
+                catch
+                {
+                    // Unreadable directory (permissions, IO).
                 }
             }
-        }
-        catch
-        {
-            // Unreadable directory (permissions, IO).
+
+            level = next;
         }
 
         return null;
