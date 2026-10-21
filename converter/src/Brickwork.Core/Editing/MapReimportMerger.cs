@@ -213,6 +213,7 @@ public static class MapReimportMerger
         region.LayerId = wall.LayerId;
         region.GroupId = wall.GroupId;
         region.IsActive = wall.IsActive;
+        region.Levels = [.. wall.Levels];
     }
 
     private static bool IsNew(int entityId, HashSet<int> present, ISet<int> imported) =>

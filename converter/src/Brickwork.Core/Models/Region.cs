@@ -16,6 +16,9 @@ public sealed class Region
 
     public int? GroupId { get; set; }
 
+    /// <summary>Foundry scene levels this is on (1-based); empty means every level.</summary>
+    public HashSet<int> Levels { get; set; } = [];
+
     /// <summary>Closed scene-space polygon. Always treated as closed; first and last points need not coincide.</summary>
     public IList<MapPoint> Points { get; init; } = [];
 

@@ -39,6 +39,27 @@
         <dock:DockFluentTheme />
         <StyleInclude Source="avares://IconPacks.Avalonia.FontAwesome6/FontAwesome6.axaml" />
 
+        <!-- Row of "on level N" checkboxes (see SceneLevelToggle); empty with a single level. -->
+        <Style Selector="ItemsControl.scene-levels">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="2" />
+                </ItemsPanelTemplate>
+            </Setter>
+            <Setter Property="ItemTemplate">
+                <DataTemplate DataType="vm:SceneLevelToggle">
+                    <CheckBox Content="{Binding Label}"
+                              IsChecked="{Binding IsChecked}"
+                              ToolTip.Tip="{Binding ToolTip}"
+                              FontSize="11"
+                              MinWidth="0"
+                              Padding="2,0,4,0"
+                              VerticalAlignment="Center" />
+                </DataTemplate>
+            </Setter>
+        </Style>
+
         <Style Selector="ScrollViewer.tool-panel-scroll">
             <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
             <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />

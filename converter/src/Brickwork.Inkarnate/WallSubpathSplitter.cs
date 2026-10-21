@@ -133,6 +133,7 @@ internal static class WallSubpathSplitter
             WallThickness = source.WallThickness,
             GroupId = source.GroupId,
             PathTemplateId = source.PathTemplateId,
+            Levels = [.. source.Levels],
             Points = points.ToList(),
         };
 

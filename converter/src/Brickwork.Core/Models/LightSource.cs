@@ -26,6 +26,9 @@ public sealed class LightSource
 
     public int? GroupId { get; set; }
 
+    /// <summary>Foundry scene levels this is on (1-based); empty means every level.</summary>
+    public HashSet<int> Levels { get; set; } = [];
+
     public bool IsActive { get; set; } = true;
 
     public MapPoint Position { get; set; }

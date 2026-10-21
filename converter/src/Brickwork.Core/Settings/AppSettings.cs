@@ -16,6 +16,12 @@ public sealed class AppSettings
     /// <summary>Absolute Foundry maps folder; used as the base for Foundry background.src paths.</summary>
     public string FoundryMapsPath { get; set; } = FoundryPaths.TryGetPreferredMapsDirectory() ?? string.Empty;
 
+    /// <summary>Number of Foundry scene levels; walls, regions and lights can be put on each.</summary>
+    public int SceneLevelCount { get; set; } = 1;
+
+    /// <summary>Height of each Foundry scene level in feet.</summary>
+    public double SceneLevelHeight { get; set; } = SceneLevels.DefaultHeight;
+
     /// <summary>Foundry pixels per grid square when no map image is found in the maps folder.</summary>
     public int FoundryGridSize { get; set; } = FoundryExportCanvas.DefaultGridSize;
 

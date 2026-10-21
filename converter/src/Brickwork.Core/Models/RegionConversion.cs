@@ -18,6 +18,7 @@ public static class RegionConversion
             IsActive = wall.IsActive,
             IsEntityVisible = wall.IsEntityVisible,
             GroupId = wall.GroupId,
+            Levels = [.. wall.Levels],
             RegionType = RegionType.DifficultTerrain,
             Points = points,
         };
@@ -32,6 +33,7 @@ public static class RegionConversion
             IsActive = region.IsActive,
             IsEntityVisible = region.IsEntityVisible,
             GroupId = region.GroupId,
+            Levels = [.. region.Levels],
             LineType = WallLineType.Solid,
             WallEnabled = true,
             IsClosed = true,

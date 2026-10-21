@@ -276,6 +276,7 @@ public sealed class DocumentContentMemento
         target.Animation = source.Animation;
         target.AnimationSpeed = source.AnimationSpeed;
         target.AnimationIntensity = source.AnimationIntensity;
+        target.Levels = [.. source.Levels];
     }
 
     private static void CopyLayerInto(MapLayer source, MapLayer target)
@@ -304,6 +305,7 @@ public sealed class DocumentContentMemento
         target.WallThickness = source.WallThickness;
         target.GroupId = source.GroupId;
         target.PathTemplateId = source.PathTemplateId;
+        target.Levels = [.. source.Levels];
         ReplacePoints(target.Points, source.Points);
         SyncPortals(source.Portals, target.Portals);
         target.Offset = source.Offset;
@@ -319,6 +321,7 @@ public sealed class DocumentContentMemento
         target.IsEntityVisible = source.IsEntityVisible;
         target.RegionType = source.RegionType;
         target.GroupId = source.GroupId;
+        target.Levels = [.. source.Levels];
         ReplacePoints(target.Points, source.Points);
     }
 
@@ -420,6 +423,7 @@ public sealed class DocumentContentMemento
             WallThickness = wall.WallThickness,
             GroupId = wall.GroupId,
             PathTemplateId = wall.PathTemplateId,
+            Levels = [.. wall.Levels],
             Points = wall.Points.ToList(),
             Portals = wall.Portals.Select(ClonePortal).ToList(),
             Offset = wall.Offset,
@@ -437,6 +441,7 @@ public sealed class DocumentContentMemento
             IsEntityVisible = region.IsEntityVisible,
             RegionType = region.RegionType,
             GroupId = region.GroupId,
+            Levels = [.. region.Levels],
             Points = region.Points.ToList(),
         };
 
@@ -495,6 +500,8 @@ public sealed class DocumentContentMemento
         a.Scale.Equals(b.Scale) &&
         a.WallThickness.Equals(b.WallThickness) &&
         a.GroupId == b.GroupId &&
+        a.PathTemplateId == b.PathTemplateId &&
+        a.Levels.SetEquals(b.Levels) &&
         a.Points.SequenceEqual(b.Points) &&
         PortalListsEqual(a.Portals, b.Portals) &&
         a.Offset.Equals(b.Offset) &&
@@ -509,6 +516,7 @@ public sealed class DocumentContentMemento
         a.IsEntityVisible == b.IsEntityVisible &&
         a.RegionType == b.RegionType &&
         a.GroupId == b.GroupId &&
+        a.Levels.SetEquals(b.Levels) &&
         a.Points.SequenceEqual(b.Points);
 
     private static bool PortalListsEqual(IList<WallPortal> a, IList<WallPortal> b)
@@ -557,6 +565,7 @@ public sealed class DocumentContentMemento
         a.Position.Equals(b.Position) &&
         a.BrightRadius.Equals(b.BrightRadius) &&
         a.DimRadius.Equals(b.DimRadius) &&
+        a.Levels.SetEquals(b.Levels) &&
         a.Color == b.Color &&
         a.Animation == b.Animation &&
         a.AnimationSpeed == b.AnimationSpeed &&

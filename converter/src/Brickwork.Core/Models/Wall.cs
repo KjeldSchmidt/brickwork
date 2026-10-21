@@ -45,6 +45,9 @@ public sealed class Wall
     /// </summary>
     public int? PathTemplateId { get; set; }
 
+    /// <summary>Foundry scene levels this is on (1-based); empty means every level.</summary>
+    public HashSet<int> Levels { get; set; } = [];
+
     public IList<MapPoint> Points { get; init; } = [];
 
     public IList<WallPortal> Portals { get; init; } = [];

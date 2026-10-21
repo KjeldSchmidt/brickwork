@@ -40,14 +40,17 @@ internal static class FoundrySceneBuilder
         // background made the Scenes sidebar decode the full-size map on hover.
         scene.Remove("thumb");
 
+        var levels = new LevelLayout(Math.Clamp(map.SceneLevelCount, 1, SceneLevels.MaxCount), map.SceneLevelHeight);
+        scene["levels"] = BuildLevels(scene["levels"]?[0] as JsonObject, levels, backgroundSrc);
+
         var wallSegments = FoundryWallSegmentBuilder.BuildFromMap(map);
-        scene["walls"] = new JsonArray(wallSegments.Select(ToWallJson).ToArray());
+        scene["walls"] = new JsonArray(wallSegments.Select(segment => ToWallJson(segment, levels)).ToArray());
 
         var regions = FoundryRegionBuilder.BuildFromMap(map);
-        scene["regions"] = new JsonArray(regions.Select(ToRegionJson).ToArray());
+        scene["regions"] = new JsonArray(regions.Select(region => ToRegionJson(region, levels)).ToArray());
 
         var lights = FoundryLightBuilder.BuildFromMap(map);
-        scene["lights"] = new JsonArray(lights.Select(ToLightJson).ToArray());
+        scene["lights"] = new JsonArray(lights.Select(light => ToLightJson(light, levels)).ToArray());
 
         await JsonSerializer.SerializeAsync(destination, scene, SerializerOptions, cancellationToken)
             .ConfigureAwait(false);
@@ -63,11 +66,52 @@ internal static class FoundrySceneBuilder
             ?? throw new InvalidOperationException("Failed to parse Foundry scene template.");
     }
 
-    private static JsonObject ToWallJson(FoundryWallSegment segment)
+    /// <summary>Foundry levels stacked from the ground up, each <see cref="Height"/> feet tall.</summary>
+    private sealed record LevelLayout(int Count, double Height)
+    {
+        /// <summary>Level 1 keeps the template's id (the scene's initial level).</summary>
+        public static string Id(int level) => level == 1 ? "defaultLevel0000" : $"brickworkLevel{level:00}";
+
+        public double Bottom(int level) => (level - 1) * Height;
+
+        public double Top(int level) => level * Height;
+
+        /// <summary>Foundry ids for an entity's levels; an empty list means every level.</summary>
+        public JsonArray Ids(IReadOnlyList<int> levels) =>
+            new(levels.Select(level => (JsonNode)JsonValue.Create(Id(level))!).ToArray());
+    }
+
+    /// <summary>
+    /// One Foundry level per scene level. Only the first shows the map image; higher levels have no
+    /// background of their own and show the levels below them.
+    /// </summary>
+    private static JsonArray BuildLevels(JsonObject? templateLevel, LevelLayout levels, string backgroundSrc)
+    {
+        var result = new JsonArray();
+        for (var level = 1; level <= levels.Count; level++)
+        {
+            var node = templateLevel?.DeepClone().AsObject() ?? new JsonObject();
+            node["_id"] = LevelLayout.Id(level);
+            node["name"] = levels.Count == 1 ? "Level" : $"Level {level}";
+            node["elevation"] = new JsonObject { ["bottom"] = levels.Bottom(level), ["top"] = levels.Top(level) };
+            if (node["background"] is JsonObject background)
+            {
+                background["src"] = level == 1 ? backgroundSrc : null;
+            }
+
+            node["visibility"] = new JsonObject { ["levels"] = levels.Ids(Enumerable.Range(1, level - 1).ToList()) };
+            node["sort"] = level - 1;
+            result.Add(node);
+        }
+
+        return result;
+    }
+
+    private static JsonObject ToWallJson(FoundryWallSegment segment, LevelLayout levels)
     {
         return new JsonObject
         {
-            ["levels"] = new JsonArray("defaultLevel0000"),
+            ["levels"] = levels.Ids(segment.Levels),
             ["light"] = segment.Light,
             ["move"] = segment.Move,
             ["sight"] = segment.Sight,
@@ -89,15 +133,16 @@ internal static class FoundrySceneBuilder
         };
     }
 
-    private static JsonObject ToLightJson(FoundryLight light) =>
+    private static JsonObject ToLightJson(FoundryLight light, LevelLayout levels) =>
         new()
         {
             ["_id"] = FoundryIdGenerator.Create(),
             ["x"] = light.X,
             ["y"] = light.Y,
-            ["elevation"] = 0,
+            // A light on some levels sits on the floor of the lowest of them.
+            ["elevation"] = light.Levels.Count == 0 ? 0 : levels.Bottom(light.Levels.Min()),
             ["rotation"] = 0,
-            ["levels"] = new JsonArray("defaultLevel0000"),
+            ["levels"] = levels.Ids(light.Levels),
             ["walls"] = true,
             ["vision"] = false,
             ["config"] = new JsonObject
@@ -133,7 +178,7 @@ internal static class FoundrySceneBuilder
             ["flags"] = new JsonObject(),
         };
 
-    private static JsonObject ToRegionJson(FoundryRegion region)
+    private static JsonObject ToRegionJson(FoundryRegion region, LevelLayout levels)
     {
         var behaviors = new JsonArray();
         if (region.WalkMovementCost is { } cost)
@@ -168,11 +213,11 @@ internal static class FoundrySceneBuilder
             ["shapes"] = new JsonArray(region.Shapes.Select(ToShapeJson).ToArray()),
             ["elevation"] = new JsonObject
             {
-                ["bottom"] = 0,
-                ["top"] = 20,
+                ["bottom"] = region.Levels.Count == 0 ? 0 : levels.Bottom(region.Levels.Min()),
+                ["top"] = region.Levels.Count == 0 ? levels.Top(levels.Count) : levels.Top(region.Levels.Max()),
                 ["topInclusive"] = false,
             },
-            ["levels"] = new JsonArray("defaultLevel0000"),
+            ["levels"] = levels.Ids(region.Levels),
             ["restriction"] = new JsonObject
             {
                 ["enabled"] = false,

@@ -247,6 +247,8 @@ public partial class ImportToolViewModel : Tool
                 ? null
                 : _session.FoundryMapsPath;
             _session.Map.FoundryGridSize = _session.FoundryGridSize;
+            _session.Map.SceneLevelCount = _session.SceneLevelCount;
+            _session.Map.SceneLevelHeight = _session.SceneLevelHeight;
 
             await using var output = File.Create(outputPath);
             await _convertMapService

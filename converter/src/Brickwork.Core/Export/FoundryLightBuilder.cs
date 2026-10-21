@@ -11,7 +11,11 @@ public sealed record FoundryLight(
     string Color,
     string? AnimationType,
     int AnimationSpeed,
-    int AnimationIntensity);
+    int AnimationIntensity)
+{
+    /// <summary>Scene levels (1-based) the light is on; empty means every level.</summary>
+    public IReadOnlyList<int> Levels { get; init; } = [];
+}
 
 /// <summary>Maps active lights to Foundry canvas coordinates.</summary>
 public static class FoundryLightBuilder
@@ -32,7 +36,10 @@ public static class FoundryLightBuilder
                     LightColors.Normalize(light.Color),
                     LightAnimations.ToFoundryType(light.Animation),
                     Math.Clamp(light.AnimationSpeed, 1, 10),
-                    Math.Clamp(light.AnimationIntensity, 1, 10));
+                    Math.Clamp(light.AnimationIntensity, 1, 10))
+                {
+                    Levels = SceneLevels.Effective(light.Levels, map.SceneLevelCount),
+                };
             })
             .ToList();
     }

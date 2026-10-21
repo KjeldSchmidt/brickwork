@@ -61,7 +61,7 @@ public partial class WallsToolViewModel : Tool
         _session.PathTemplateNamesChanged += (_, _) => RefreshDisplayNames();
         _session.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName is nameof(EditorSession.Map))
+            if (args.PropertyName is nameof(EditorSession.Map) or nameof(EditorSession.SceneLevelCount))
             {
                 RebuildLayers();
             }
@@ -1634,7 +1634,10 @@ public partial class WallLayerNodeViewModel : ObservableObject
         _session = session;
         LayerId = layerId;
         _fallbackDisplayName = displayName;
+        LevelToggles = SceneLevelToggle.CreateFor(session, () => WallTreeActiveState.Walls(Children).Select(wall => wall.Levels));
     }
+
+    public ObservableCollection<SceneLevelToggle> LevelToggles { get; }
 
     public string LayerId { get; }
 
@@ -1700,6 +1703,7 @@ public partial class WallLayerNodeViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(DisplayName));
+        SceneLevelToggle.RefreshAll(LevelToggles);
         foreach (var child in Children)
         {
             switch (child)
@@ -1757,7 +1761,10 @@ public partial class WallGroupNodeViewModel : ObservableObject
         _session = session;
         Group = group;
         PathTemplateId = pathTemplateId;
+        LevelToggles = SceneLevelToggle.CreateFor(session, () => WallTreeActiveState.Walls(Children).Select(wall => wall.Levels));
     }
+
+    public ObservableCollection<SceneLevelToggle> LevelToggles { get; }
 
     /// <summary>The Inkarnate group, or a stand-in (not in the map) for a path-style node.</summary>
     public EntityGroup Group { get; }
@@ -1822,6 +1829,7 @@ public partial class WallGroupNodeViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(DisplayName));
         OnPropertyChanged(nameof(IsActive));
+        SceneLevelToggle.RefreshAll(LevelToggles);
         foreach (var child in Children)
         {
             if (child is WallItemViewModel wall)
@@ -1880,6 +1888,7 @@ public partial class WallItemViewModel : ObservableObject
         _tree = tree;
         _session = session;
         Wall = wall;
+        LevelToggles = SceneLevelToggle.CreateFor(session, () => [Wall.Levels]);
 
         var portalNumber = 1;
         foreach (var portal in wall.Portals)
@@ -1890,6 +1899,8 @@ public partial class WallItemViewModel : ObservableObject
     }
 
     public Wall Wall { get; }
+
+    public ObservableCollection<SceneLevelToggle> LevelToggles { get; }
 
     public ObservableCollection<WallPortalItemViewModel> Portals { get; } = [];
 
@@ -1987,6 +1998,7 @@ public partial class WallItemViewModel : ObservableObject
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(LineType));
         OnPropertyChanged(nameof(DisplayName));
+        SceneLevelToggle.RefreshAll(LevelToggles);
         SyncPortalsFromWall();
         RefreshHighlightState();
         // ComboBox can push null/stale SelectedItem while templates settle after a mass update.
@@ -2186,6 +2198,27 @@ public partial class WallPortalItemViewModel : ObservableObject
 
 internal static class WallTreeActiveState
 {
+    /// <summary>The walls listed under <paramref name="children"/>, through nested group nodes.</summary>
+    public static IEnumerable<Wall> Walls(IEnumerable<object> children)
+    {
+        foreach (var child in children)
+        {
+            switch (child)
+            {
+                case WallGroupNodeViewModel group:
+                    foreach (var wall in Walls(group.Children))
+                    {
+                        yield return wall;
+                    }
+
+                    break;
+                case WallItemViewModel item:
+                    yield return item.Wall;
+                    break;
+            }
+        }
+    }
+
     public static bool? Compute(IEnumerable<object> children)
     {
         bool? state = null;

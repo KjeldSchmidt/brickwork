@@ -72,6 +72,7 @@
                                     <TextBlock Text="{Binding Header}"
                                                FontWeight="SemiBold"
                                                VerticalAlignment="Center" />
+                                    <ItemsControl Classes="scene-levels" ItemsSource="{Binding LevelToggles}" Margin="8,0,0,0" />
                                 </StackPanel>
                                 <Grid ColumnDefinitions="Auto,70,Auto,70,Auto,Auto,82"
                                       ColumnSpacing="4"
@@ -174,6 +175,7 @@
                                            Opacity="0.55"
                                            FontSize="12"
                                            VerticalAlignment="Center" />
+                                <ItemsControl Classes="scene-levels" ItemsSource="{Binding LevelToggles}" Margin="8,0,0,0" />
                             </StackPanel>
                         </DataTemplate>
                     </TreeView.DataTemplates>

@@ -34,7 +34,7 @@ public partial class RegionsToolViewModel : Tool
         _session = session;
         _session.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName is nameof(EditorSession.Map))
+            if (args.PropertyName is nameof(EditorSession.Map) or nameof(EditorSession.SceneLevelCount))
             {
                 RebuildRegions();
             }
@@ -409,9 +409,12 @@ public partial class RegionItemViewModel : ObservableObject
         _tree = tree;
         _session = session;
         Region = region;
+        LevelToggles = SceneLevelToggle.CreateFor(session, () => [Region.Levels]);
     }
 
     public Region Region { get; }
+
+    public ObservableCollection<SceneLevelToggle> LevelToggles { get; }
 
     public IReadOnlyList<RegionType> RegionTypeOptions { get; } = Enum.GetValues<RegionType>();
 
@@ -495,6 +498,7 @@ public partial class RegionItemViewModel : ObservableObject
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(RegionType));
         OnPropertyChanged(nameof(DisplayName));
+        SceneLevelToggle.RefreshAll(LevelToggles);
         RefreshHighlightState();
         Dispatcher.UIThread.Post(
             () => _suppressTypeBinding = false,

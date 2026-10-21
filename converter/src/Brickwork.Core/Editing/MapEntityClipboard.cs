@@ -132,6 +132,7 @@ public sealed class MapEntityClipboard
             WallThickness = wall.WallThickness,
             GroupId = wall.GroupId,
             PathTemplateId = wall.PathTemplateId,
+            Levels = [.. wall.Levels],
             Points = wall.Points.ToList(),
             Portals = wall.Portals.Select(ClonePortal).ToList(),
             Offset = wall.Offset,
@@ -149,6 +150,7 @@ public sealed class MapEntityClipboard
             IsEntityVisible = region.IsEntityVisible,
             RegionType = region.RegionType,
             GroupId = region.GroupId,
+            Levels = [.. region.Levels],
             Points = region.Points.ToList(),
         };
 

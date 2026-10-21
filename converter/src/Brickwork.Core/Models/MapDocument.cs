@@ -36,6 +36,12 @@ public sealed class MapDocument
     /// </summary>
     public FoundryExportGrid? FoundryExportGrid { get; set; }
 
+    /// <summary>Number of Foundry scene levels to export (see <see cref="SceneLevels"/>).</summary>
+    public int SceneLevelCount { get; set; } = 1;
+
+    /// <summary>Height of each Foundry scene level in feet.</summary>
+    public double SceneLevelHeight { get; set; } = SceneLevels.DefaultHeight;
+
     /// <summary>
     /// Feet covered by one cell of <see cref="Grid"/>: 5 ft, times the Foundry squares per map cell
     /// when the export grid has a different square count.

@@ -53,7 +53,7 @@
                                 CornerRadius="4"
                                 Classes.wall-tree-highlight="{Binding IsTreeHighlighted}">
                             <Grid HorizontalAlignment="Stretch"
-                                  ColumnDefinitions="Auto,*,Auto">
+                                  ColumnDefinitions="Auto,*,Auto,Auto">
                                 <CheckBox Grid.Column="0"
                                           IsChecked="{Binding IsActive}"
                                           VerticalAlignment="Center" />
@@ -80,6 +80,7 @@
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
+                                <ItemsControl Classes="scene-levels" ItemsSource="{Binding LevelToggles}" Grid.Column="3" Margin="6,0,0,0" />
                             </Grid>
                         </Border>
                     </DataTemplate>

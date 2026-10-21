@@ -25,7 +25,7 @@ public partial class LightsToolViewModel : Tool
         _session = session;
         _session.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName is nameof(EditorSession.Map))
+            if (args.PropertyName is nameof(EditorSession.Map) or nameof(EditorSession.SceneLevelCount))
             {
                 Rebuild();
             }
@@ -164,7 +164,10 @@ public partial class LightKindViewModel : ObservableObject
         Lights = lights;
         Children = new ObservableCollection<LightItemViewModel>(
             lights.Select((light, index) => new LightItemViewModel(tool, session, light, index + 1)));
+        LevelToggles = SceneLevelToggle.CreateFor(session, () => Lights.Select(light => light.Levels));
     }
+
+    public ObservableCollection<SceneLevelToggle> LevelToggles { get; }
 
     public string Name { get; }
 
@@ -285,6 +288,7 @@ public partial class LightKindViewModel : ObservableObject
         OnPropertyChanged(nameof(HasAnimation));
         OnPropertyChanged(nameof(AnimationSpeed));
         OnPropertyChanged(nameof(AnimationIntensity));
+        SceneLevelToggle.RefreshAll(LevelToggles);
         foreach (var child in Children)
         {
             child.RefreshFromModel();
@@ -322,9 +326,12 @@ public partial class LightItemViewModel : ObservableObject
         _session = session;
         Light = light;
         Number = number;
+        LevelToggles = SceneLevelToggle.CreateFor(session, () => [Light.Levels]);
     }
 
     public LightSource Light { get; }
+
+    public ObservableCollection<SceneLevelToggle> LevelToggles { get; }
 
     public int Number { get; }
 
@@ -356,5 +363,6 @@ public partial class LightItemViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(PositionText));
+        SceneLevelToggle.RefreshAll(LevelToggles);
     }
 }

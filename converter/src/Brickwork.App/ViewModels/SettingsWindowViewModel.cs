@@ -46,9 +46,11 @@ public partial class SettingsWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(FoundryMapsPath));
             }
 
-            if (args.PropertyName is nameof(EditorSession.FoundryGridSize))
+            if (args.PropertyName is nameof(EditorSession.FoundryGridSize)
+                or nameof(EditorSession.SceneLevelCount)
+                or nameof(EditorSession.SceneLevelHeight))
             {
-                OnPropertyChanged(nameof(FoundryGridSize));
+                OnPropertyChanged(args.PropertyName);
             }
 
             if (args.PropertyName is nameof(EditorSession.DetectRegionsFromColorPaths))
@@ -266,6 +268,18 @@ public partial class SettingsWindowViewModel : ObservableObject
     {
         get => _session.FoundryGridSize;
         set => _session.FoundryGridSize = Math.Max(1, value);
+    }
+
+    public int SceneLevelCount
+    {
+        get => _session.SceneLevelCount;
+        set => _session.SceneLevelCount = Math.Clamp(value, 1, SceneLevels.MaxCount);
+    }
+
+    public double SceneLevelHeight
+    {
+        get => _session.SceneLevelHeight;
+        set => _session.SceneLevelHeight = value > 0 ? value : SceneLevels.DefaultHeight;
     }
 
     public void SelectCategory(SettingsCategory category) => SelectedCategory = category;

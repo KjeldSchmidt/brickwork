@@ -16,7 +16,11 @@ public sealed record FoundryWallSegment(
     int? ThresholdLight = null,
     int? ThresholdSight = null,
     int? ThresholdSound = null,
-    bool ThresholdAttenuation = false);
+    bool ThresholdAttenuation = false)
+{
+    /// <summary>Scene levels (1-based) the segment is on; empty means every level.</summary>
+    public IReadOnlyList<int> Levels { get; init; } = [];
+}
 
 public static class FoundryWallSegmentBuilder
 {
@@ -27,19 +31,10 @@ public static class FoundryWallSegmentBuilder
 
         foreach (var wall in map.Walls.Where(wall => wall.WallEnabled))
         {
-            if (!IsWallBodySuppressed(wall) && TryBuildTerrainPolygonSegments(wall, transform, segments))
+            var levels = SceneLevels.Effective(wall.Levels, map.SceneLevelCount);
+            foreach (var segment in BuildFromWall(wall, transform))
             {
-                continue;
-            }
-
-            foreach (var run in WallPathSegmentBuilder.BuildExportRuns(wall))
-            {
-                if (IsWallBodySuppressed(wall) && !run.IsPortal)
-                {
-                    continue;
-                }
-
-                AddRunSegments(run, transform, segments);
+                segments.Add(levels.Count == 0 ? segment : segment with { Levels = levels });
             }
         }
 
