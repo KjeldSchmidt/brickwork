@@ -8,7 +8,10 @@ using Brickwork.Core.Models;
 
 namespace Brickwork.App.ViewModels;
 
-/// <summary>Lists the map's lights grouped by kind (e.g. "Hand Lantern Lit"), with per-kind settings.</summary>
+/// <summary>
+/// Lists the map's lights grouped by kind (e.g. "Hand Lantern Lit"), with per-kind settings; a kind
+/// whose lights are on several Inkarnate layers is split by layer.
+/// </summary>
 public partial class LightsToolViewModel : Tool
 {
     private readonly EditorSession _session;
@@ -66,7 +69,7 @@ public partial class LightsToolViewModel : Tool
         {
             var total = Kinds.Sum(kind => kind.Lights.Count);
             var active = Kinds.Sum(kind => kind.Lights.Count(light => light.IsActive));
-            return $"{active} of {total} lights exported. Radii are in grid squares.";
+            return $"{active} of {total} lights exported. Radii are in feet.";
         }
     }
 
@@ -162,8 +165,14 @@ public partial class LightKindViewModel : ObservableObject
         _session = session;
         Name = name;
         Lights = lights;
-        Children = new ObservableCollection<LightItemViewModel>(
-            lights.Select((light, index) => new LightItemViewModel(tool, session, light, index + 1)));
+        var items = lights.Select((light, index) => new LightItemViewModel(tool, session, light, index + 1)).ToList();
+        var byLayer = items.GroupBy(item => item.Light.LayerId ?? string.Empty).ToList();
+        Children = byLayer.Count > 1
+            ? new ObservableCollection<object>(byLayer
+                .Select(group => new LightLayerNodeViewModel(tool, session, group.Key, group.ToList()))
+                .OrderBy(node => node.Order)
+                .ThenBy(node => node.Name, StringComparer.OrdinalIgnoreCase))
+            : new ObservableCollection<object>(items);
         LevelToggles = SceneLevelToggle.CreateFor(session, () => Lights.Select(light => light.Levels));
     }
 
@@ -173,7 +182,8 @@ public partial class LightKindViewModel : ObservableObject
 
     public IReadOnlyList<LightSource> Lights { get; }
 
-    public ObservableCollection<LightItemViewModel> Children { get; }
+    /// <summary>Light items, or one <see cref="LightLayerNodeViewModel"/> per layer when they span several.</summary>
+    public ObservableCollection<object> Children { get; }
 
     public string Header => $"{Name} ({Lights.Count})";
 
@@ -291,7 +301,15 @@ public partial class LightKindViewModel : ObservableObject
         SceneLevelToggle.RefreshAll(LevelToggles);
         foreach (var child in Children)
         {
-            child.RefreshFromModel();
+            switch (child)
+            {
+                case LightLayerNodeViewModel layer:
+                    layer.RefreshFromModel();
+                    break;
+                case LightItemViewModel light:
+                    light.RefreshFromModel();
+                    break;
+            }
         }
     }
 
@@ -312,6 +330,71 @@ public partial class LightKindViewModel : ObservableObject
         });
         RefreshFromModel();
         _tool.NotifySummaryChanged();
+    }
+}
+
+/// <summary>The lights of one kind that sit on one Inkarnate layer.</summary>
+public partial class LightLayerNodeViewModel : ObservableObject
+{
+    private readonly LightsToolViewModel _tool;
+    private readonly EditorSession _session;
+
+    public LightLayerNodeViewModel(
+        LightsToolViewModel tool,
+        EditorSession session,
+        string layerId,
+        IReadOnlyList<LightItemViewModel> children)
+    {
+        _tool = tool;
+        _session = session;
+        var layer = session.Map?.Layers.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, layerId, StringComparison.OrdinalIgnoreCase));
+        Name = layer?.DisplayName ?? (layerId.Length == 0 ? "(no layer)" : layerId);
+        Order = layer?.Order ?? int.MaxValue;
+        Children = new ObservableCollection<LightItemViewModel>(children);
+        LevelToggles = SceneLevelToggle.CreateFor(session, () => Children.Select(item => item.Light.Levels));
+    }
+
+    public string Name { get; }
+
+    public int Order { get; }
+
+    public ObservableCollection<LightItemViewModel> Children { get; }
+
+    public ObservableCollection<SceneLevelToggle> LevelToggles { get; }
+
+    public string Header => $"{Name} ({Children.Count})";
+
+    public bool? IsActive
+    {
+        get => Children.All(item => item.Light.IsActive) ? true
+            : Children.Any(item => item.Light.IsActive) ? null
+            : false;
+        set
+        {
+            // A click on an indeterminate box reaches here as null; treat it as "enable all".
+            var enabled = value ?? true;
+            var lights = Children.Select(item => item.Light).ToList();
+            _session.Execute(enabled ? "Enable lights" : "Disable lights", () =>
+            {
+                foreach (var light in lights)
+                {
+                    light.IsActive = enabled;
+                }
+            });
+            OnPropertyChanged();
+            _tool.NotifySummaryChanged();
+        }
+    }
+
+    public void RefreshFromModel()
+    {
+        OnPropertyChanged(nameof(IsActive));
+        SceneLevelToggle.RefreshAll(LevelToggles);
+        foreach (var child in Children)
+        {
+            child.RefreshFromModel();
+        }
     }
 }
 

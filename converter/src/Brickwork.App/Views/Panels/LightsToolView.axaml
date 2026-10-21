@@ -162,6 +162,18 @@
                             </StackPanel>
                         </TreeDataTemplate>
 
+                        <TreeDataTemplate DataType="vm:LightLayerNodeViewModel"
+                                          ItemsSource="{Binding Children}">
+                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
+                                <CheckBox IsChecked="{Binding IsActive}"
+                                          VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Header}"
+                                           FontWeight="Medium"
+                                           VerticalAlignment="Center" />
+                                <ItemsControl Classes="scene-levels" ItemsSource="{Binding LevelToggles}" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </TreeDataTemplate>
+
                         <DataTemplate DataType="vm:LightItemViewModel">
                             <StackPanel Orientation="Horizontal"
                                         Spacing="6"
