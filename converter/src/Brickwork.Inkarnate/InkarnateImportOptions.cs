@@ -24,10 +24,10 @@ public sealed class InkarnateImportOptions
     /// <summary>Pick a flicker/pulse animation for detected lights from their names.</summary>
     public bool DetectLightAnimations { get; set; } = true;
 
-    /// <summary>Bright radius in grid squares for detected lights.</summary>
+    /// <summary>Bright radius in feet for detected lights.</summary>
     public double LightBrightRadius { get; set; } = LightSource.DefaultBrightRadius;
 
-    /// <summary>Dim radius in grid squares for detected lights.</summary>
+    /// <summary>Dim radius in feet for detected lights.</summary>
     public double LightDimRadius { get; set; } = LightSource.DefaultDimRadius;
 
     /// <summary>Color (#rrggbb) for detected lights; black means no colorization.</summary>

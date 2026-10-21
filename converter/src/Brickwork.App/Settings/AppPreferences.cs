@@ -87,8 +87,8 @@ public sealed class AppPreferences
             _session.LightKeywords = settings.LightKeywords ?? string.Empty;
             _session.LightExcludeKeywords = settings.LightExcludeKeywords ?? string.Empty;
             _session.DetectLightAnimations = settings.DetectLightAnimations;
-            _session.LightBrightRadius = settings.LightBrightRadius;
-            _session.LightDimRadius = settings.LightDimRadius;
+            _session.LightBrightRadius = settings.LightBrightRadiusFeet;
+            _session.LightDimRadius = settings.LightDimRadiusFeet;
             _session.LightColor = LightColors.Normalize(settings.LightColor);
             _session.DetectTreesFromStamps = settings.DetectTreesFromStamps;
             _session.TreeKeywords = settings.TreeKeywords ?? string.Empty;
@@ -119,8 +119,8 @@ public sealed class AppPreferences
             LightKeywords = _session.LightKeywords,
             LightExcludeKeywords = _session.LightExcludeKeywords,
             DetectLightAnimations = _session.DetectLightAnimations,
-            LightBrightRadius = _session.LightBrightRadius,
-            LightDimRadius = _session.LightDimRadius,
+            LightBrightRadiusFeet = _session.LightBrightRadius,
+            LightDimRadiusFeet = _session.LightDimRadius,
             LightColor = _session.LightColor,
             DetectTreesFromStamps = _session.DetectTreesFromStamps,
             TreeKeywords = _session.TreeKeywords,

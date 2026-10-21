@@ -19,12 +19,6 @@ public sealed class FoundryExportCanvas
 
     public SceneTransform Transform { get; init; } = null!;
 
-    /// <summary>
-    /// Foundry squares per map grid cell (1 unless the export grid has a different square count);
-    /// distances given in map squares, like light radii, are multiplied by this.
-    /// </summary>
-    public double SquaresPerMapCell { get; init; } = 1;
-
     public static FoundryExportCanvas FromMap(MapDocument map)
     {
         ArgumentNullException.ThrowIfNull(map);
@@ -40,8 +34,7 @@ public sealed class FoundryExportCanvas
                 scene,
                 exportGrid.Columns * exportGrid.PixelsPerSquare,
                 exportGrid.Rows * exportGrid.PixelsPerSquare,
-                exportGrid.PixelsPerSquare,
-                map.Grid is { Columns: > 0 } ? exportGrid.Columns / (double)map.Grid.Columns : 1);
+                exportGrid.PixelsPerSquare);
         }
 
         if (map.UnderlyingMap is { IsConnected: true, Width: > 0, Height: > 0 } underlying &&
@@ -72,14 +65,12 @@ public sealed class FoundryExportCanvas
         SceneDimensions scene,
         int canvasWidth,
         int canvasHeight,
-        int? gridSize,
-        double squaresPerMapCell = 1) =>
+        int? gridSize) =>
         new()
         {
             Width = canvasWidth,
             Height = canvasHeight,
             GridSize = gridSize,
-            SquaresPerMapCell = squaresPerMapCell,
             Transform = new SceneTransform
             {
                 SceneWidth = scene.Width,

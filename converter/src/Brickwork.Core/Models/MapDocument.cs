@@ -37,6 +37,15 @@ public sealed class MapDocument
     public FoundryExportGrid? FoundryExportGrid { get; set; }
 
     /// <summary>
+    /// Feet covered by one cell of <see cref="Grid"/>: 5 ft, times the Foundry squares per map cell
+    /// when the export grid has a different square count.
+    /// </summary>
+    public double FeetPerMapCell =>
+        FoundryExportGrid is { IsValid: true } exportGrid && Grid.Columns > 0
+            ? LightSource.FeetPerSquare * exportGrid.Columns / Grid.Columns
+            : LightSource.FeetPerSquare;
+
+    /// <summary>
     /// Full-resolution Foundry background matched by source base name under the maps folder.
     /// Null when no matching image was found.
     /// </summary>

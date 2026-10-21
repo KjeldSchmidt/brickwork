@@ -93,7 +93,8 @@ public sealed class UvttExporter : IMapExporter
                 {
                     Position = UvttCoordinateTransform.ToUvttPoint(
                         UvttCoordinateTransform.SceneToGrid(light.Position, origin, cellSize)),
-                    Range = light.DimRadius,
+                    // UVTT ranges are in grid cells.
+                    Range = light.DimRadius / map.FeetPerMapCell,
                     // UVTT has no "uncolored" light; black would be no light at all, so use white.
                     Color = LightColors.IsNone(light.Color)
                         ? "ffffffff"

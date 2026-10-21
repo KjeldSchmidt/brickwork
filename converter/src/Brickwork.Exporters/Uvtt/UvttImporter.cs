@@ -125,8 +125,9 @@ public sealed class UvttImporter : IMapImporter
                     UvttCoordinateTransform.FromUvttPoint(light.Position),
                     origin,
                     cellSize),
-                BrightRadius = light.Range / 2d,
-                DimRadius = light.Range,
+                // UVTT ranges are in grid cells; lights are kept in feet.
+                BrightRadius = light.Range / 2d * LightSource.FeetPerSquare,
+                DimRadius = light.Range * LightSource.FeetPerSquare,
                 Color = ReadLightColor(light.Color),
             });
         }

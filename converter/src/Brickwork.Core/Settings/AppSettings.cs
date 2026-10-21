@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Brickwork.Core.Export;
 using Brickwork.Core.Foundry;
 using Brickwork.Core.Geometry;
@@ -39,11 +40,19 @@ public sealed class AppSettings
     /// <summary>Pick a flicker/pulse animation for detected lights from their names.</summary>
     public bool DetectLightAnimations { get; set; } = true;
 
-    /// <summary>Default bright radius, in grid squares, for detected lights.</summary>
-    public double LightBrightRadius { get; set; } = LightSource.DefaultBrightRadius;
+    /// <summary>Default bright radius, in feet, for detected lights.</summary>
+    public double LightBrightRadiusFeet { get; set; } = LightSource.DefaultBrightRadius;
 
-    /// <summary>Default dim radius, in grid squares, for detected lights.</summary>
-    public double LightDimRadius { get; set; } = LightSource.DefaultDimRadius;
+    /// <summary>Default dim radius, in feet, for detected lights.</summary>
+    public double LightDimRadiusFeet { get; set; } = LightSource.DefaultDimRadius;
+
+    /// <summary>Old bright radius in grid squares; read once and converted to feet.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LightBrightRadius { get; set; }
+
+    /// <summary>Old dim radius in grid squares; read once and converted to feet.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? LightDimRadius { get; set; }
 
     /// <summary>Default color (#rrggbb) for detected lights; black means no colorization.</summary>
     public string LightColor { get; set; } = LightSource.DefaultColor;

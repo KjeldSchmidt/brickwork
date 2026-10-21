@@ -22,6 +22,26 @@ public class AppSettingsStoreTests
     }
 
     [Fact]
+    public void Load_OldRadiiInSquares_ConvertsToFeet()
+    {
+        using var temp = new TempDirectory();
+        Directory.CreateDirectory(temp.Path);
+        File.WriteAllText(
+            Path.Combine(temp.Path, "settings.json"),
+            """{ "lightBrightRadius": 1, "lightDimRadius": 3 }""");
+        var store = new AppSettingsStore(temp.Path);
+
+        var settings = store.Load();
+        Assert.Equal(5, settings.LightBrightRadiusFeet);
+        Assert.Equal(15, settings.LightDimRadiusFeet);
+
+        store.Save(settings);
+        var json = File.ReadAllText(store.SettingsFilePath);
+        Assert.DoesNotContain("\"lightBrightRadius\"", json, StringComparison.Ordinal);
+        Assert.Equal(15, store.Load().LightDimRadiusFeet);
+    }
+
+    [Fact]
     public void Save_ThenLoad_RoundTripsValues()
     {
         using var temp = new TempDirectory();

@@ -94,7 +94,7 @@ public class LightImportExportTests
     }
 
     [Fact]
-    public async Task FoundryExport_ExportGrid_ScalesLightRadiiToFoundrySquares()
+    public async Task FoundryExport_ExportGrid_KeepsRadiiInFeet()
     {
         var map = await ImportAsync(new InkarnateImportOptions());
         map.FoundryExportGrid = new FoundryExportGrid(map.Grid.Columns * 3, map.Grid.Rows * 3, 100);
@@ -105,9 +105,9 @@ public class LightImportExportTests
         output.Position = 0;
         using var document = await JsonDocument.ParseAsync(output);
         var config = document.RootElement.GetProperty("lights")[0].GetProperty("config");
-        // Each map square is 3 Foundry squares of 5 ft.
-        Assert.Equal(LightSource.DefaultBrightRadius * 3 * 5, config.GetProperty("bright").GetDouble());
-        Assert.Equal(LightSource.DefaultDimRadius * 3 * 5, config.GetProperty("dim").GetDouble());
+        // Radii are feet already, so the export grid does not change them.
+        Assert.Equal(LightSource.DefaultBrightRadius, config.GetProperty("bright").GetDouble());
+        Assert.Equal(LightSource.DefaultDimRadius, config.GetProperty("dim").GetDouble());
     }
 
     [Fact]
@@ -142,8 +142,8 @@ public class LightImportExportTests
         Assert.Equal(225, first.GetProperty("x").GetInt32());
         Assert.Equal(300, first.GetProperty("y").GetInt32());
         var config = first.GetProperty("config");
-        Assert.Equal(LightSource.DefaultBrightRadius * 5, config.GetProperty("bright").GetDouble());
-        Assert.Equal(LightSource.DefaultDimRadius * 5, config.GetProperty("dim").GetDouble());
+        Assert.Equal(LightSource.DefaultBrightRadius, config.GetProperty("bright").GetDouble());
+        Assert.Equal(LightSource.DefaultDimRadius, config.GetProperty("dim").GetDouble());
         // Default black means no colorization, which Foundry expects as a null color.
         Assert.Equal(JsonValueKind.Null, config.GetProperty("color").ValueKind);
         var animation = config.GetProperty("animation");
@@ -165,7 +165,8 @@ public class LightImportExportTests
         var lights = document.RootElement.GetProperty("lights");
         Assert.Equal(2, lights.GetArrayLength());
         Assert.Equal(1.5, lights[0].GetProperty("position").GetProperty("x").GetDouble(), precision: 6);
-        Assert.Equal(LightSource.DefaultDimRadius, lights[0].GetProperty("range").GetDouble());
+        // UVTT ranges are grid cells: 40 ft at 5 ft per cell.
+        Assert.Equal(LightSource.DefaultDimRadius / 5, lights[0].GetProperty("range").GetDouble());
         // Uncolored (black) lights become white in UVTT.
         Assert.Equal("ffffffff", lights[0].GetProperty("color").GetString());
     }

@@ -79,6 +79,19 @@ public sealed class AppSettingsStore
             settings.TreeTrunkGrowthPercent = TreeTrunks.DefaultGrowthPercent;
         }
 
+        // Light radii used to be stored in grid squares.
+        if (settings.LightBrightRadius is double brightSquares)
+        {
+            settings.LightBrightRadiusFeet = brightSquares * LightSource.FeetPerSquare;
+            settings.LightBrightRadius = null;
+        }
+
+        if (settings.LightDimRadius is double dimSquares)
+        {
+            settings.LightDimRadiusFeet = dimSquares * LightSource.FeetPerSquare;
+            settings.LightDimRadius = null;
+        }
+
         return settings;
     }
 }

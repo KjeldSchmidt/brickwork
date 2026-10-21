@@ -143,7 +143,8 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
         }
 
         var showRadii = highlight?.ShowLightRadii ?? true;
-        var pixelsPerSquare = (float)(map.Grid.CellSize * transform.ScaleX);
+        // Radii are in feet; one map cell covers map.FeetPerMapCell feet.
+        var pixelsPerFoot = (float)(map.Grid.CellSize * transform.ScaleX / map.FeetPerMapCell);
         using var fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
         using var stroke = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke };
 
@@ -161,19 +162,19 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
                     ? new SKColor(red, green, blue)
                     : SKColors.Orange;
 
-            if (light.IsActive && pixelsPerSquare > 0 && (showRadii || emphasized))
+            if (light.IsActive && pixelsPerFoot > 0 && (showRadii || emphasized))
             {
                 fill.Color = color.WithAlpha(emphasized ? (byte)0x1C : (byte)0x0C);
-                canvas.DrawCircle(x, y, (float)light.DimRadius * pixelsPerSquare, fill);
+                canvas.DrawCircle(x, y, (float)light.DimRadius * pixelsPerFoot, fill);
                 fill.Color = color.WithAlpha(emphasized ? (byte)0x28 : (byte)0x14);
-                canvas.DrawCircle(x, y, (float)light.BrightRadius * pixelsPerSquare, fill);
+                canvas.DrawCircle(x, y, (float)light.BrightRadius * pixelsPerFoot, fill);
 
                 if (emphasized)
                 {
                     stroke.Color = color;
                     stroke.StrokeWidth = 1.5f;
-                    canvas.DrawCircle(x, y, (float)light.DimRadius * pixelsPerSquare, stroke);
-                    canvas.DrawCircle(x, y, (float)light.BrightRadius * pixelsPerSquare, stroke);
+                    canvas.DrawCircle(x, y, (float)light.DimRadius * pixelsPerFoot, stroke);
+                    canvas.DrawCircle(x, y, (float)light.BrightRadius * pixelsPerFoot, stroke);
                 }
             }
 

@@ -76,23 +76,23 @@
                                 <Grid ColumnDefinitions="Auto,70,Auto,70,Auto,Auto,82"
                                       ColumnSpacing="4"
                                       Margin="24,0,0,0">
-                                    <TextBlock Grid.Column="0" Text="Bright" VerticalAlignment="Center" FontSize="12" />
+                                    <TextBlock Grid.Column="0" Text="Bright ft" VerticalAlignment="Center" FontSize="12" />
                                     <NumericUpDown Grid.Column="1"
                                                    Classes="light-radius"
                                                    Value="{Binding BrightRadius}"
                                                    Minimum="0"
-                                                   Maximum="200"
-                                                   Increment="1"
+                                                   Maximum="1000"
+                                                   Increment="5"
                                                    FormatString="0.##"
                                                    ShowButtonSpinner="False"
                                                    Watermark="mixed" />
-                                    <TextBlock Grid.Column="2" Text="Dim" VerticalAlignment="Center" FontSize="12" />
+                                    <TextBlock Grid.Column="2" Text="Dim ft" VerticalAlignment="Center" FontSize="12" />
                                     <NumericUpDown Grid.Column="3"
                                                    Classes="light-radius"
                                                    Value="{Binding DimRadius}"
                                                    Minimum="0"
-                                                   Maximum="200"
-                                                   Increment="1"
+                                                   Maximum="1000"
+                                                   Increment="5"
                                                    FormatString="0.##"
                                                    ShowButtonSpinner="False"
                                                    Watermark="mixed" />

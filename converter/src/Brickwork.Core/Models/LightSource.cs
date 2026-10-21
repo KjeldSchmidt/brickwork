@@ -3,9 +3,14 @@ namespace Brickwork.Core.Models;
 /// <summary>A point light, e.g. created from a lit lantern stamp in an Inkarnate map.</summary>
 public sealed class LightSource
 {
-    public const double DefaultBrightRadius = 4;
+    /// <summary>Default bright radius in feet.</summary>
+    public const double DefaultBrightRadius = 20;
 
-    public const double DefaultDimRadius = 8;
+    /// <summary>Default dim radius in feet.</summary>
+    public const double DefaultDimRadius = 40;
+
+    /// <summary>Feet per Foundry grid square (Foundry's default grid distance).</summary>
+    public const double FeetPerSquare = 5;
 
     /// <summary>Black means "no colorization" (Foundry light color unset).</summary>
     public const string DefaultColor = LightColors.None;
@@ -25,10 +30,10 @@ public sealed class LightSource
 
     public MapPoint Position { get; set; }
 
-    /// <summary>Bright light radius in grid squares.</summary>
+    /// <summary>Bright light radius in feet.</summary>
     public double BrightRadius { get; set; } = DefaultBrightRadius;
 
-    /// <summary>Dim light radius in grid squares (measured from the light, not from the bright edge).</summary>
+    /// <summary>Dim light radius in feet (measured from the light, not from the bright edge).</summary>
     public double DimRadius { get; set; } = DefaultDimRadius;
 
     /// <summary>Light tint as <c>#rrggbb</c>.</summary>

@@ -44,9 +44,8 @@ internal static class FoundrySceneBuilder
         var regions = FoundryRegionBuilder.BuildFromMap(map);
         scene["regions"] = new JsonArray(regions.Select(ToRegionJson).ToArray());
 
-        var gridDistance = scene["grid"]?["distance"]?.GetValue<double>() ?? 5d;
         var lights = FoundryLightBuilder.BuildFromMap(map);
-        scene["lights"] = new JsonArray(lights.Select(light => ToLightJson(light, gridDistance)).ToArray());
+        scene["lights"] = new JsonArray(lights.Select(ToLightJson).ToArray());
 
         await JsonSerializer.SerializeAsync(destination, scene, SerializerOptions, cancellationToken)
             .ConfigureAwait(false);
@@ -88,7 +87,7 @@ internal static class FoundrySceneBuilder
         };
     }
 
-    private static JsonObject ToLightJson(FoundryLight light, double gridDistance) =>
+    private static JsonObject ToLightJson(FoundryLight light) =>
         new()
         {
             ["_id"] = FoundryIdGenerator.Create(),
@@ -105,8 +104,8 @@ internal static class FoundrySceneBuilder
                 ["priority"] = 0,
                 ["alpha"] = 0.5,
                 ["angle"] = 360,
-                ["bright"] = light.BrightSquares * gridDistance,
-                ["dim"] = light.DimSquares * gridDistance,
+                ["bright"] = light.BrightFeet,
+                ["dim"] = light.DimFeet,
                 // Foundry only skips colorization for a null color; black is our "no color".
                 ["color"] = LightColors.IsNone(light.Color) ? null : light.Color,
                 ["coloration"] = 1,

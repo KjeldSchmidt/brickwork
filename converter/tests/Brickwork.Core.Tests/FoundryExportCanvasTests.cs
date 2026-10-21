@@ -109,7 +109,7 @@ public class FoundryExportCanvasTests
         Assert.Equal(18000, canvas.Width);
         Assert.Equal(13500, canvas.Height);
         Assert.Equal(150, canvas.GridSize);
-        Assert.Equal(3, canvas.SquaresPerMapCell, precision: 9);
+        Assert.Equal(15, map.FeetPerMapCell, precision: 9);
 
         var corner = canvas.Transform.SceneToPreview(new MapPoint(map.Scene.Width, map.Scene.Height));
         Assert.Equal(18000, corner.X, precision: 6);

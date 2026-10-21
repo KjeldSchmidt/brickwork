@@ -6,8 +6,8 @@ public sealed record FoundryLight(
     string Name,
     int X,
     int Y,
-    double BrightSquares,
-    double DimSquares,
+    double BrightFeet,
+    double DimFeet,
     string Color,
     string? AnimationType,
     int AnimationSpeed,
@@ -18,9 +18,7 @@ public static class FoundryLightBuilder
 {
     public static IReadOnlyList<FoundryLight> BuildFromMap(MapDocument map)
     {
-        var canvas = FoundryExportCanvas.FromMap(map);
-        var transform = canvas.Transform;
-        var squares = canvas.SquaresPerMapCell;
+        var transform = FoundryExportCanvas.FromMap(map).Transform;
         return map.ExportableLights()
             .Select(light =>
             {
@@ -29,8 +27,8 @@ public static class FoundryLightBuilder
                     light.DisplayName,
                     (int)Math.Round(canvasPoint.X),
                     (int)Math.Round(canvasPoint.Y),
-                    Math.Max(0, light.BrightRadius) * squares,
-                    Math.Max(0, light.DimRadius) * squares,
+                    Math.Max(0, light.BrightRadius),
+                    Math.Max(0, light.DimRadius),
                     LightColors.Normalize(light.Color),
                     LightAnimations.ToFoundryType(light.Animation),
                     Math.Clamp(light.AnimationSpeed, 1, 10),
