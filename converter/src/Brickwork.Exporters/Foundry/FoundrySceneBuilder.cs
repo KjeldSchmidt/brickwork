@@ -36,7 +36,9 @@ internal static class FoundrySceneBuilder
             map.SourceFileName,
             map.Name);
         scene["background"] = new JsonObject { ["src"] = backgroundSrc };
-        scene["thumb"] = backgroundSrc;
+        // No thumb: Foundry then makes a small one when the scene is created. Pointing it at the
+        // background made the Scenes sidebar decode the full-size map on hover.
+        scene.Remove("thumb");
 
         var wallSegments = FoundryWallSegmentBuilder.BuildFromMap(map);
         scene["walls"] = new JsonArray(wallSegments.Select(ToWallJson).ToArray());

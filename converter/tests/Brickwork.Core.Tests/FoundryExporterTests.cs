@@ -285,9 +285,7 @@ public class FoundryExporterTests
         Assert.Equal(
             "basic-walls.webp",
             document.RootElement.GetProperty("background").GetProperty("src").GetString());
-        Assert.Equal(
-            "basic-walls.webp",
-            document.RootElement.GetProperty("thumb").GetString());
+        Assert.False(document.RootElement.TryGetProperty("thumb", out _));
         Assert.False(document.RootElement.TryGetProperty("_stats", out _));
 
         var initial = document.RootElement.GetProperty("initial");
@@ -507,9 +505,7 @@ public class FoundryExporterTests
             Assert.Equal(
                 "maps/basic-walls.webp",
                 document.RootElement.GetProperty("background").GetProperty("src").GetString());
-            Assert.Equal(
-                "maps/basic-walls.webp",
-                document.RootElement.GetProperty("thumb").GetString());
+            Assert.False(document.RootElement.TryGetProperty("thumb", out _));
         }
         finally
         {
