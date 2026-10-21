@@ -131,6 +131,7 @@ public sealed class MapEntityClipboard
             Scale = wall.Scale,
             WallThickness = wall.WallThickness,
             GroupId = wall.GroupId,
+            PathTemplateId = wall.PathTemplateId,
             Points = wall.Points.ToList(),
             Portals = wall.Portals.Select(ClonePortal).ToList(),
             Offset = wall.Offset,

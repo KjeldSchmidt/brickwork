@@ -303,6 +303,7 @@ public sealed class DocumentContentMemento
         target.Scale = source.Scale;
         target.WallThickness = source.WallThickness;
         target.GroupId = source.GroupId;
+        target.PathTemplateId = source.PathTemplateId;
         ReplacePoints(target.Points, source.Points);
         SyncPortals(source.Portals, target.Portals);
         target.Offset = source.Offset;
@@ -418,6 +419,7 @@ public sealed class DocumentContentMemento
             Scale = wall.Scale,
             WallThickness = wall.WallThickness,
             GroupId = wall.GroupId,
+            PathTemplateId = wall.PathTemplateId,
             Points = wall.Points.ToList(),
             Portals = wall.Portals.Select(ClonePortal).ToList(),
             Offset = wall.Offset,

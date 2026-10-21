@@ -238,6 +238,13 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
                     EntityParsing.ApplyPortals(wall, property.Value);
                     appliedKnownField = true;
                     break;
+                case "pathId":
+                    wall.PathTemplateId = property.Value.ValueKind == JsonValueKind.Number &&
+                                          property.Value.TryGetInt32(out var pathId)
+                        ? pathId
+                        : null;
+                    appliedKnownField = true;
+                    break;
                 case "wallThickness":
                     wall.WallThickness = property.Value.ValueKind == JsonValueKind.Number
                         ? property.Value.GetDouble()

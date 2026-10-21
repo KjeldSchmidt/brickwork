@@ -39,6 +39,12 @@ public sealed class Wall
 
     public int? GroupId { get; set; }
 
+    /// <summary>
+    /// Inkarnate path style (<c>pathId</c>, e.g. "Rope Fence"); the same id in every map.
+    /// Names come from <see cref="PathTemplateLibrary"/>.
+    /// </summary>
+    public int? PathTemplateId { get; set; }
+
     public IList<MapPoint> Points { get; init; } = [];
 
     public IList<WallPortal> Portals { get; init; } = [];

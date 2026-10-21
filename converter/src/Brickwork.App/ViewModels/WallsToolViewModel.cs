@@ -58,6 +58,7 @@ public partial class WallsToolViewModel : Tool
     public WallsToolViewModel(EditorSession session)
     {
         _session = session;
+        _session.PathTemplateNamesChanged += (_, _) => RefreshDisplayNames();
         _session.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName is nameof(EditorSession.Map))
@@ -584,6 +585,26 @@ public partial class WallsToolViewModel : Tool
             return;
         }
 
+        // Path-style names live in the library (all maps), not in this map, so they are not undoable.
+        var templateIds = targets
+            .OfType<WallGroupNodeViewModel>()
+            .Select(group => group.PathTemplateId)
+            .OfType<int>()
+            .Distinct()
+            .ToList();
+        foreach (var templateId in templateIds)
+        {
+            _session.SetPathTemplateName(templateId, name);
+        }
+
+        targets = targets
+            .Where(target => target is not WallGroupNodeViewModel { PathTemplateId: not null })
+            .ToList();
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
         var actionName = targets.Count == 1 ? "Rename" : "Rename selection";
         _session.Execute(actionName, () =>
         {
@@ -610,6 +631,14 @@ public partial class WallsToolViewModel : Tool
         foreach (var target in targets)
         {
             NotifyDisplayName(target);
+        }
+    }
+
+    private void RefreshDisplayNames()
+    {
+        foreach (var node in EnumerateTreeNodesInOrder())
+        {
+            NotifyDisplayName(node);
         }
     }
 
@@ -1045,8 +1074,10 @@ public partial class WallsToolViewModel : Tool
             return;
         }
 
-        // Additions only: insert matching nodes instead of rebuilding.
-        if (treeWallIds.IsSubsetOf(mapWallIds))
+        // Additions only: insert matching nodes instead of rebuilding
+        // (walls with a path style may belong in a path-style node, so those rebuild).
+        if (treeWallIds.IsSubsetOf(mapWallIds) &&
+            PanelWalls.All(wall => treeWallIds.Contains(wall.EntityId) || wall.PathTemplateId is null))
         {
             foreach (var wall in PanelWalls.OrderBy(candidate => candidate.EntityId))
             {
@@ -1254,7 +1285,8 @@ public partial class WallsToolViewModel : Tool
                     }
                     else
                     {
-                        group.RefreshActiveState();
+                        // Path-style nodes show their wall count.
+                        group.RefreshFromModel();
                     }
 
                     return true;
@@ -1414,10 +1446,7 @@ public partial class WallsToolViewModel : Tool
                 }
             }
 
-            foreach (var wall in layerWalls.Where(wall => wall.GroupId is null).OrderBy(wall => wall.EntityId))
-            {
-                layerNode.Children.Add(new WallItemViewModel(this, _session, wall));
-            }
+            AddWallItems(layerNode.Children, layerWalls.Where(wall => wall.GroupId is null));
 
             if (layerNode.Children.Count > 0)
             {
@@ -1475,12 +1504,42 @@ public partial class WallsToolViewModel : Tool
             }
         }
 
-        foreach (var wall in GetChildWalls(group, wallsById, layerWallIds).OrderBy(wall => wall.EntityId))
-        {
-            node.Children.Add(new WallItemViewModel(this, _session, wall));
-        }
+        AddWallItems(node.Children, GetChildWalls(group, wallsById, layerWallIds));
 
         return node.Children.Count > 0 ? node : null;
+    }
+
+    /// <summary>
+    /// Adds wall items, gathering walls of the same Inkarnate path style (two or more) under a
+    /// path-style node; the rest are listed directly.
+    /// </summary>
+    private void AddWallItems(ObservableCollection<object> children, IEnumerable<Wall> walls)
+    {
+        var ordered = walls.OrderBy(wall => wall.EntityId).ToList();
+        var templateGroups = ordered
+            .Where(wall => wall.PathTemplateId is not null)
+            .GroupBy(wall => wall.PathTemplateId!.Value)
+            .Where(group => group.Count() > 1)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        foreach (var (templateId, templateWalls) in templateGroups
+                     .OrderBy(entry => _session.PathTemplates.TemplateDisplayName(entry.Key), StringComparer.CurrentCultureIgnoreCase))
+        {
+            // Negative ids keep the stand-in groups apart from Inkarnate's group ids.
+            var standIn = new EntityGroup { GroupId = -templateId, LayerId = templateWalls[0].LayerId };
+            var templateNode = new WallGroupNodeViewModel(_session, standIn, templateId);
+            foreach (var wall in templateWalls)
+            {
+                templateNode.Children.Add(new WallItemViewModel(this, _session, wall));
+            }
+
+            children.Add(templateNode);
+        }
+
+        foreach (var wall in ordered.Where(wall => wall.PathTemplateId is not int id || !templateGroups.ContainsKey(id)))
+        {
+            children.Add(new WallItemViewModel(this, _session, wall));
+        }
     }
 
     private static bool IsRootGroup(EntityGroup group, IReadOnlyDictionary<int, EntityGroup> groupsById) =>
@@ -1693,21 +1752,29 @@ public partial class WallGroupNodeViewModel : ObservableObject
     [ObservableProperty]
     private string _renameText = string.Empty;
 
-    public WallGroupNodeViewModel(EditorSession session, EntityGroup group)
+    public WallGroupNodeViewModel(EditorSession session, EntityGroup group, int? pathTemplateId = null)
     {
         _session = session;
         Group = group;
+        PathTemplateId = pathTemplateId;
     }
 
+    /// <summary>The Inkarnate group, or a stand-in (not in the map) for a path-style node.</summary>
     public EntityGroup Group { get; }
+
+    /// <summary>Set for a node that gathers the walls of one Inkarnate path style.</summary>
+    public int? PathTemplateId { get; }
 
     public ObservableCollection<object> Children { get; } = [];
 
-    public string DisplayName => Group.DisplayName;
+    public string DisplayName => PathTemplateId is int id
+        ? $"{_session.PathTemplates.TemplateDisplayName(id)} ({Children.Count})"
+        : Group.DisplayName;
 
     public void BeginRename()
     {
-        RenameText = DisplayName;
+        // A path-style node is renamed by its style name, without the wall count.
+        RenameText = PathTemplateId is int id ? _session.PathTemplates.TemplateDisplayName(id) : DisplayName;
         IsRenaming = true;
     }
 
@@ -1829,7 +1896,7 @@ public partial class WallItemViewModel : ObservableObject
     public IReadOnlyList<WallLineType> LineTypeOptions { get; } =
         Enum.GetValues<WallLineType>();
 
-    public string DisplayName => Wall.DisplayName;
+    public string DisplayName => _session.PathTemplates.DisplayName(Wall);
 
     public void BeginRename()
     {

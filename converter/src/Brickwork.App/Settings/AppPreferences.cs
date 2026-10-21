@@ -23,6 +23,21 @@ public sealed class AppPreferences
         // The tree-trunk library is written once, when the app exits (see FlushTreeTrunkLibrary).
         _session.TreeAdjustmentsChanged += (_, _) => _treeTrunkLibraryDirty = true;
 
+        var pathTemplateStore = new PathTemplateLibraryStore(Path.GetDirectoryName(_store.SettingsFilePath));
+        _session.LoadPathTemplates(new PathTemplateLibrary(PathTemplateLibraryStore.LoadBuiltIn(), pathTemplateStore.Load()));
+        // Renames are rare, so path-style names are written right away.
+        _session.PathTemplateNamesChanged += (_, _) =>
+        {
+            try
+            {
+                pathTemplateStore.Save(_session.PathTemplates.UserValues);
+            }
+            catch
+            {
+                // Unwritable settings folder: keep the names for this session only.
+            }
+        };
+
         _session.PropertyChanged += (_, args) =>
         {
             if (_suppressSave)

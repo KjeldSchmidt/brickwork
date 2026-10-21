@@ -12,6 +12,10 @@
     <EmbeddedResource Include="..\..\..\resources\tree-trunks.json"
                       LogicalName="Brickwork.Core.TreeTrunkDefaults.json"
                       Link="Settings\tree-trunks.json" />
+    <!-- Built-in names for Inkarnate path styles (pathId); same format as the user's path-templates.json. -->
+    <EmbeddedResource Include="..\..\..\resources\path-templates.json"
+                      LogicalName="Brickwork.Core.PathTemplateDefaults.json"
+                      Link="Settings\path-templates.json" />
   </ItemGroup>
 
 </Project>

@@ -56,6 +56,7 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
             RotationPivot = origin,
             Scale = scale,
             WallThickness = InkJsonReader.ReadDouble(entity, "wallThickness"),
+            PathTemplateId = ReadPathTemplateId(entity),
         };
 
         var angle = entity.TryGetProperty("angle", out var angleElement) &&
@@ -113,4 +114,11 @@ internal sealed class PathV2EntityHandler : IInkEntityHandler
 
         context.ApplyVisibilityToWall(wall, item.LayerId);
     }
+
+    private static int? ReadPathTemplateId(JsonElement entity) =>
+        entity.TryGetProperty("pathId", out var pathId) &&
+        pathId.ValueKind == JsonValueKind.Number &&
+        pathId.TryGetInt32(out var value)
+            ? value
+            : null;
 }

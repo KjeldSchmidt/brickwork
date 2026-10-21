@@ -128,6 +128,20 @@ public sealed partial class EditorSession : ObservableObject
 
     public void LoadTreeLibrary(TreeTrunkLibrary library) => TreeLibrary = library;
 
+    /// <summary>Names for Inkarnate path styles: built-in names plus the user's (path-templates.json).</summary>
+    public PathTemplateLibrary PathTemplates { get; private set; } = new();
+
+    /// <summary>Raised when a path style is renamed, so lists refresh and the names are saved.</summary>
+    public event EventHandler? PathTemplateNamesChanged;
+
+    public void LoadPathTemplates(PathTemplateLibrary library) => PathTemplates = library;
+
+    public void SetPathTemplateName(int pathTemplateId, string? name)
+    {
+        PathTemplates.SetName(pathTemplateId, name);
+        PathTemplateNamesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public void SetTreeAdjustment(string key, TreeTrunkAdjustment adjustment)
     {
         TreeLibrary.Set(key, adjustment);
