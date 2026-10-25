@@ -15,6 +15,10 @@ internal static class FoundrySceneBuilder
         var canvas = FoundryExportCanvas.FromMap(map);
 
         var scene = LoadTemplate();
+        // Without a core version Foundry migrates the import as pre-levels data, and its levels
+        // migration replaces "levels" with a single level built from "background". 14.353 is the
+        // first version with levels, so no newer v14 refuses the import as too new.
+        scene["_stats"] = new JsonObject { ["coreVersion"] = "14.353" };
         scene["name"] = map.Name;
         scene["width"] = canvas.Width;
         scene["height"] = canvas.Height;

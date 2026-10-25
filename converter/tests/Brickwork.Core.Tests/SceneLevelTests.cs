@@ -86,6 +86,9 @@ public class SceneLevelTests
         using var document = await JsonDocument.ParseAsync(output);
         var root = document.RootElement;
 
+        // Foundry only keeps "levels" on import when the scene is from a version that has them.
+        Assert.Equal("14.353", root.GetProperty("_stats").GetProperty("coreVersion").GetString());
+
         var levels = root.GetProperty("levels").EnumerateArray().ToList();
         Assert.Equal(3, levels.Count);
         Assert.Equal("defaultLevel0000", levels[0].GetProperty("_id").GetString());

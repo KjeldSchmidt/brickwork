@@ -281,12 +281,16 @@ public class FoundryExporterTests
         Assert.Equal(
             expectedCanvas.GridSize,
             document.RootElement.GetProperty("grid").GetProperty("size").GetInt32());
-        // Legacy root background.src — V14 migrateLevels copies this onto levels[0] on import.
+        // Legacy root background.src, kept for older readers; levels[0] carries the image in v14.
         Assert.Equal(
             "basic-walls.webp",
             document.RootElement.GetProperty("background").GetProperty("src").GetString());
         Assert.False(document.RootElement.TryGetProperty("thumb", out _));
-        Assert.False(document.RootElement.TryGetProperty("_stats", out _));
+        Assert.Equal(
+            "basic-walls.webp",
+            document.RootElement.GetProperty("levels")[0].GetProperty("background").GetProperty("src").GetString());
+        // Set so Foundry does not run its pre-levels migration, which would replace "levels".
+        Assert.Equal("14.353", document.RootElement.GetProperty("_stats").GetProperty("coreVersion").GetString());
 
         var initial = document.RootElement.GetProperty("initial");
         Assert.Equal(1d, initial.GetProperty("scale").GetDouble());
