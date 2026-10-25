@@ -9,7 +9,8 @@
         <StackPanel Margin="12,6" Spacing="8">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <Button Grid.Column="0"
-                        Content="Open Original Map"
+                        Content="Open Map or Project"
+                        ToolTip.Tip="Open an Inkarnate map (or other source map) or a saved .brickwork project"
                         Command="{Binding OpenSourceMapCommand}"
                         HorizontalAlignment="Stretch"
                         HorizontalContentAlignment="Center" />
@@ -25,6 +26,27 @@
                                                     Kind="GearSolid" />
                 </Button>
             </Grid>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button Grid.Column="0"
+                        Content="Save Project"
+                        ToolTip.Tip="Save the map with all changes and a copy of its source file (Ctrl+S)"
+                        Command="{Binding SaveProjectCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" />
+                <Button Grid.Column="1"
+                        Content="Save As…"
+                        Command="{Binding SaveProjectAsCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center" />
+            </Grid>
+
+            <Button Content="Update Project"
+                    ToolTip.Tip="Bring in a newer backup of the source map; the changes made here are applied to it"
+                    Command="{Binding UpdateProjectCommand}"
+                    IsVisible="{Binding IsProjectOpen}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" />
 
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <Button Grid.Column="0"

@@ -27,6 +27,10 @@ public sealed partial class EditorSession : ObservableObject
     [ObservableProperty]
     private string? _sourceFilePath;
 
+    /// <summary>The open <c>.brickwork</c> project; null while the map is not saved as one.</summary>
+    [ObservableProperty]
+    private string? _projectFilePath;
+
     [ObservableProperty]
     private int _contentRevision;
 

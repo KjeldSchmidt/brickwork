@@ -9,8 +9,8 @@ namespace Brickwork.App.Dock;
 
 public sealed class AppDockFactory : Factory
 {
-    private const double FileDockCompactProportion = 0.17;
-    private const double FileDockExpandedProportion = 0.27;
+    private const double FileDockCompactProportion = 0.25;
+    private const double FileDockExpandedProportion = 0.35;
     private const double WallsDockCompactProportion = 1d - FileDockCompactProportion;
     private const double WallsDockExpandedProportion = 1d - FileDockExpandedProportion;
 

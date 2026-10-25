@@ -129,6 +129,20 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (IsPrimaryModifier(e.KeyModifiers) && e.Key == Key.S)
+        {
+            var command = e.KeyModifiers.HasFlag(KeyModifiers.Shift)
+                ? viewModel.SaveProjectAsCommand
+                : viewModel.SaveProjectCommand;
+            if (command.CanExecute(null))
+            {
+                command.Execute(null);
+                e.Handled = true;
+            }
+
+            return;
+        }
+
         if (IsPrimaryModifier(e.KeyModifiers) && e.Key == Key.E && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
         {
             if (viewModel.ExportCommand.CanExecute(null))

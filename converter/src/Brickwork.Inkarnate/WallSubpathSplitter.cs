@@ -13,13 +13,16 @@ internal static class WallSubpathSplitter
 {
     private const int MinimumSubpathPoints = 2;
 
+    private const int MaxSubpaths = 64;
+
+    /// <summary>
+    /// Negative id for subpath <paramref name="index"/> of <paramref name="entityId"/>, so a later
+    /// backup with more entities gives the part the same id (see <c>TreeTrunks.WallId</c>).
+    /// </summary>
+    public static int PartId(int entityId, int index) => -(1_000_000_000 + entityId * MaxSubpaths + index);
+
     public static int SplitAll(InkImportContext context)
     {
-        var nextEntityId = context.WallsByEntityId.Keys
-            .Concat(context.GroupsById.Keys)
-            .Concat(context.StampsByEntityId.Keys)
-            .DefaultIfEmpty(0)
-            .Max() + 1;
         var created = 0;
 
         foreach (var wall in context.WallsByEntityId.Values.OrderBy(wall => wall.EntityId).ToList())
@@ -43,7 +46,7 @@ internal static class WallSubpathSplitter
             var outer = subpaths[longestIndex];
             var parts = new List<Wall>();
             var partNumber = 1;
-            for (var i = 0; i < subpaths.Count; i++)
+            for (var i = 0; i < subpaths.Count && i < MaxSubpaths; i++)
             {
                 if (i == longestIndex)
                 {
@@ -54,7 +57,7 @@ internal static class WallSubpathSplitter
                 var suffix = wall.IsClosed && IsInsidePolygon(subpaths[i][0], outer)
                     ? "inner"
                     : $"part {partNumber}";
-                parts.Add(CreatePart(wall, nextEntityId++, subpaths[i], suffix));
+                parts.Add(CreatePart(wall, PartId(wall.EntityId, i), subpaths[i], suffix));
             }
 
             var portals = wall.Portals.ToList();

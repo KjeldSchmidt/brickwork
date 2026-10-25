@@ -40,6 +40,13 @@ public partial class MainWindowViewModel : ObservableObject
             if (args.PropertyName is nameof(EditorSession.Map))
             {
                 ExportCommand.NotifyCanExecuteChanged();
+                SaveProjectCommand.NotifyCanExecuteChanged();
+                SaveProjectAsCommand.NotifyCanExecuteChanged();
+            }
+
+            if (args.PropertyName is nameof(EditorSession.Map) or nameof(EditorSession.ProjectFilePath))
+            {
+                UpdateProjectCommand.NotifyCanExecuteChanged();
             }
 
             if (args.PropertyName is nameof(EditorSession.CanUndo) or nameof(EditorSession.UndoActionName))
@@ -64,6 +71,35 @@ public partial class MainWindowViewModel : ObservableObject
             await command.ExecuteAsync(null).ConfigureAwait(true);
         }
     }
+
+    [RelayCommand(CanExecute = nameof(CanExport))]
+    private async Task SaveProjectAsync()
+    {
+        if (ImportTool?.SaveProjectCommand is { } command)
+        {
+            await command.ExecuteAsync(null).ConfigureAwait(true);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExport))]
+    private async Task SaveProjectAsAsync()
+    {
+        if (ImportTool?.SaveProjectAsCommand is { } command)
+        {
+            await command.ExecuteAsync(null).ConfigureAwait(true);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUpdateProject))]
+    private async Task UpdateProjectAsync()
+    {
+        if (ImportTool?.UpdateProjectCommand is { } command)
+        {
+            await command.ExecuteAsync(null).ConfigureAwait(true);
+        }
+    }
+
+    private bool CanUpdateProject() => Session.Map is not null && Session.ProjectFilePath is not null;
 
     public string UndoHeader => Session.UndoActionName is { } name ? $"_Undo {name}" : "_Undo";
 

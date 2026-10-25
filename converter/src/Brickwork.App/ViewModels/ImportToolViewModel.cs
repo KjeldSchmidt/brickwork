@@ -59,6 +59,9 @@ public partial class ImportToolViewModel : Tool
             if (args.PropertyName is nameof(EditorSession.Map))
             {
                 ConvertCommand.NotifyCanExecuteChanged();
+                SaveProjectCommand.NotifyCanExecuteChanged();
+                SaveProjectAsCommand.NotifyCanExecuteChanged();
+                UpdateProjectCommand.NotifyCanExecuteChanged();
                 _compatibilityWarningDismissed = false;
                 UpdateCompatibilityWarning();
                 RefreshUnderlyingMap();
@@ -66,6 +69,11 @@ public partial class ImportToolViewModel : Tool
             else if (args.PropertyName is nameof(EditorSession.FoundryMapsPath))
             {
                 RefreshUnderlyingMap();
+            }
+            else if (args.PropertyName is nameof(EditorSession.ProjectFilePath))
+            {
+                OnPropertyChanged(nameof(IsProjectOpen));
+                UpdateProjectCommand.NotifyCanExecuteChanged();
             }
         };
     }
@@ -132,12 +140,21 @@ public partial class ImportToolViewModel : Tool
 
     private bool CanDismissCompatibilityWarning() => ShowCompatibilityWarning;
 
+    /// <summary>True while a <c>.brickwork</c> project is open (shows Update Project).</summary>
+    public bool IsProjectOpen => _session.ProjectFilePath is not null;
+
     [RelayCommand]
     private async Task OpenSourceMapAsync()
     {
         var path = await PickSourceMapAsync().ConfigureAwait(true);
         if (path is null)
         {
+            return;
+        }
+
+        if (ProjectFiles.IsProjectPath(path))
+        {
+            await OpenProjectAsync(path).ConfigureAwait(true);
             return;
         }
 
@@ -149,6 +166,7 @@ public partial class ImportToolViewModel : Tool
             MapReimportMerger.RecordImportedIds(map);
             map.SourceFileName = Path.GetFileName(path);
             _session.SourceFilePath = path;
+            _session.ProjectFilePath = null;
             _session.Map = map;
             _session.SourceFileName = Path.GetFileName(path);
             StatusMessage = $"Loaded {_session.SourceFileName}.";
@@ -160,11 +178,94 @@ public partial class ImportToolViewModel : Tool
             _session.Map = null;
             _session.SourceFileName = null;
             _session.SourceFilePath = null;
+            _session.ProjectFilePath = null;
             StatusMessage = $"Failed to load input: {ex.Message}";
             UpdateCompatibilityWarning();
             RefreshUnderlyingMap();
         }
     }
+
+    private async Task OpenProjectAsync(string path)
+    {
+        try
+        {
+            await ProjectFiles.OpenAsync(_session, path).ConfigureAwait(true);
+            StatusMessage = $"Opened project {Path.GetFileName(path)}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Failed to open project: {ex.Message}";
+        }
+
+        UpdateCompatibilityWarning();
+        RefreshUnderlyingMap();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveProject))]
+    private async Task SaveProjectAsync()
+    {
+        if (_session.ProjectFilePath is { } path)
+        {
+            await SaveProjectToAsync(path).ConfigureAwait(true);
+        }
+        else
+        {
+            await SaveProjectAsAsync().ConfigureAwait(true);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveProject))]
+    private async Task SaveProjectAsAsync()
+    {
+        var suggestedName = Path.GetFileNameWithoutExtension(_session.ProjectFilePath ?? _session.SourceFileName ?? "map");
+        var path = await PickProjectDestinationAsync(suggestedName).ConfigureAwait(true);
+        if (path is null)
+        {
+            StatusMessage = "Save cancelled.";
+            return;
+        }
+
+        await SaveProjectToAsync(path).ConfigureAwait(true);
+    }
+
+    private async Task SaveProjectToAsync(string path)
+    {
+        try
+        {
+            await ProjectFiles.SaveAsync(_session, path).ConfigureAwait(true);
+            StatusMessage = $"Saved project {Path.GetFileName(path)}.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not save the project: {ex.Message}";
+        }
+    }
+
+    private bool CanSaveProject() => _session.Map is not null;
+
+    [RelayCommand(CanExecute = nameof(CanUpdateProject))]
+    private async Task UpdateProjectAsync()
+    {
+        var path = await PickSourceMapAsync("Choose a newer backup of the map", includeProjects: false).ConfigureAwait(true);
+        if (path is null)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusMessage = await ProjectFiles.UpdateAsync(_session, path).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not update the project: {ex.Message}";
+        }
+
+        UpdateCompatibilityWarning();
+        RefreshUnderlyingMap();
+    }
+
+    private bool CanUpdateProject() => _session.Map is not null && _session.ProjectFilePath is not null;
 
     private void RefreshUnderlyingMap()
     {
@@ -265,7 +366,7 @@ public partial class ImportToolViewModel : Tool
 
     private bool CanConvert() => _session.Map is not null;
 
-    private async Task<string?> PickSourceMapAsync()
+    private async Task<string?> PickSourceMapAsync(string title = "Open map or project", bool includeProjects = true)
     {
         if (Avalonia.Application.Current?.ApplicationLifetime is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -278,16 +379,21 @@ public partial class ImportToolViewModel : Tool
             return null;
         }
 
+        string[] mapPatterns = ["*.ink", "*.uvtt", "*.dd2vtt", "*.df2vtt", "*.json"];
+        string[] projectPatterns = [$"*{BrickworkProject.Extension}"];
         var files = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open original map",
+            Title = title,
             AllowMultiple = false,
             FileTypeFilter =
             [
                 new FilePickerFileType("All supported files")
                 {
-                    Patterns = ["*.ink", "*.uvtt", "*.dd2vtt", "*.df2vtt", "*.json"],
+                    Patterns = includeProjects ? [.. projectPatterns, .. mapPatterns] : mapPatterns,
                 },
+                .. includeProjects
+                    ? new[] { new FilePickerFileType("Brickwork projects") { Patterns = projectPatterns } }
+                    : [],
                 new FilePickerFileType("Inkarnate maps") { Patterns = ["*.ink"] },
                 new FilePickerFileType("Universal VTT") { Patterns = ["*.uvtt", "*.dd2vtt", "*.df2vtt"] },
                 new FilePickerFileType("JSON files") { Patterns = ["*.json"] },
@@ -296,6 +402,25 @@ public partial class ImportToolViewModel : Tool
         }).ConfigureAwait(true);
 
         return files.Count > 0 ? files[0].Path.LocalPath : null;
+    }
+
+    private static async Task<string?> PickProjectDestinationAsync(string suggestedBaseName)
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+            desktop.MainWindow?.StorageProvider is not { } storageProvider)
+        {
+            return null;
+        }
+
+        var file = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save project",
+            FileTypeChoices = [new FilePickerFileType("Brickwork project") { Patterns = [$"*{BrickworkProject.Extension}"] }],
+            DefaultExtension = BrickworkProject.Extension.TrimStart('.'),
+            SuggestedFileName = suggestedBaseName + BrickworkProject.Extension,
+        }).ConfigureAwait(true);
+
+        return file?.Path.LocalPath;
     }
 
     private async Task<(string Path, string FormatId)?> PickExportDestinationAsync(string suggestedBaseName)

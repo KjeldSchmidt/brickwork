@@ -17,6 +17,8 @@
 
     <Window.KeyBindings>
         <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenSourceMapCommand}" />
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveProjectCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveProjectAsCommand}" />
         <KeyBinding Gesture="Ctrl+E" Command="{Binding ExportCommand}" />
         <KeyBinding Gesture="Ctrl+OemComma" Command="{Binding OpenSettingsCommand}" />
     </Window.KeyBindings>
@@ -28,6 +30,17 @@
                           InputGesture="Ctrl+O"
                           HotKey="Ctrl+O"
                           Command="{Binding OpenSourceMapCommand}" />
+                <MenuItem Header="_Save Project"
+                          InputGesture="Ctrl+S"
+                          HotKey="Ctrl+S"
+                          Command="{Binding SaveProjectCommand}" />
+                <MenuItem Header="Save Project _As…"
+                          InputGesture="Ctrl+Shift+S"
+                          HotKey="Ctrl+Shift+S"
+                          Command="{Binding SaveProjectAsCommand}" />
+                <MenuItem Header="_Update Project…"
+                          Command="{Binding UpdateProjectCommand}" />
+                <Separator />
                 <MenuItem Header="_Export…"
                           InputGesture="Ctrl+E"
                           HotKey="Ctrl+E"
