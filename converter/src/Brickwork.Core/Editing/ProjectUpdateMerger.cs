@@ -128,6 +128,7 @@ public static class ProjectUpdateMerger
 
         result.SceneLevelCount = project.SceneLevelCount;
         result.SceneLevelHeight = project.SceneLevelHeight;
+        result.GlobalIllumination = project.GlobalIllumination;
         result.FoundryExportGrid = project.FoundryExportGrid;
         result.FoundryGridSize = project.FoundryGridSize;
         result.FoundryMapsDirectory = project.FoundryMapsDirectory;

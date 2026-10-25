@@ -35,6 +35,11 @@ internal static class FoundrySceneBuilder
             initial["scale"] = 1;
         }
 
+        if (scene["environment"]?["globalLight"] is JsonObject globalLight)
+        {
+            globalLight["enabled"] = map.GlobalIllumination;
+        }
+
         var backgroundSrc = FoundryPaths.BuildBackgroundSrc(
             map.FoundryMapsDirectory,
             map.SourceFileName,

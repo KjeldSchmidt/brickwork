@@ -36,6 +36,9 @@ public sealed class MapDocument
     /// </summary>
     public FoundryExportGrid? FoundryExportGrid { get; set; }
 
+    /// <summary>Turn on Foundry's global illumination in the exported scene.</summary>
+    public bool GlobalIllumination { get; set; } = true;
+
     /// <summary>Number of Foundry scene levels to export (see <see cref="SceneLevels"/>).</summary>
     public int SceneLevelCount { get; set; } = 1;
 

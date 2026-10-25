@@ -79,6 +79,9 @@ public sealed partial class EditorSession : ObservableObject
     [ObservableProperty]
     private int _foundryGridSize = FoundryExportCanvas.DefaultGridSize;
 
+    [ObservableProperty]
+    private bool _globalIllumination = true;
+
     /// <summary>Number of Foundry scene levels (the level checkboxes in the panels).</summary>
     [ObservableProperty]
     private int _sceneLevelCount = 1;

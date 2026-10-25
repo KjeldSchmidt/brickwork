@@ -128,4 +128,26 @@ public class SceneLevelTests
         Assert.Equal(40, region.GetProperty("elevation").GetProperty("bottom").GetDouble());
         Assert.Equal(60, region.GetProperty("elevation").GetProperty("top").GetDouble());
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task FoundryExport_WritesGlobalIllumination(bool enabled)
+    {
+        var map = new MapDocument
+        {
+            Scene = new SceneDimensions { Width = 1000, Height = 1000 },
+            Preview = new PreviewDimensions { Width = 1000, Height = 1000 },
+            GlobalIllumination = enabled,
+        };
+
+        await using var output = new MemoryStream();
+        await ServiceFactory.CreateConvertMapService().ConvertAsync(map, output, "foundry");
+        output.Position = 0;
+        using var document = await JsonDocument.ParseAsync(output);
+
+        Assert.Equal(
+            enabled,
+            document.RootElement.GetProperty("environment").GetProperty("globalLight").GetProperty("enabled").GetBoolean());
+    }
 }

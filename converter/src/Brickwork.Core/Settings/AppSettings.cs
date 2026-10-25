@@ -22,6 +22,9 @@ public sealed class AppSettings
     /// <summary>Height of each Foundry scene level in feet.</summary>
     public double SceneLevelHeight { get; set; } = SceneLevels.DefaultHeight;
 
+    /// <summary>Turn on Foundry's global illumination in exported scenes.</summary>
+    public bool GlobalIllumination { get; set; } = true;
+
     /// <summary>Foundry pixels per grid square when no map image is found in the maps folder.</summary>
     public int FoundryGridSize { get; set; } = FoundryExportCanvas.DefaultGridSize;
 

@@ -235,6 +235,11 @@
                     <NumericUpDown Minimum="50" Maximum="1000" Increment="10" FormatString="0"
                                    Value="{Binding FoundryGridSize}" Width="110"
                                    HorizontalAlignment="Left" />
+                    <CheckBox Content="Global illumination"
+                              IsChecked="{Binding GlobalIllumination}" />
+                    <TextBlock Text="Turns on Foundry's global illumination in the exported scene, so the whole map is lit while the scene is not dark."
+                               TextWrapping="Wrap"
+                               Opacity="0.75" />
                     <TextBlock Text="Scene levels"
                                FontWeight="SemiBold" />
                     <TextBlock Text="Foundry levels stacked from the ground up. With more than one, the Walls, Regions and Lights tabs get a checkbox per level to choose where each one appears. Only level 1 shows the map image; higher levels show the levels below."
