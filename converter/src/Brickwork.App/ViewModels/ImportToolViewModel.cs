@@ -417,7 +417,8 @@ public partial class ImportToolViewModel : Tool
             Title = "Save project",
             FileTypeChoices = [new FilePickerFileType("Brickwork project") { Patterns = [$"*{BrickworkProject.Extension}"] }],
             DefaultExtension = BrickworkProject.Extension.TrimStart('.'),
-            SuggestedFileName = suggestedBaseName + BrickworkProject.Extension,
+            // Without the extension: the macOS save panel adds DefaultExtension to the name again.
+            SuggestedFileName = suggestedBaseName,
         }).ConfigureAwait(true);
 
         return file?.Path.LocalPath;

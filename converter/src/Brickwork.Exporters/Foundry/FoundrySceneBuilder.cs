@@ -54,7 +54,15 @@ internal static class FoundrySceneBuilder
         scene["regions"] = new JsonArray(regions.Select(region => ToRegionJson(region, levels)).ToArray());
 
         var lights = FoundryLightBuilder.BuildFromMap(map);
-        scene["lights"] = new JsonArray(lights.Select(light => ToLightJson(light, levels)).ToArray());
+        // Foundry puts a light on the one level its elevation falls in (that is where it shines and
+        // which walls block it), so a light on several levels becomes one light per level.
+        scene["lights"] = new JsonArray(lights
+            .SelectMany(light => levels.Count == 1
+                ? [(light, Level: (int?)null)]
+                : (light.Levels.Count == 0 ? Enumerable.Range(1, levels.Count) : light.Levels)
+                    .Select(level => (light, Level: (int?)level)))
+            .Select(pair => ToLightJson(pair.light, pair.Level, levels))
+            .ToArray());
 
         await JsonSerializer.SerializeAsync(destination, scene, SerializerOptions, cancellationToken)
             .ConfigureAwait(false);
@@ -137,16 +145,17 @@ internal static class FoundrySceneBuilder
         };
     }
 
-    private static JsonObject ToLightJson(FoundryLight light, LevelLayout levels) =>
+    /// <param name="level">The level this copy of the light is on; null in a scene with one level.</param>
+    private static JsonObject ToLightJson(FoundryLight light, int? level, LevelLayout levels) =>
         new()
         {
             ["_id"] = FoundryIdGenerator.Create(),
             ["x"] = light.X,
             ["y"] = light.Y,
-            // A light on some levels sits on the floor of the lowest of them.
-            ["elevation"] = light.Levels.Count == 0 ? 0 : levels.Bottom(light.Levels.Min()),
+            // On the floor of its level, so Foundry shows no relative elevation there.
+            ["elevation"] = level is int floor ? levels.Bottom(floor) : 0,
             ["rotation"] = 0,
-            ["levels"] = levels.Ids(light.Levels),
+            ["levels"] = levels.Ids(level is int on ? [on] : []),
             ["walls"] = true,
             ["vision"] = false,
             ["config"] = new JsonObject

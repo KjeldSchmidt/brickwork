@@ -73,6 +73,7 @@ public class SceneLevelTests
         });
         map.Walls.Add(new Wall { EntityId = 2, Points = { new MapPoint(0, 100), new MapPoint(500, 100) } });
         map.Lights.Add(new LightSource { EntityId = 3, Position = new MapPoint(10, 10), Levels = [2, 3] });
+        map.Lights.Add(new LightSource { EntityId = 5, Position = new MapPoint(20, 20) });
         map.Regions.Add(new Region
         {
             EntityId = 4,
@@ -108,11 +109,19 @@ public class SceneLevelTests
         Assert.Contains(wallLevels, ids => ids.SequenceEqual(["brickworkLevel02"]));
         Assert.Contains(wallLevels, ids => ids.Count == 0);
 
-        var light = root.GetProperty("lights")[0];
-        Assert.Equal(
-            ["brickworkLevel02", "brickworkLevel03"],
-            light.GetProperty("levels").EnumerateArray().Select(id => id.GetString()));
-        Assert.Equal(20, light.GetProperty("elevation").GetDouble());
+        // A light on several levels becomes one light on each, at that level's floor.
+        var lights = root.GetProperty("lights").EnumerateArray()
+            .Select(light => (
+                Levels: light.GetProperty("levels").EnumerateArray().Select(id => id.GetString()).ToList(),
+                Elevation: light.GetProperty("elevation").GetDouble()))
+            .ToList();
+        Assert.Equal(5, lights.Count);
+        Assert.Equal(["brickworkLevel02"], lights[0].Levels);
+        Assert.Equal(20, lights[0].Elevation);
+        Assert.Equal(["brickworkLevel03"], lights[1].Levels);
+        Assert.Equal(40, lights[1].Elevation);
+        Assert.Equal([0d, 20d, 40d], lights.Skip(2).Select(light => light.Elevation));
+        Assert.All(lights.Skip(2), light => Assert.Single(light.Levels));
 
         var region = root.GetProperty("regions")[0];
         Assert.Equal(["brickworkLevel03"], region.GetProperty("levels").EnumerateArray().Select(id => id.GetString()));
