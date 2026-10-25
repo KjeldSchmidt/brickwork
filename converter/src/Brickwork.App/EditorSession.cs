@@ -87,9 +87,6 @@ public sealed partial class EditorSession : ObservableObject
     private int _sceneLevelCount = 1;
 
     [ObservableProperty]
-    private double _sceneLevelHeight = SceneLevels.DefaultHeight;
-
-    [ObservableProperty]
     private bool _detectRegionsFromColorPaths = true;
 
     [ObservableProperty]

@@ -50,7 +50,6 @@ public sealed class AppPreferences
                 or nameof(EditorSession.FoundryMapsPath)
                 or nameof(EditorSession.FoundryGridSize)
                 or nameof(EditorSession.SceneLevelCount)
-                or nameof(EditorSession.SceneLevelHeight)
                 or nameof(EditorSession.GlobalIllumination)
                 or nameof(EditorSession.DetectRegionsFromColorPaths)
                 or nameof(EditorSession.DetectRegionsFromNamedContainers)
@@ -96,7 +95,6 @@ public sealed class AppPreferences
             _session.ShowDebugPanel = settings.ShowDebugPanel;
             _session.FoundryMapsPath = settings.FoundryMapsPath ?? string.Empty;
             _session.SceneLevelCount = Math.Clamp(settings.SceneLevelCount, 1, SceneLevels.MaxCount);
-            _session.SceneLevelHeight = settings.SceneLevelHeight > 0 ? settings.SceneLevelHeight : SceneLevels.DefaultHeight;
             _session.GlobalIllumination = settings.GlobalIllumination;
             _session.FoundryGridSize = settings.FoundryGridSize > 0
                 ? settings.FoundryGridSize
@@ -134,7 +132,6 @@ public sealed class AppPreferences
             FoundryMapsPath = _session.FoundryMapsPath,
             FoundryGridSize = _session.FoundryGridSize,
             SceneLevelCount = _session.SceneLevelCount,
-            SceneLevelHeight = _session.SceneLevelHeight,
             GlobalIllumination = _session.GlobalIllumination,
             DetectRegionsFromColorPaths = _session.DetectRegionsFromColorPaths,
             DetectRegionsFromNamedContainers = _session.DetectRegionsFromNamedContainers,

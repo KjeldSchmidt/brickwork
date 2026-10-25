@@ -49,7 +49,7 @@ internal static class FoundrySceneBuilder
         // background made the Scenes sidebar decode the full-size map on hover.
         scene.Remove("thumb");
 
-        var levels = new LevelLayout(Math.Clamp(map.SceneLevelCount, 1, SceneLevels.MaxCount), map.SceneLevelHeight);
+        var levels = new LevelLayout(Math.Clamp(map.SceneLevelCount, 1, SceneLevels.MaxCount));
         scene["levels"] = BuildLevels(scene["levels"]?[0] as JsonObject, levels, backgroundSrc);
 
         var wallSegments = FoundryWallSegmentBuilder.BuildFromMap(map);
@@ -59,15 +59,7 @@ internal static class FoundrySceneBuilder
         scene["regions"] = new JsonArray(regions.Select(region => ToRegionJson(region, levels)).ToArray());
 
         var lights = FoundryLightBuilder.BuildFromMap(map);
-        // Foundry puts a light on the one level its elevation falls in (that is where it shines and
-        // which walls block it), so a light on several levels becomes one light per level.
-        scene["lights"] = new JsonArray(lights
-            .SelectMany(light => levels.Count == 1
-                ? [(light, Level: (int?)null)]
-                : (light.Levels.Count == 0 ? Enumerable.Range(1, levels.Count) : light.Levels)
-                    .Select(level => (light, Level: (int?)level)))
-            .Select(pair => ToLightJson(pair.light, pair.Level, levels))
-            .ToArray());
+        scene["lights"] = new JsonArray(lights.Select(light => ToLightJson(light, levels)).ToArray());
 
         await JsonSerializer.SerializeAsync(destination, scene, SerializerOptions, cancellationToken)
             .ConfigureAwait(false);
@@ -83,15 +75,14 @@ internal static class FoundrySceneBuilder
             ?? throw new InvalidOperationException("Failed to parse Foundry scene template.");
     }
 
-    /// <summary>Foundry levels stacked from the ground up, each <see cref="Height"/> feet tall.</summary>
-    private sealed record LevelLayout(int Count, double Height)
+    /// <summary>
+    /// Foundry levels. Elevations are left to Foundry: every level keeps the template's range and
+    /// everything on them its default elevation, so levels only decide where things appear.
+    /// </summary>
+    private sealed record LevelLayout(int Count)
     {
         /// <summary>Level 1 keeps the template's id (the scene's initial level).</summary>
         public static string Id(int level) => level == 1 ? "defaultLevel0000" : $"brickworkLevel{level:00}";
-
-        public double Bottom(int level) => (level - 1) * Height;
-
-        public double Top(int level) => level * Height;
 
         /// <summary>Foundry ids for an entity's levels; an empty list means every level.</summary>
         public JsonArray Ids(IReadOnlyList<int> levels) =>
@@ -110,7 +101,6 @@ internal static class FoundrySceneBuilder
             var node = templateLevel?.DeepClone().AsObject() ?? new JsonObject();
             node["_id"] = LevelLayout.Id(level);
             node["name"] = levels.Count == 1 ? "Level" : $"Level {level}";
-            node["elevation"] = new JsonObject { ["bottom"] = levels.Bottom(level), ["top"] = levels.Top(level) };
             if (node["background"] is JsonObject background)
             {
                 background["src"] = level == 1 ? backgroundSrc : null;
@@ -150,17 +140,15 @@ internal static class FoundrySceneBuilder
         };
     }
 
-    /// <param name="level">The level this copy of the light is on; null in a scene with one level.</param>
-    private static JsonObject ToLightJson(FoundryLight light, int? level, LevelLayout levels) =>
+    private static JsonObject ToLightJson(FoundryLight light, LevelLayout levels) =>
         new()
         {
             ["_id"] = FoundryIdGenerator.Create(),
             ["x"] = light.X,
             ["y"] = light.Y,
-            // On the floor of its level, so Foundry shows no relative elevation there.
-            ["elevation"] = level is int floor ? levels.Bottom(floor) : 0,
+            ["elevation"] = 0,
             ["rotation"] = 0,
-            ["levels"] = levels.Ids(level is int on ? [on] : []),
+            ["levels"] = levels.Ids(light.Levels),
             ["walls"] = true,
             ["vision"] = false,
             ["config"] = new JsonObject
@@ -231,8 +219,8 @@ internal static class FoundrySceneBuilder
             ["shapes"] = new JsonArray(region.Shapes.Select(ToShapeJson).ToArray()),
             ["elevation"] = new JsonObject
             {
-                ["bottom"] = region.Levels.Count == 0 ? 0 : levels.Bottom(region.Levels.Min()),
-                ["top"] = region.Levels.Count == 0 ? levels.Top(levels.Count) : levels.Top(region.Levels.Max()),
+                ["bottom"] = 0,
+                ["top"] = 20,
                 ["topInclusive"] = false,
             },
             ["levels"] = levels.Ids(region.Levels),

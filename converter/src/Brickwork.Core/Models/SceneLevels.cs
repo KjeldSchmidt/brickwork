@@ -8,9 +8,6 @@ public static class SceneLevels
 {
     public const int MaxCount = 10;
 
-    /// <summary>Default height of each level in feet (Foundry's default level is 0–20 ft).</summary>
-    public const double DefaultHeight = 20;
-
     public static bool IsOn(IReadOnlySet<int> levels, int level) => levels.Count == 0 || levels.Contains(level);
 
     /// <summary>Like <see cref="IsOn(IReadOnlySet{int}, int)"/>, as exported with <paramref name="levelCount"/> levels.</summary>

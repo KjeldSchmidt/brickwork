@@ -127,7 +127,6 @@ public static class ProjectUpdateMerger
         MergeLayers(project, previousImport, result);
 
         result.SceneLevelCount = project.SceneLevelCount;
-        result.SceneLevelHeight = project.SceneLevelHeight;
         result.GlobalIllumination = project.GlobalIllumination;
         result.FoundryExportGrid = project.FoundryExportGrid;
         result.FoundryGridSize = project.FoundryGridSize;

@@ -349,7 +349,6 @@ public partial class ImportToolViewModel : Tool
                 : _session.FoundryMapsPath;
             _session.Map.FoundryGridSize = _session.FoundryGridSize;
             _session.Map.SceneLevelCount = _session.SceneLevelCount;
-            _session.Map.SceneLevelHeight = _session.SceneLevelHeight;
             _session.Map.GlobalIllumination = _session.GlobalIllumination;
 
             await using var output = File.Create(outputPath);

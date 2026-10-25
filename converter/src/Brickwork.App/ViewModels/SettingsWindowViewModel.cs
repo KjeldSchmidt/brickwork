@@ -48,7 +48,6 @@ public partial class SettingsWindowViewModel : ObservableObject
 
             if (args.PropertyName is nameof(EditorSession.FoundryGridSize)
                 or nameof(EditorSession.SceneLevelCount)
-                or nameof(EditorSession.SceneLevelHeight)
                 or nameof(EditorSession.GlobalIllumination))
             {
                 OnPropertyChanged(args.PropertyName);
@@ -275,12 +274,6 @@ public partial class SettingsWindowViewModel : ObservableObject
     {
         get => _session.SceneLevelCount;
         set => _session.SceneLevelCount = Math.Clamp(value, 1, SceneLevels.MaxCount);
-    }
-
-    public double SceneLevelHeight
-    {
-        get => _session.SceneLevelHeight;
-        set => _session.SceneLevelHeight = value > 0 ? value : SceneLevels.DefaultHeight;
     }
 
     public bool GlobalIllumination

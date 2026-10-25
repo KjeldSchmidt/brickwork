@@ -19,9 +19,6 @@ public sealed class AppSettings
     /// <summary>Number of Foundry scene levels; walls, regions and lights can be put on each.</summary>
     public int SceneLevelCount { get; set; } = 1;
 
-    /// <summary>Height of each Foundry scene level in feet.</summary>
-    public double SceneLevelHeight { get; set; } = SceneLevels.DefaultHeight;
-
     /// <summary>Turn on Foundry's global illumination in exported scenes.</summary>
     public bool GlobalIllumination { get; set; } = true;
 

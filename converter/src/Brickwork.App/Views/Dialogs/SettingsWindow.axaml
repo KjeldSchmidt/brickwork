@@ -242,16 +242,13 @@
                                Opacity="0.75" />
                     <TextBlock Text="Scene levels"
                                FontWeight="SemiBold" />
-                    <TextBlock Text="Foundry levels stacked from the ground up. With more than one, the Walls, Regions and Lights tabs get a checkbox per level to choose where each one appears. Only level 1 shows the map image; higher levels show the levels below."
+                    <TextBlock Text="Foundry levels for this map. With more than one, the Walls, Regions and Lights tabs get a checkbox per level to choose where each one appears. Only level 1 shows the map image; higher levels show the levels below. Elevations are left as Foundry sets them; change them in Foundry if needed."
                                TextWrapping="Wrap"
                                Opacity="0.75" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBlock Text="Levels" VerticalAlignment="Center" />
                         <NumericUpDown Minimum="1" Maximum="10" Increment="1" FormatString="0"
                                        Value="{Binding SceneLevelCount}" Width="110" />
-                        <TextBlock Text="Height per level (ft)" VerticalAlignment="Center" />
-                        <NumericUpDown Minimum="1" Maximum="1000" Increment="5" FormatString="0.#"
-                                       Value="{Binding SceneLevelHeight}" Width="110" />
                     </StackPanel>
                 </StackPanel>
 

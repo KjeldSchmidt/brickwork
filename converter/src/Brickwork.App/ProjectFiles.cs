@@ -30,7 +30,6 @@ public static class ProjectFiles
         var map = project.Map;
         map.SourceFileName = project.SourceFileName;
         session.SceneLevelCount = Math.Clamp(map.SceneLevelCount, 1, SceneLevels.MaxCount);
-        session.SceneLevelHeight = map.SceneLevelHeight > 0 ? map.SceneLevelHeight : SceneLevels.DefaultHeight;
         session.GlobalIllumination = map.GlobalIllumination;
         session.SourceFilePath = sourcePath;
         session.ProjectFilePath = path;
@@ -52,7 +51,6 @@ public static class ProjectFiles
         }
 
         map.SceneLevelCount = session.SceneLevelCount;
-        map.SceneLevelHeight = session.SceneLevelHeight;
         map.GlobalIllumination = session.GlobalIllumination;
         var sourceFileName = session.SourceFileName ?? Path.GetFileName(session.SourceFilePath);
         var project = new BrickworkProject
@@ -88,7 +86,6 @@ public static class ProjectFiles
         var previousImport = await ImportAsync(session, session.SourceFilePath).ConfigureAwait(true);
         var newImport = await ImportAsync(session, backupPath).ConfigureAwait(true);
         map.SceneLevelCount = session.SceneLevelCount;
-        map.SceneLevelHeight = session.SceneLevelHeight;
         map.GlobalIllumination = session.GlobalIllumination;
         var result = ProjectUpdateMerger.Merge(map, previousImport, newImport);
 

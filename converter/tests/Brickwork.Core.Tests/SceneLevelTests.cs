@@ -63,7 +63,6 @@ public class SceneLevelTests
             Scene = new SceneDimensions { Width = 1000, Height = 1000 },
             Preview = new PreviewDimensions { Width = 1000, Height = 1000 },
             SceneLevelCount = 3,
-            SceneLevelHeight = 20,
         };
         map.Walls.Add(new Wall
         {
@@ -94,8 +93,8 @@ public class SceneLevelTests
         Assert.Equal(3, levels.Count);
         Assert.Equal("defaultLevel0000", levels[0].GetProperty("_id").GetString());
         Assert.Equal("brickworkLevel02", levels[1].GetProperty("_id").GetString());
-        Assert.Equal(20, levels[1].GetProperty("elevation").GetProperty("bottom").GetDouble());
-        Assert.Equal(40, levels[1].GetProperty("elevation").GetProperty("top").GetDouble());
+        // Brickwork leaves elevations to Foundry: every level keeps the default range.
+        Assert.All(levels, level => Assert.Equal(20, level.GetProperty("elevation").GetProperty("top").GetDouble()));
         // Only level 1 shows the map; level 3 sees the two levels below it.
         Assert.Equal(JsonValueKind.String, levels[0].GetProperty("background").GetProperty("src").ValueKind);
         Assert.Equal(JsonValueKind.Null, levels[2].GetProperty("background").GetProperty("src").ValueKind);
@@ -109,24 +108,18 @@ public class SceneLevelTests
         Assert.Contains(wallLevels, ids => ids.SequenceEqual(["brickworkLevel02"]));
         Assert.Contains(wallLevels, ids => ids.Count == 0);
 
-        // A light on several levels becomes one light on each, at that level's floor.
-        var lights = root.GetProperty("lights").EnumerateArray()
-            .Select(light => (
-                Levels: light.GetProperty("levels").EnumerateArray().Select(id => id.GetString()).ToList(),
-                Elevation: light.GetProperty("elevation").GetDouble()))
-            .ToList();
-        Assert.Equal(5, lights.Count);
-        Assert.Equal(["brickworkLevel02"], lights[0].Levels);
-        Assert.Equal(20, lights[0].Elevation);
-        Assert.Equal(["brickworkLevel03"], lights[1].Levels);
-        Assert.Equal(40, lights[1].Elevation);
-        Assert.Equal([0d, 20d, 40d], lights.Skip(2).Select(light => light.Elevation));
-        Assert.All(lights.Skip(2), light => Assert.Single(light.Levels));
+        var lights = root.GetProperty("lights").EnumerateArray().ToList();
+        Assert.Equal(2, lights.Count);
+        Assert.Equal(
+            ["brickworkLevel02", "brickworkLevel03"],
+            lights[0].GetProperty("levels").EnumerateArray().Select(id => id.GetString()));
+        Assert.Empty(lights[1].GetProperty("levels").EnumerateArray());
+        Assert.All(lights, light => Assert.Equal(0, light.GetProperty("elevation").GetDouble()));
 
         var region = root.GetProperty("regions")[0];
         Assert.Equal(["brickworkLevel03"], region.GetProperty("levels").EnumerateArray().Select(id => id.GetString()));
-        Assert.Equal(40, region.GetProperty("elevation").GetProperty("bottom").GetDouble());
-        Assert.Equal(60, region.GetProperty("elevation").GetProperty("top").GetDouble());
+        Assert.Equal(0, region.GetProperty("elevation").GetProperty("bottom").GetDouble());
+        Assert.Equal(20, region.GetProperty("elevation").GetProperty("top").GetDouble());
     }
 
     [Theory]
