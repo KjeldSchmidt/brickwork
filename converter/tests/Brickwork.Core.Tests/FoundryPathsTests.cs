@@ -93,6 +93,31 @@ public class FoundryPathsTests
     }
 
     [Fact]
+    public void TryResolveDataRootFromMapsPath_WalksUpToData()
+    {
+        using var temp = new TempDirectory();
+        var data = Path.Combine(temp.Path, "FoundryVTT", "Data");
+        var maps = Path.Combine(data, "Maps");
+        Directory.CreateDirectory(maps);
+
+        var root = FoundryPaths.TryResolveDataRootFromMapsPath(maps);
+
+        Assert.Equal(data, root);
+    }
+
+    [Fact]
+    public void TryResolveDataRootFromMapsPath_WhenAlreadyDataWithWorlds_ReturnsSelf()
+    {
+        using var temp = new TempDirectory();
+        var data = Path.Combine(temp.Path, "custom-data");
+        Directory.CreateDirectory(Path.Combine(data, "worlds"));
+
+        var root = FoundryPaths.TryResolveDataRootFromMapsPath(data);
+
+        Assert.Equal(Path.GetFullPath(data), root);
+    }
+
+    [Fact]
     public void ResolveBackgroundBaseName_InkUsesMapTitle()
     {
         Assert.Equal("Cool Dungeon", FoundryPaths.ResolveBackgroundBaseName("backup-123.ink", "Cool Dungeon"));

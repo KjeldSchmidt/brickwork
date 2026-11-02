@@ -8,6 +8,7 @@ using Brickwork.App.Foundry;
 using Brickwork.App.Views.Dialogs;
 using Brickwork.Composition;
 using Brickwork.Core.Services;
+using Brickwork.Exporters.Foundry;
 using Brickwork.Inkarnate;
 using IconPacks.Avalonia.FontAwesome6;
 
@@ -171,6 +172,58 @@ public partial class ImportToolViewModel : Tool
         }
     }
 
+    [RelayCommand]
+    private async Task OpenFoundrySceneAsync()
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+            desktop.MainWindow is null)
+        {
+            return;
+        }
+
+        var choice = await OpenFoundrySceneWindow
+            .ShowAsync(desktop.MainWindow, _session.FoundryMapsPath)
+            .ConfigureAwait(true);
+        if (choice is null ||
+            string.IsNullOrWhiteSpace(choice.DataRoot) ||
+            string.IsNullOrWhiteSpace(choice.SelectedWorldId) ||
+            string.IsNullOrWhiteSpace(choice.SelectedSceneId))
+        {
+            return;
+        }
+
+        try
+        {
+            var importer = ServiceFactory.CreateFoundryWorldSceneImporter();
+            var map = importer.ImportScene(
+                choice.DataRoot,
+                choice.SelectedWorldId,
+                choice.SelectedSceneId,
+                string.IsNullOrWhiteSpace(_session.FoundryMapsPath) ? null : _session.FoundryMapsPath,
+                _session.WallSimplificationTolerance);
+
+            _session.SourceFilePath = null;
+            _session.Map = map;
+            _session.SourceFileName = map.SourceFileName;
+            StatusMessage = $"Loaded Foundry scene {choice.SelectedScene?.Name ?? choice.SelectedSceneId}.";
+            UpdateCompatibilityWarning();
+            RefreshUnderlyingMap();
+        }
+        catch (FoundryWorldDataLockedException ex)
+        {
+            StatusMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _session.Map = null;
+            _session.SourceFileName = null;
+            _session.SourceFilePath = null;
+            StatusMessage = $"Failed to open Foundry scene: {ex.Message}";
+            UpdateCompatibilityWarning();
+            RefreshUnderlyingMap();
+        }
+    }
+
     private void RefreshUnderlyingMap()
     {
         if (_session.Map is null)
@@ -180,11 +233,16 @@ public partial class ImportToolViewModel : Tool
             return;
         }
 
-        var sourceFileName = _session.Map.SourceFileName ?? _session.SourceFileName;
-        var underlying = UnderlyingMapResolver.TryResolve(
-            _session.FoundryMapsPath,
-            sourceFileName,
-            _session.Map.Name);
+        var underlying = UnderlyingMapResolver.TryResolveFromAbsolutePath(_session.Map.ImagePath);
+        if (underlying is null)
+        {
+            var sourceFileName = _session.Map.SourceFileName ?? _session.SourceFileName;
+            underlying = UnderlyingMapResolver.TryResolve(
+                _session.FoundryMapsPath,
+                sourceFileName,
+                _session.Map.Name);
+        }
+
         _session.Map.UnderlyingMap = underlying;
 
         if (underlying is { IsConnected: true })

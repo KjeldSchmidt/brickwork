@@ -15,4 +15,8 @@
     <ProjectReference Include="..\Brickwork.Core\Brickwork.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="LevelDB.NET.Standard" Version="1.1.0" />
+  </ItemGroup>
+
 </Project>

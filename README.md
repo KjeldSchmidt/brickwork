@@ -1,5 +1,8 @@
 # ![Brickwork](resources/logo/icon-32.png) Brickwork
 
+[![Total Downloads](https://img.shields.io/github/downloads/KjeldSchmidt/brickwork/total?label=total%20downloads)](https://github.com/KjeldSchmidt/brickwork/releases)
+[![Latest Release Downloads](https://img.shields.io/github/downloads/KjeldSchmidt/brickwork/latest/total?label=latest%20release)](https://github.com/KjeldSchmidt/brickwork/releases/latest)
+
 ## For Users
 
 Brickwork is a tool that helps you to get battlemaps created in Inkarnate into
