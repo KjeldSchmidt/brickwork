@@ -146,6 +146,10 @@ internal static class WallGeometryRebuilder
                 wall.RotationPivot = MapPointTransforms.RotateAround(wall.RotationPivot, pivot, deltaDegrees);
                 wall.Angle += deltaDegrees;
             }
+            else if (context.StampsByEntityId.TryGetValue(memberId, out var stamp))
+            {
+                stamp.Position = MapPointTransforms.RotateAround(stamp.Position, pivot, deltaDegrees);
+            }
             else if (context.GroupsById.TryGetValue(memberId, out var childGroup))
             {
                 childGroup.Angle += deltaDegrees;
@@ -171,6 +175,10 @@ internal static class WallGeometryRebuilder
                 wall.PathOrigin = new MapPoint(wall.PathOrigin.X + dx, wall.PathOrigin.Y + dy);
                 wall.RotationPivot = new MapPoint(wall.RotationPivot.X + dx, wall.RotationPivot.Y + dy);
                 wall.Origin = new MapPoint(wall.Origin.X + dx, wall.Origin.Y + dy);
+            }
+            else if (context.StampsByEntityId.TryGetValue(memberId, out var stamp))
+            {
+                stamp.Position = new MapPoint(stamp.Position.X + dx, stamp.Position.Y + dy);
             }
             else if (context.GroupsById.TryGetValue(memberId, out var childGroup))
             {

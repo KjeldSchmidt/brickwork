@@ -7,4 +7,6 @@ internal sealed class InkParseResult
     public required MapDocument Map { get; init; }
 
     public required IReadOnlyDictionary<int, string> PathWallTypes { get; init; }
+
+    public IReadOnlyList<InkStamp> Stamps { get; init; } = [];
 }

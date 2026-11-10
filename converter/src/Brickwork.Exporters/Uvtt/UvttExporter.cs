@@ -88,7 +88,15 @@ public sealed class UvttExporter : IMapExporter
             ObjectsLineOfSight = objectsLineOfSight,
             Portals = portals,
             Environment = new UvttEnvironment { BakedLighting = false },
-            Lights = [],
+            Lights = map.ExportableLights()
+                .Select(light => new UvttLight
+                {
+                    Position = UvttCoordinateTransform.ToUvttPoint(
+                        UvttCoordinateTransform.SceneToGrid(light.Position, origin, cellSize)),
+                    Range = light.DimRadius,
+                    Color = "ff" + LightColors.Normalize(light.Color).TrimStart('#'),
+                })
+                .ToList(),
             Image = Convert.ToBase64String(map.PreviewImagePng!),
         };
     }

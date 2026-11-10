@@ -66,6 +66,15 @@ public partial class MapPreviewDocumentViewModel : Document
     [ObservableProperty]
     private IReadOnlySet<int> _selectedRegionEntityIds = new HashSet<int>();
 
+    [ObservableProperty]
+    private int? _focusedLightEntityId;
+
+    [ObservableProperty]
+    private int? _hoveredLightEntityId;
+
+    [ObservableProperty]
+    private bool _showLightRadii = true;
+
     public MapPreviewDocumentViewModel(EditorSession session)
     {
         _session = session;
@@ -100,7 +109,10 @@ public partial class MapPreviewDocumentViewModel : Document
                 or nameof(EditorSession.HoveredWallEntityId)
                 or nameof(EditorSession.HoveredPortal)
                 or nameof(EditorSession.FocusedRegionEntityId)
-                or nameof(EditorSession.HoveredRegionEntityId))
+                or nameof(EditorSession.HoveredRegionEntityId)
+                or nameof(EditorSession.FocusedLightEntityId)
+                or nameof(EditorSession.HoveredLightEntityId)
+                or nameof(EditorSession.ShowLightRadii))
             {
                 UpdateHighlightFromSession();
             }
@@ -151,6 +163,9 @@ public partial class MapPreviewDocumentViewModel : Document
         FocusedRegionEntityId = _session.FocusedRegionEntityId;
         HoveredRegionEntityId = _session.HoveredRegionEntityId;
         SelectedRegionEntityIds = _session.SelectedRegionEntityIds.ToHashSet();
+        FocusedLightEntityId = _session.FocusedLightEntityId;
+        HoveredLightEntityId = _session.HoveredLightEntityId;
+        ShowLightRadii = _session.ShowLightRadii;
     }
 
     public void UpdateHoverAt(MapPoint previewPoint)

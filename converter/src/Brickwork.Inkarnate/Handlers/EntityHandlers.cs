@@ -39,7 +39,9 @@ internal sealed class LightEntityHandler : IInkEntityHandler
         var entity = item.Entity;
         var light = new LightSource
         {
-            Range = InkJsonReader.ReadDouble(entity, "range"),
+            EntityId = InkJsonReader.ReadInt(entity, "entityId") ?? 0,
+            Name = InkJsonReader.ReadString(entity, "name") ?? "Light",
+            LayerId = item.LayerId,
             Color = EntityParsing.ReadColor(entity),
         };
 
@@ -94,6 +96,37 @@ internal sealed class GroupEntityHandler : IInkEntityHandler
         {
             group.RotationPivot = new MapPoint(oxElement.GetDouble(), oyElement.GetDouble());
         }
+    }
+}
+
+/// <summary>Records stamps so lit objects (lanterns, torches, …) can become lights after import.</summary>
+internal sealed class StampEntityHandler : IInkEntityHandler
+{
+    public string EntityType => "stamp";
+
+    public TransactionUnderstanding Understanding => TransactionUnderstanding.FullyUnderstood;
+
+    public void Apply(InkImportContext context, InkEntityItem item)
+    {
+        var entity = item.Entity;
+        var entityId = InkJsonReader.ReadInt(entity, "entityId");
+        if (entityId is null or <= 0)
+        {
+            return;
+        }
+
+        var groupId = InkJsonReader.ReadInt(entity, "groupId");
+        context.StampsByEntityId[entityId.Value] = new InkStamp
+        {
+            EntityId = entityId.Value,
+            Name = InkJsonReader.ReadString(entity, "name"),
+            DefaultName = InkJsonReader.ReadString(entity, "defaultName"),
+            LayerId = item.LayerId,
+            GroupId = groupId is > 0 ? groupId : null,
+            Position = new MapPoint(InkJsonReader.ReadDouble(entity, "x"), InkJsonReader.ReadDouble(entity, "y")),
+            IsEntityVisible = !(entity.TryGetProperty("isVisible", out var visibleElement) &&
+                                visibleElement.ValueKind == JsonValueKind.False),
+        };
     }
 }
 

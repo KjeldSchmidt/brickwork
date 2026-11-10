@@ -27,7 +27,13 @@ public sealed class AppPreferences
                 or nameof(EditorSession.FoundryMapsPath)
                 or nameof(EditorSession.DetectRegionsFromColorPaths)
                 or nameof(EditorSession.DetectRegionsFromNamedContainers)
-                or nameof(EditorSession.DetectRegionsFromPathNames))
+                or nameof(EditorSession.DetectRegionsFromPathNames)
+                or nameof(EditorSession.DetectLightsFromStamps)
+                or nameof(EditorSession.LightKeywords)
+                or nameof(EditorSession.LightExcludeKeywords)
+                or nameof(EditorSession.DetectLightAnimations)
+                or nameof(EditorSession.LightBrightRadius)
+                or nameof(EditorSession.LightDimRadius))
             {
                 Save();
             }
@@ -47,6 +53,12 @@ public sealed class AppPreferences
             _session.DetectRegionsFromColorPaths = settings.DetectRegionsFromColorPaths;
             _session.DetectRegionsFromNamedContainers = settings.DetectRegionsFromNamedContainers;
             _session.DetectRegionsFromPathNames = settings.DetectRegionsFromPathNames;
+            _session.DetectLightsFromStamps = settings.DetectLightsFromStamps;
+            _session.LightKeywords = settings.LightKeywords ?? string.Empty;
+            _session.LightExcludeKeywords = settings.LightExcludeKeywords ?? string.Empty;
+            _session.DetectLightAnimations = settings.DetectLightAnimations;
+            _session.LightBrightRadius = settings.LightBrightRadius;
+            _session.LightDimRadius = settings.LightDimRadius;
         }
         finally
         {
@@ -66,6 +78,12 @@ public sealed class AppPreferences
             DetectRegionsFromColorPaths = _session.DetectRegionsFromColorPaths,
             DetectRegionsFromNamedContainers = _session.DetectRegionsFromNamedContainers,
             DetectRegionsFromPathNames = _session.DetectRegionsFromPathNames,
+            DetectLightsFromStamps = _session.DetectLightsFromStamps,
+            LightKeywords = _session.LightKeywords,
+            LightExcludeKeywords = _session.LightExcludeKeywords,
+            DetectLightAnimations = _session.DetectLightAnimations,
+            LightBrightRadius = _session.LightBrightRadius,
+            LightDimRadius = _session.LightDimRadius,
             SkippedUpdateVersion = existing.SkippedUpdateVersion,
         });
     }

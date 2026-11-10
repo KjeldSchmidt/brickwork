@@ -37,6 +37,18 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 ExportCommand.NotifyCanExecuteChanged();
             }
+
+            if (args.PropertyName is nameof(EditorSession.CanUndo) or nameof(EditorSession.UndoActionName))
+            {
+                OnPropertyChanged(nameof(UndoHeader));
+                UndoCommand.NotifyCanExecuteChanged();
+            }
+
+            if (args.PropertyName is nameof(EditorSession.CanRedo) or nameof(EditorSession.RedoActionName))
+            {
+                OnPropertyChanged(nameof(RedoHeader));
+                RedoCommand.NotifyCanExecuteChanged();
+            }
         };
     }
 
@@ -48,6 +60,20 @@ public partial class MainWindowViewModel : ObservableObject
             await command.ExecuteAsync(null).ConfigureAwait(true);
         }
     }
+
+    public string UndoHeader => Session.UndoActionName is { } name ? $"_Undo {name}" : "_Undo";
+
+    public string RedoHeader => Session.RedoActionName is { } name ? $"_Redo {name}" : "_Redo";
+
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private void Undo() => Session.Undo();
+
+    private bool CanUndo() => Session.CanUndo;
+
+    [RelayCommand(CanExecute = nameof(CanRedo))]
+    private void Redo() => Session.Redo();
+
+    private bool CanRedo() => Session.CanRedo;
 
     [RelayCommand(CanExecute = nameof(CanExport))]
     private async Task ExportAsync()

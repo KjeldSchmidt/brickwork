@@ -60,6 +60,11 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
             return ApplyGroupUpdate(context, group, updateElement);
         }
 
+        if (context.StampsByEntityId.TryGetValue(entityId.Value, out var stamp))
+        {
+            return ApplyStampUpdate(stamp, updateElement);
+        }
+
         if (!context.WallsByEntityId.TryGetValue(entityId.Value, out var wall))
         {
             return TransactionUnderstanding.KnownIgnored;
@@ -151,6 +156,45 @@ internal sealed class EntityUpdateTransactionHandler : IInkTransactionHandler
         }
 
         return appliedKnownField ? understanding : TransactionUnderstanding.KnownIgnored;
+    }
+
+    private static TransactionUnderstanding ApplyStampUpdate(InkStamp stamp, JsonElement updateElement)
+    {
+        var appliedKnownField = false;
+        var x = stamp.Position.X;
+        var y = stamp.Position.Y;
+
+        foreach (var property in updateElement.EnumerateObject())
+        {
+            switch (property.Name)
+            {
+                case "name" when property.Value.ValueKind is JsonValueKind.String or JsonValueKind.Null:
+                    stamp.Name = property.Value.ValueKind == JsonValueKind.String ? property.Value.GetString() : null;
+                    appliedKnownField = true;
+                    break;
+                case "defaultName" when property.Value.ValueKind == JsonValueKind.String:
+                    stamp.DefaultName = property.Value.GetString();
+                    appliedKnownField = true;
+                    break;
+                case "x" when property.Value.ValueKind == JsonValueKind.Number:
+                    x = property.Value.GetDouble();
+                    appliedKnownField = true;
+                    break;
+                case "y" when property.Value.ValueKind == JsonValueKind.Number:
+                    y = property.Value.GetDouble();
+                    appliedKnownField = true;
+                    break;
+                case "isVisible" when property.Value.ValueKind is JsonValueKind.True or JsonValueKind.False:
+                    stamp.IsEntityVisible = property.Value.ValueKind == JsonValueKind.True;
+                    appliedKnownField = true;
+                    break;
+            }
+        }
+
+        stamp.Position = new MapPoint(x, y);
+
+        // Only position, name and visibility matter for light detection; the rest is cosmetic.
+        return appliedKnownField ? TransactionUnderstanding.FullyUnderstood : TransactionUnderstanding.KnownIgnored;
     }
 
     private static TransactionUnderstanding ApplyWallUpdate(

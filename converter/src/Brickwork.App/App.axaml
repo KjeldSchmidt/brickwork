@@ -17,6 +17,9 @@
         <DataTemplate DataType="vm:RegionsToolViewModel">
             <panels:RegionsToolView />
         </DataTemplate>
+        <DataTemplate DataType="vm:LightsToolViewModel">
+            <panels:LightsToolView />
+        </DataTemplate>
         <DataTemplate DataType="vm:DebugToolViewModel">
             <panels:DebugToolView />
         </DataTemplate>

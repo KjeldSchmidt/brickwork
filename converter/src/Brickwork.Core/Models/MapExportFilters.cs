@@ -8,6 +8,9 @@ public static class MapExportFilters
             wall.IsActive &&
             wall.LineType != WallLineType.Disabled);
 
+    public static IEnumerable<LightSource> ExportableLights(this MapDocument map) =>
+        map.Lights.Where(light => light.IsActive && light.DimRadius > 0);
+
     public static IEnumerable<WallPortal> ActivePortals(this Wall wall) =>
         wall.Portals.Where(portal => portal.IsActive);
 

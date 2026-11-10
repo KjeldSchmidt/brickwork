@@ -12,7 +12,10 @@ public sealed record MapRenderHighlight(
     int? FocusedRegionEntityId,
     int? HoveredRegionEntityId,
     bool ShowWallHandles = false,
-    bool ShowRegionHandles = false)
+    bool ShowRegionHandles = false,
+    int? FocusedLightEntityId = null,
+    int? HoveredLightEntityId = null,
+    bool ShowLightRadii = true)
 {
     public static MapRenderHighlight Empty { get; } = new(
         new HashSet<int>(),
