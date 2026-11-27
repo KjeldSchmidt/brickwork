@@ -116,6 +116,49 @@ public static class FoundryPaths
     }
 
     /// <summary>
+    /// Resolves the Foundry <c>Data</c> root from a maps-folder setting: walk up to a
+    /// folder named <c>Data</c>, otherwise treat <paramref name="mapsPath"/> itself as Data
+    /// when it exists (or return the OS default Data directory).
+    /// </summary>
+    public static string? TryResolveDataRootFromMapsPath(string? mapsPath)
+    {
+        if (!string.IsNullOrWhiteSpace(mapsPath))
+        {
+            var fromWalk = TryFindDataRoot(mapsPath);
+            if (fromWalk is not null)
+            {
+                return fromWalk;
+            }
+
+            try
+            {
+                var absolute = Path.GetFullPath(mapsPath);
+                if (Directory.Exists(absolute) &&
+                    string.Equals(new DirectoryInfo(absolute).Name, "Data", StringComparison.OrdinalIgnoreCase))
+                {
+                    return absolute;
+                }
+
+                // Maps path may already be the Data root under a nonstandard name, or Data itself.
+                if (Directory.Exists(absolute))
+                {
+                    var worlds = Path.Combine(absolute, "worlds");
+                    if (Directory.Exists(worlds))
+                    {
+                        return absolute;
+                    }
+                }
+            }
+            catch
+            {
+                // Fall through to default.
+            }
+        }
+
+        return TryGetDefaultDataDirectory();
+    }
+
+    /// <summary>
     /// Base name used to find/write a Foundry background image.
     /// Inkarnate <c>.ink</c> sources use the map title (JSON <c>title</c>); other formats use the file stem.
     /// </summary>

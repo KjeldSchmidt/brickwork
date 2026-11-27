@@ -1,0 +1,72 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Brickwork.App.ViewModels"
+        x:Class="Brickwork.App.Views.Dialogs.OpenFoundrySceneWindow"
+        x:DataType="vm:OpenFoundrySceneViewModel"
+        Title="Open Foundry Scene"
+        Width="560"
+        Height="480"
+        MinWidth="440"
+        MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+    <DockPanel Margin="16" LastChildFill="True">
+        <StackPanel DockPanel.Dock="Bottom"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,12,0,0">
+            <Button Content="Cancel"
+                    Click="OnCancelClick"
+                    MinWidth="88" />
+            <Button Content="Open"
+                    Classes="primary"
+                    Command="{Binding OpenCommand}"
+                    Click="OnOpenClick"
+                    MinWidth="88"
+                    IsDefault="True" />
+        </StackPanel>
+
+        <StackPanel Spacing="10">
+            <TextBlock Text="{Binding DataRootStatus}"
+                       TextWrapping="Wrap"
+                       Opacity="0.85" />
+
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <TextBlock Text="World" FontWeight="SemiBold" />
+                    <ComboBox ItemsSource="{Binding Worlds}"
+                              SelectedItem="{Binding SelectedWorld}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FoundryWorldListItem">
+                                <TextBlock Text="{Binding Display}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Content="Refresh"
+                        Command="{Binding RefreshCommand}"
+                        VerticalAlignment="Bottom"
+                        MinWidth="80" />
+            </Grid>
+
+            <TextBlock Text="Scene" FontWeight="SemiBold" />
+            <ListBox ItemsSource="{Binding Scenes}"
+                     SelectedItem="{Binding SelectedScene}"
+                     MinHeight="180"
+                     MaxHeight="260">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FoundrySceneListItem">
+                        <TextBlock Text="{Binding Display}" TextWrapping="NoWrap" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock Text="{Binding StatusMessage}"
+                       TextWrapping="Wrap"
+                       Opacity="0.8" />
+        </StackPanel>
+    </DockPanel>
+</Window>

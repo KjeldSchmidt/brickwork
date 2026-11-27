@@ -1,6 +1,7 @@
 using Brickwork.Core.Ports;
 using Brickwork.Core.Services;
 using Brickwork.Exporters;
+using Brickwork.Exporters.Foundry;
 using Brickwork.Exporters.Uvtt;
 using Brickwork.Inkarnate;
 
@@ -39,6 +40,11 @@ public static class ServiceFactory
 
     public static IReadOnlyList<IMapImporter> CreateImporters() =>
         [CreateInkarnateImporter(), CreateUvttImporter()];
+
+    public static FoundryWorldCatalog CreateFoundryWorldCatalog() => new();
+
+    public static FoundryWorldSceneImporter CreateFoundryWorldSceneImporter() =>
+        new(CreateFoundryWorldCatalog());
 
     public static ConvertMapService CreateConvertMapService()
     {

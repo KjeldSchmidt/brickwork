@@ -42,6 +42,51 @@ public class FoundryWallRestrictionsTests
 
     [Theory]
     [MemberData(nameof(ReferenceWallTypes))]
+    public void InferLineType_MatchesFoundryReferenceScene(WallLineType lineType, int referenceWallIndex)
+    {
+        var referenceWall = LoadReferenceWall(referenceWallIndex);
+        var restrictions = new FoundryWallRestrictions(
+            referenceWall.Sight,
+            referenceWall.Light,
+            referenceWall.Sound,
+            referenceWall.Move,
+            referenceWall.Door,
+            referenceWall.ThresholdLight,
+            referenceWall.ThresholdSight,
+            referenceWall.ThresholdSound,
+            referenceWall.ThresholdAttenuation);
+
+        Assert.Equal(lineType, FoundryWallRestrictions.InferLineType(restrictions));
+    }
+
+    [Fact]
+    public void InferLineType_UnknownRestrictions_ReturnsSolid()
+    {
+        var restrictions = new FoundryWallRestrictions(1, 2, 3, 4, 0);
+        Assert.Equal(WallLineType.Solid, FoundryWallRestrictions.InferLineType(restrictions));
+    }
+
+    [Fact]
+    public void InferLineType_FoundryEtherealCategory_MoveNone_EvenWithSoundAndThresholds()
+    {
+        // The Manor wall vm1Ng4A0y2uJnaR9: Foundry UI classifies move===NONE as ethereal,
+        // even when sound is NORMAL and window-like thresholds are set.
+        var restrictions = new FoundryWallRestrictions(
+            Sight: 20,
+            Light: 20,
+            Sound: 20,
+            Move: 0,
+            Door: 0,
+            ThresholdLight: 10,
+            ThresholdSight: 10,
+            ThresholdSound: null,
+            ThresholdAttenuation: true);
+
+        Assert.Equal(WallLineType.Ethereal, FoundryWallRestrictions.InferLineType(restrictions));
+    }
+
+    [Theory]
+    [MemberData(nameof(ReferenceWallTypes))]
     public void BuildFromWall_ExportsMatchingRestrictions(WallLineType lineType, int referenceWallIndex)
     {
         var referenceWall = LoadReferenceWall(referenceWallIndex);

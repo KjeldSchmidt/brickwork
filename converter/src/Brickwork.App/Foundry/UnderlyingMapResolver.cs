@@ -13,7 +13,12 @@ public static class UnderlyingMapResolver
         string? mapTitle = null)
     {
         var absolutePath = FoundryPaths.TryResolveBackgroundImagePath(mapsDirectory, sourceFileName, mapTitle);
-        if (absolutePath is null)
+        return absolutePath is null ? null : TryResolveFromAbsolutePath(absolutePath);
+    }
+
+    public static UnderlyingMapInfo? TryResolveFromAbsolutePath(string? absolutePath)
+    {
+        if (string.IsNullOrWhiteSpace(absolutePath) || !File.Exists(absolutePath))
         {
             return null;
         }
