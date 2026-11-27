@@ -132,11 +132,23 @@ internal sealed class EntityGroupTransactionHandler : IInkTransactionHandler
             {
                 previousGroupParentEntity.MemberIds.Remove(memberId);
             }
+            else if (context.StampsByEntityId.TryGetValue(memberId, out var memberStamp) &&
+                     memberStamp.GroupId is int previousStampGroup &&
+                     previousStampGroup != groupId.Value &&
+                     context.GroupsById.TryGetValue(previousStampGroup, out var previousStampParent))
+            {
+                previousStampParent.MemberIds.Remove(memberId);
+            }
 
             if (context.WallsByEntityId.TryGetValue(memberId, out wall))
             {
                 wall.GroupId = groupId;
                 group.LayerId ??= wall.LayerId;
+            }
+            else if (context.StampsByEntityId.TryGetValue(memberId, out var stamp))
+            {
+                stamp.GroupId = groupId;
+                group.LayerId ??= stamp.LayerId;
             }
             else if (context.GroupsById.TryGetValue(memberId, out var nestedGroup))
             {

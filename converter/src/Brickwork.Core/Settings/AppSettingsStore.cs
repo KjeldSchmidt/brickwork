@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Brickwork.Core.Geometry;
+using Brickwork.Core.Models;
 
 namespace Brickwork.Core.Settings;
 
@@ -69,6 +70,13 @@ public sealed class AppSettingsStore
             settings.WallSimplificationTolerance < 0)
         {
             settings.WallSimplificationTolerance = WallSimplificationSettings.DefaultToleranceSceneUnits;
+        }
+
+        if (double.IsNaN(settings.TreeTrunkGrowthPercent) ||
+            double.IsInfinity(settings.TreeTrunkGrowthPercent) ||
+            settings.TreeTrunkGrowthPercent < 0)
+        {
+            settings.TreeTrunkGrowthPercent = TreeTrunks.DefaultGrowthPercent;
         }
 
         return settings;

@@ -21,7 +21,7 @@ internal sealed class InkTransactionRegistry
             new PathV2EntityHandler(),
             new LightEntityHandler(),
             new GroupEntityHandler(),
-            new KnownIgnoredEntityHandler("stamp"),
+            new StampEntityHandler(),
             new KnownIgnoredEntityHandler("text"),
         ];
 

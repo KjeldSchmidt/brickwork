@@ -25,6 +25,12 @@ internal static class FoundrySceneBuilder
             grid["size"] = gridSize;
         }
 
+        // Open at 100 % zoom (Foundry otherwise defaults to 50 / grid size); x/y stay null so it centers.
+        if (scene["initial"] is JsonObject initial)
+        {
+            initial["scale"] = 1;
+        }
+
         var backgroundSrc = FoundryPaths.BuildBackgroundSrc(
             map.FoundryMapsDirectory,
             map.SourceFileName,
@@ -37,6 +43,10 @@ internal static class FoundrySceneBuilder
 
         var regions = FoundryRegionBuilder.BuildFromMap(map);
         scene["regions"] = new JsonArray(regions.Select(ToRegionJson).ToArray());
+
+        var gridDistance = scene["grid"]?["distance"]?.GetValue<double>() ?? 5d;
+        var lights = FoundryLightBuilder.BuildFromMap(map);
+        scene["lights"] = new JsonArray(lights.Select(light => ToLightJson(light, gridDistance)).ToArray());
 
         await JsonSerializer.SerializeAsync(destination, scene, SerializerOptions, cancellationToken)
             .ConfigureAwait(false);
@@ -77,6 +87,50 @@ internal static class FoundrySceneBuilder
             ["_id"] = FoundryIdGenerator.Create(),
         };
     }
+
+    private static JsonObject ToLightJson(FoundryLight light, double gridDistance) =>
+        new()
+        {
+            ["_id"] = FoundryIdGenerator.Create(),
+            ["x"] = light.X,
+            ["y"] = light.Y,
+            ["elevation"] = 0,
+            ["rotation"] = 0,
+            ["levels"] = new JsonArray("defaultLevel0000"),
+            ["walls"] = true,
+            ["vision"] = false,
+            ["config"] = new JsonObject
+            {
+                ["negative"] = false,
+                ["priority"] = 0,
+                ["alpha"] = 0.5,
+                ["angle"] = 360,
+                ["bright"] = light.BrightSquares * gridDistance,
+                ["dim"] = light.DimSquares * gridDistance,
+                // Foundry only skips colorization for a null color; black is our "no color".
+                ["color"] = LightColors.IsNone(light.Color) ? null : light.Color,
+                ["coloration"] = 1,
+                ["attenuation"] = 0.5,
+                ["luminosity"] = 0.5,
+                ["saturation"] = 0,
+                ["contrast"] = 0,
+                ["shadows"] = 0,
+                ["animation"] = new JsonObject
+                {
+                    ["type"] = light.AnimationType,
+                    ["speed"] = light.AnimationSpeed,
+                    ["intensity"] = light.AnimationIntensity,
+                    ["reverse"] = false,
+                },
+                ["darkness"] = new JsonObject
+                {
+                    ["min"] = 0,
+                    ["max"] = 1,
+                },
+            },
+            ["hidden"] = false,
+            ["flags"] = new JsonObject(),
+        };
 
     private static JsonObject ToRegionJson(FoundryRegion region)
     {

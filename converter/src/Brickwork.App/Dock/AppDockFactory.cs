@@ -53,6 +53,22 @@ public sealed class AppDockFactory : Factory
             CanPin = true,
         };
 
+        var lightsTool = new LightsToolViewModel(_session)
+        {
+            Id = EditorSession.LightsPanelId,
+            Title = "Lights",
+            CanClose = false,
+            CanPin = true,
+        };
+
+        var treesTool = new TreesToolViewModel(_session)
+        {
+            Id = EditorSession.TreesPanelId,
+            Title = "Trees",
+            CanClose = false,
+            CanPin = true,
+        };
+
         _debugTool = new DebugToolViewModel(_session)
         {
             Id = "DebugTool",
@@ -88,7 +104,7 @@ public sealed class AppDockFactory : Factory
             Proportion = FileDockCompactProportion,
         };
 
-        var wallsDockables = new ObservableCollection<IDockable> { wallsTool, regionsTool };
+        var wallsDockables = new ObservableCollection<IDockable> { wallsTool, regionsTool, lightsTool, treesTool };
         if (_session.ShowDebugPanel)
         {
             wallsDockables.Add(_debugTool);
@@ -101,6 +117,15 @@ public sealed class AppDockFactory : Factory
             Alignment = Alignment.Left,
             GripMode = GripMode.Visible,
             Proportion = WallsDockCompactProportion,
+        };
+
+        _session.ActivePanelId = _wallsDock.ActiveDockable?.Id;
+        _wallsDock.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(ToolDock.ActiveDockable))
+            {
+                _session.ActivePanelId = _wallsDock.ActiveDockable?.Id;
+            }
         };
 
         importTool.FileDockExpandedChanged = expanded =>
@@ -189,6 +214,8 @@ public sealed class AppDockFactory : Factory
             ["ImportTool"] = () => _session,
             ["WallsTool"] = () => _session,
             ["RegionsTool"] = () => _session,
+            ["LightsTool"] = () => _session,
+            ["TreesTool"] = () => _session,
             ["DebugTool"] = () => _session,
             ["ToolPalette"] = () => _session,
             ["MapPreview"] = () => _session,

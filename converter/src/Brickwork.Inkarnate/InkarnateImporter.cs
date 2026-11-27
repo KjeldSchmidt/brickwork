@@ -23,6 +23,8 @@ public sealed class InkarnateImporter : IMapImporter
             .ConfigureAwait(false);
         WallPointSimplifier.ApplyAll(parsed.Map.Walls, Options.WallSimplificationTolerance);
         RegionImportDetection.PromoteDetectedRegions(parsed.Map, parsed.PathWallTypes, Options);
+        LightImportDetection.AddLightsFromStamps(parsed.Map, parsed.Stamps, Options);
+        TreeImportDetection.AddTrunkWalls(parsed.Map, parsed.Stamps, Options);
         return parsed.Map;
     }
 }

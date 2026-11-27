@@ -1,8 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Brickwork.App.Editing;
 using Brickwork.Core.Editing;
+using Brickwork.Core.Export;
 using Brickwork.Core.Geometry;
 using Brickwork.Core.Models;
+using Brickwork.Inkarnate;
 
 namespace Brickwork.App;
 
@@ -53,6 +55,15 @@ public sealed partial class EditorSession : ObservableObject
     private int _highlightRevision;
 
     [ObservableProperty]
+    private int? _focusedLightEntityId;
+
+    [ObservableProperty]
+    private int? _hoveredLightEntityId;
+
+    [ObservableProperty]
+    private bool _showLightRadii = true;
+
+    [ObservableProperty]
     private double _wallSimplificationTolerance = WallSimplificationSettings.DefaultToleranceSceneUnits;
 
     [ObservableProperty]
@@ -62,6 +73,9 @@ public sealed partial class EditorSession : ObservableObject
     private string _foundryMapsPath = string.Empty;
 
     [ObservableProperty]
+    private int _foundryGridSize = FoundryExportCanvas.DefaultGridSize;
+
+    [ObservableProperty]
     private bool _detectRegionsFromColorPaths = true;
 
     [ObservableProperty]
@@ -69,6 +83,82 @@ public sealed partial class EditorSession : ObservableObject
 
     [ObservableProperty]
     private bool _detectRegionsFromPathNames = true;
+
+    [ObservableProperty]
+    private bool _detectLightsFromStamps = true;
+
+    [ObservableProperty]
+    private string _lightKeywords = Core.Models.LightKeywords.DefaultInclude;
+
+    [ObservableProperty]
+    private string _lightExcludeKeywords = Core.Models.LightKeywords.DefaultExclude;
+
+    [ObservableProperty]
+    private bool _detectLightAnimations = true;
+
+    [ObservableProperty]
+    private double _lightBrightRadius = LightSource.DefaultBrightRadius;
+
+    [ObservableProperty]
+    private double _lightDimRadius = LightSource.DefaultDimRadius;
+
+    [ObservableProperty]
+    private string _lightColor = LightSource.DefaultColor;
+
+    [ObservableProperty]
+    private bool _detectTreesFromStamps = true;
+
+    [ObservableProperty]
+    private string _treeKeywords = TreeTrunks.DefaultInclude;
+
+    [ObservableProperty]
+    private string _treeExcludeKeywords = TreeTrunks.DefaultExclude;
+
+    [ObservableProperty]
+    private double _treeTrunkSize = TreeTrunks.DefaultSize;
+
+    [ObservableProperty]
+    private double _treeTrunkGrowthPercent = TreeTrunks.DefaultGrowthPercent;
+
+    /// <summary>Per-version tree trunk adjustments: built-in values plus the user's (tree-trunks.json).</summary>
+    public TreeTrunkLibrary TreeLibrary { get; private set; } = new();
+
+    /// <summary>Raised when the user's tree trunk adjustments change, so they can be saved.</summary>
+    public event EventHandler? TreeAdjustmentsChanged;
+
+    public void LoadTreeLibrary(TreeTrunkLibrary library) => TreeLibrary = library;
+
+    public void SetTreeAdjustment(string key, TreeTrunkAdjustment adjustment)
+    {
+        TreeLibrary.Set(key, adjustment);
+        TreeAdjustmentsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Returns a version to its built-in value; returns that value.</summary>
+    public TreeTrunkAdjustment ResetTreeAdjustment(string key, string? name)
+    {
+        var value = TreeLibrary.Reset(key, name);
+        TreeAdjustmentsChanged?.Invoke(this, EventArgs.Empty);
+        return value;
+    }
+
+    /// <summary>Id of the side-panel tab being shown (e.g. "WallsTool", "TreesTool").</summary>
+    [ObservableProperty]
+    private string? _activePanelId;
+
+    public bool IsTreesPanelShown => ActivePanelId == TreesPanelId;
+
+    public const string TreesPanelId = "TreesTool";
+
+    public bool IsLightsPanelShown => ActivePanelId == LightsPanelId;
+
+    public const string LightsPanelId = "LightsTool";
+
+    partial void OnActivePanelIdChanged(string? value)
+    {
+        OnPropertyChanged(nameof(IsTreesPanelShown));
+        OnPropertyChanged(nameof(IsLightsPanelShown));
+    }
 
     [ObservableProperty]
     private MapToolKind _activeMapTool = MapToolKind.WallEditing;
@@ -96,6 +186,29 @@ public sealed partial class EditorSession : ObservableObject
 
     /// <summary>True while a drag/edit gesture is open (history coalesced until dispose).</summary>
     public bool IsGestureActive => _activeGesture is not null;
+
+    /// <summary>Import options built from the current settings.</summary>
+    public InkarnateImportOptions CreateImportOptions() =>
+        new()
+        {
+            WallSimplificationTolerance = WallSimplificationTolerance,
+            DetectRegionsFromColorPaths = DetectRegionsFromColorPaths,
+            DetectRegionsFromNamedContainers = DetectRegionsFromNamedContainers,
+            DetectRegionsFromPathNames = DetectRegionsFromPathNames,
+            DetectLightsFromStamps = DetectLightsFromStamps,
+            LightKeywords = LightKeywords,
+            LightExcludeKeywords = LightExcludeKeywords,
+            DetectLightAnimations = DetectLightAnimations,
+            LightBrightRadius = LightBrightRadius,
+            LightDimRadius = LightDimRadius,
+            LightColor = LightColor,
+            DetectTreesFromStamps = DetectTreesFromStamps,
+            TreeKeywords = TreeKeywords,
+            TreeExcludeKeywords = TreeExcludeKeywords,
+            TreeTrunkSize = TreeTrunkSize,
+            TreeTrunkGrowthPercent = TreeTrunkGrowthPercent,
+            TreeAdjustments = TreeLibrary.Effective,
+        };
 
     public void NotifyContentChanged()
     {

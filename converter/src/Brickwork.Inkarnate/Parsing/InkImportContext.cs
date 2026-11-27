@@ -17,6 +17,8 @@ internal sealed class InkImportContext
 
     public Dictionary<int, EntityGroup> GroupsById { get; } = [];
 
+    public Dictionary<int, InkStamp> StampsByEntityId { get; } = [];
+
     public Dictionary<string, MapLayer> LayersById { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Final Inkarnate path-v2 wallType per entity (color vs texture), after history updates.</summary>
@@ -86,6 +88,14 @@ internal sealed class InkImportContext
             RemoveEntity(wallId);
         }
 
+        foreach (var stampId in StampsByEntityId.Values
+                     .Where(stamp => string.Equals(stamp.LayerId, layerId, StringComparison.OrdinalIgnoreCase))
+                     .Select(stamp => stamp.EntityId)
+                     .ToList())
+        {
+            RemoveEntity(stampId);
+        }
+
         var groupIds = GroupsById.Values
             .Where(group => string.Equals(group.LayerId, layerId, StringComparison.OrdinalIgnoreCase))
             .Select(group => group.GroupId)
@@ -133,6 +143,12 @@ internal sealed class InkImportContext
             return;
         }
 
+        if (StampsByEntityId.TryGetValue(entityId, out var stamp))
+        {
+            stamp.LayerId = targetLayerId;
+            return;
+        }
+
         if (!GroupsById.TryGetValue(entityId, out var group))
         {
             return;
@@ -143,6 +159,11 @@ internal sealed class InkImportContext
         {
             descendant.LayerId = targetLayerId;
             ApplyVisibilityToWall(descendant, targetLayerId);
+        }
+
+        foreach (var descendant in EnumerateDescendantStamps(group))
+        {
+            descendant.LayerId = targetLayerId;
         }
 
         foreach (var nested in EnumerateDescendantGroups(group))
@@ -214,6 +235,18 @@ internal sealed class InkImportContext
             return;
         }
 
+        if (StampsByEntityId.TryGetValue(entityId, out var stamp))
+        {
+            if (stamp.GroupId is int parentId &&
+                GroupsById.TryGetValue(parentId, out var parentGroup))
+            {
+                parentGroup.MemberIds.Remove(entityId);
+            }
+
+            stamp.GroupId = null;
+            return;
+        }
+
         if (GroupsById.TryGetValue(entityId, out var group))
         {
             if (group.ParentGroupId is int parentId &&
@@ -245,6 +278,18 @@ internal sealed class InkImportContext
         {
             group.LayerId ??= wall.LayerId;
             wall.GroupId = groupId;
+            if (!group.MemberIds.Contains(entityId))
+            {
+                group.MemberIds.Add(entityId);
+            }
+
+            return;
+        }
+
+        if (StampsByEntityId.TryGetValue(entityId, out var stamp))
+        {
+            group.LayerId ??= stamp.LayerId;
+            stamp.GroupId = groupId;
             if (!group.MemberIds.Contains(entityId))
             {
                 group.MemberIds.Add(entityId);
@@ -289,6 +334,15 @@ internal sealed class InkImportContext
             }
         }
 
+        if (StampsByEntityId.Remove(entityId))
+        {
+            removed = true;
+            foreach (var group in GroupsById.Values)
+            {
+                group.MemberIds.Remove(entityId);
+            }
+        }
+
         var groupedWallIds = WallsByEntityId.Values
             .Where(wall => wall.GroupId == entityId)
             .Select(wall => wall.EntityId)
@@ -312,6 +366,14 @@ internal sealed class InkImportContext
                      .ToList())
         {
             removed |= RemoveEntity(wall, visiting);
+        }
+
+        foreach (var stamp in StampsByEntityId.Values
+                     .Where(stamp => stamp.GroupId is int groupId && subtree.Contains(groupId))
+                     .Select(stamp => stamp.EntityId)
+                     .ToList())
+        {
+            removed |= RemoveEntity(stamp, visiting);
         }
 
         foreach (var groupId in subtree.OrderByDescending(id => id))
@@ -370,6 +432,24 @@ internal sealed class InkImportContext
             else if (GroupsById.TryGetValue(memberId, out var childGroup))
             {
                 foreach (var descendant in EnumerateDescendantWalls(childGroup))
+                {
+                    yield return descendant;
+                }
+            }
+        }
+    }
+
+    public IEnumerable<InkStamp> EnumerateDescendantStamps(EntityGroup group)
+    {
+        foreach (var memberId in group.MemberIds)
+        {
+            if (StampsByEntityId.TryGetValue(memberId, out var stamp))
+            {
+                yield return stamp;
+            }
+            else if (GroupsById.TryGetValue(memberId, out var childGroup))
+            {
+                foreach (var descendant in EnumerateDescendantStamps(childGroup))
                 {
                     yield return descendant;
                 }

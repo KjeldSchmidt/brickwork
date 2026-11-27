@@ -92,6 +92,8 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             }
         }
 
+        DrawLights(canvas, map, transform, highlight);
+
         if (highlight is null)
         {
             return;
@@ -128,6 +130,60 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
     }
 
     public void ReleaseMap(MapDocument map) => Invalidate(map);
+
+    private static void DrawLights(
+        SKCanvas canvas,
+        MapDocument map,
+        SceneTransform transform,
+        MapRenderHighlight? highlight)
+    {
+        if (map.Lights.Count == 0 || highlight?.ShowLights == false)
+        {
+            return;
+        }
+
+        var showRadii = highlight?.ShowLightRadii ?? true;
+        var pixelsPerSquare = (float)(map.Grid.CellSize * transform.ScaleX);
+        using var fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var stroke = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke };
+
+        foreach (var light in map.Lights)
+        {
+            var emphasized = light.EntityId == highlight?.FocusedLightEntityId ||
+                             light.EntityId == highlight?.HoveredLightEntityId;
+            var center = transform.SceneToPreview(light.Position);
+            var x = (float)center.X;
+            var y = (float)center.Y;
+            // Black means "no colorization"; show such lights as plain white light.
+            var color = LightColors.IsNone(light.Color)
+                ? SKColors.White
+                : LightColors.TryParse(light.Color, out var red, out var green, out var blue)
+                    ? new SKColor(red, green, blue)
+                    : SKColors.Orange;
+
+            if (light.IsActive && pixelsPerSquare > 0 && (showRadii || emphasized))
+            {
+                fill.Color = color.WithAlpha(emphasized ? (byte)0x1C : (byte)0x0C);
+                canvas.DrawCircle(x, y, (float)light.DimRadius * pixelsPerSquare, fill);
+                fill.Color = color.WithAlpha(emphasized ? (byte)0x28 : (byte)0x14);
+                canvas.DrawCircle(x, y, (float)light.BrightRadius * pixelsPerSquare, fill);
+
+                if (emphasized)
+                {
+                    stroke.Color = color;
+                    stroke.StrokeWidth = 1.5f;
+                    canvas.DrawCircle(x, y, (float)light.DimRadius * pixelsPerSquare, stroke);
+                    canvas.DrawCircle(x, y, (float)light.BrightRadius * pixelsPerSquare, stroke);
+                }
+            }
+
+            fill.Color = light.IsActive ? color : new SKColor(0x80, 0x80, 0x80);
+            canvas.DrawCircle(x, y, NodeRadius + 1f, fill);
+            stroke.Color = emphasized ? SKColors.White : new SKColor(0x20, 0x20, 0x20);
+            stroke.StrokeWidth = emphasized ? 2.5f : NodeBorderWidth;
+            canvas.DrawCircle(x, y, NodeRadius + 1f, stroke);
+        }
+    }
 
     private static void DrawRegion(
         SKCanvas canvas,

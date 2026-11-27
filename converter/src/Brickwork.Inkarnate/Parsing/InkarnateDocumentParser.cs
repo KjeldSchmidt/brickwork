@@ -41,6 +41,7 @@ internal static class InkarnateDocumentParser
         }
 
         ApplyDerivedGridMetrics(map);
+        WallSubpathSplitter.SplitAll(context);
         context.SyncWalls();
 
         map.Compatibility = new CompatibilityReport
@@ -54,6 +55,7 @@ internal static class InkarnateDocumentParser
         {
             Map = map,
             PathWallTypes = new Dictionary<int, string>(context.PathWallTypes),
+            Stamps = context.StampsByEntityId.Values.OrderBy(stamp => stamp.EntityId).ToList(),
         };
     }
 

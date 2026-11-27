@@ -22,7 +22,8 @@ public partial class ToolPaletteViewModel : Tool
                 PackIconFontAwesome6Kind.DungeonSolid,
                 buttonHints:
                 [
-                    new("Click Wall", "Change Wall Type"),
+                    new("Click Wall", "Select Wall"),
+                    new("Double-Click Wall", "Change Wall Type"),
                     new("Shift-Click", "Add or Remove Wall"),
                     new("Drag Empty", "Marquee Select"),
                     new("Drag Node", "Move Node, Resize Gap"),

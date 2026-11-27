@@ -34,7 +34,11 @@ public class UvttImporterExporterTests
         Assert.NotNull(map.PreviewImagePng);
         Assert.True(map.PreviewImagePng!.Length > 0);
         Assert.Equal(0x89, map.PreviewImagePng[0]);
-        Assert.Empty(map.Lights);
+        Assert.Equal(41, map.Lights.Count);
+        var firstLight = map.Lights[0];
+        Assert.Equal(new MapPoint(13.26047, 4.266033), firstLight.Position);
+        Assert.Equal(3.375, firstLight.DimRadius);
+        Assert.Equal("#575112", firstLight.Color);
         Assert.Equal(58, map.Walls.Count(w => w.LineType == WallLineType.Window));
         Assert.Equal(12, map.Walls.Count(w => w.LineType == WallLineType.Door));
         Assert.Equal(0, map.Walls.Count(w => w.LineType == WallLineType.Solid));

@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Mvvm.Controls;
 using Brickwork.Core.Geometry;
@@ -15,6 +16,9 @@ public partial class MapPreviewDocumentViewModel : Document
     private IReadOnlyList<Region>? _movingRegions;
     private MapPoint? _entityMoveLastScenePoint;
     private IDisposable? _entityMoveGesture;
+    private IDisposable? _trunkGesture;
+    private DispatcherTimer? _trunkScaleIdleTimer;
+    private TrunkOffsetDrag? _trunkOffsetDrag;
     private Wall? _drawingWall;
     private Region? _drawingRegion;
     private IDisposable? _drawingGesture;
@@ -66,6 +70,19 @@ public partial class MapPreviewDocumentViewModel : Document
     [ObservableProperty]
     private IReadOnlySet<int> _selectedRegionEntityIds = new HashSet<int>();
 
+    [ObservableProperty]
+    private int? _focusedLightEntityId;
+
+    [ObservableProperty]
+    private int? _hoveredLightEntityId;
+
+    [ObservableProperty]
+    private bool _showLightRadii = true;
+
+    /// <summary>Lights are only drawn while the Lights tab is shown.</summary>
+    [ObservableProperty]
+    private bool _showLights;
+
     public MapPreviewDocumentViewModel(EditorSession session)
     {
         _session = session;
@@ -100,7 +117,11 @@ public partial class MapPreviewDocumentViewModel : Document
                 or nameof(EditorSession.HoveredWallEntityId)
                 or nameof(EditorSession.HoveredPortal)
                 or nameof(EditorSession.FocusedRegionEntityId)
-                or nameof(EditorSession.HoveredRegionEntityId))
+                or nameof(EditorSession.HoveredRegionEntityId)
+                or nameof(EditorSession.FocusedLightEntityId)
+                or nameof(EditorSession.HoveredLightEntityId)
+                or nameof(EditorSession.ShowLightRadii)
+                or nameof(EditorSession.IsLightsPanelShown))
             {
                 UpdateHighlightFromSession();
             }
@@ -151,6 +172,10 @@ public partial class MapPreviewDocumentViewModel : Document
         FocusedRegionEntityId = _session.FocusedRegionEntityId;
         HoveredRegionEntityId = _session.HoveredRegionEntityId;
         SelectedRegionEntityIds = _session.SelectedRegionEntityIds.ToHashSet();
+        FocusedLightEntityId = _session.FocusedLightEntityId;
+        HoveredLightEntityId = _session.HoveredLightEntityId;
+        ShowLightRadii = _session.ShowLightRadii;
+        ShowLights = _session.IsLightsPanelShown;
     }
 
     public void UpdateHoverAt(MapPoint previewPoint)
@@ -493,6 +518,14 @@ public partial class MapPreviewDocumentViewModel : Document
         _movingWalls = moveWallSelection
             ? Map.Walls.Where(wall => wallIds.Contains(wall.EntityId)).ToList()
             : [wallHit.Wall];
+
+        // A tree trunk X moves as a whole, never one arm at a time.
+        _movingWalls = _movingWalls
+            .Concat(Map.Walls.Where(wall =>
+                wall.Trunk is { } trunk &&
+                _movingWalls.Any(moving => moving.Trunk?.StampId == trunk.StampId)))
+            .Distinct()
+            .ToList();
         _movingRegions = null;
         _entityMoveLastScenePoint = transform.PreviewToScene(previewPoint);
         _entityMoveGesture = _session.BeginGesture(
@@ -1007,6 +1040,24 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         _session.RequestWallTreeFocus(hit.Wall);
+    }
+
+    private void SelectWallAt(MapPoint previewPoint)
+    {
+        if (Map is null || WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not { } hit)
+        {
+            return;
+        }
+
+        // Keep a multi-selection so a following double-click changes all selected walls.
+        var selectedIds = _session.SelectedWallEntityIds;
+        if (hit.Portal is null && selectedIds.Contains(hit.Wall.EntityId) && selectedIds.Count > 1)
+        {
+            _session.SetSelection(selectedIds, hit.Wall.EntityId);
+            return;
+        }
+
+        _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
     }
 
     public bool TryAddPortalAt(MapPoint previewPoint)
@@ -1527,7 +1578,7 @@ public partial class MapPreviewDocumentViewModel : Document
         _session.RequestRegionTreeFocus(hit.Region);
     }
 
-    public void HandlePrimaryClick(MapPoint previewPoint, bool shiftSelect = false)
+    public void HandlePrimaryClick(MapPoint previewPoint, bool shiftSelect = false, bool isDoubleClick = false)
     {
         switch (_session.ActiveMapTool)
         {
@@ -1551,9 +1602,21 @@ public partial class MapPreviewDocumentViewModel : Document
                 {
                     ClearWallSelection();
                 }
-                else
+                else if (_session.IsTreesPanelShown &&
+                         Map is not null &&
+                         WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is { Wall.Trunk: not null } trunkHit)
+                {
+                    // On the Trees tab a click only selects the tree; it never cycles the wall type.
+                    _session.RequestWallTreeFocus(trunkHit.Wall);
+                }
+                else if (isDoubleClick)
                 {
                     EditWallAt(previewPoint, cycleType: true);
+                }
+                else
+                {
+                    // A single click only selects; double-click changes the wall type.
+                    SelectWallAt(previewPoint);
                 }
 
                 break;
@@ -1581,4 +1644,139 @@ public partial class MapPreviewDocumentViewModel : Document
                 break;
         }
     }
+
+    /// <summary>Scale step per scroll notch for Shift+scroll on tree trunks (2 %).</summary>
+    private const double TrunkScaleStep = 1.02;
+
+    /// <summary>
+    /// Shift+scroll on the Trees tab: scales the versions of the selected tree trunks by 2 % per
+    /// notch. A burst of scrolling is one undo step.
+    /// </summary>
+    public bool TryScaleSelectedTrunks(double notches)
+    {
+        if (!_session.IsTreesPanelShown || Map is not { } map || Math.Abs(notches) < 1e-9)
+        {
+            return false;
+        }
+
+        var keys = TreeTrunkEditing.VersionKeys(SelectedTrunkWalls(map));
+        if (keys.Count == 0)
+        {
+            return false;
+        }
+
+        if (_trunkGesture is null && !_session.IsGestureActive)
+        {
+            _trunkGesture = _session.BeginGesture("Scale tree trunks");
+        }
+
+        var factor = Math.Pow(TrunkScaleStep, notches);
+        _session.Execute(
+            "Scale tree trunks",
+            () => TreeTrunkEditing.AdjustVersions(
+                _session,
+                map,
+                keys,
+                trunk => (Math.Clamp(trunk.Scale * factor, 0.1, 10), trunk.OffsetX, trunk.OffsetY)));
+
+        _trunkScaleIdleTimer ??= CreateTrunkScaleIdleTimer();
+        _trunkScaleIdleTimer.Stop();
+        _trunkScaleIdleTimer.Start();
+        return true;
+    }
+
+    /// <summary>
+    /// Shift+drag on a selected tree trunk on the Trees tab: moves the trunk offset of the selected
+    /// trees' versions. The drag is measured in the clicked tree's image frame, so its X follows the
+    /// mouse; other trees of the version move the same way in their own frame.
+    /// </summary>
+    public bool TryBeginTrunkOffsetDrag(MapPoint previewPoint)
+    {
+        if (!_session.IsTreesPanelShown ||
+            Map is not { } map ||
+            SceneTransform.ForMapPreview(map) is not { } transform ||
+            WallHitTester.Pick(map, previewPoint, tolerancePreviewPixels: 8) is not { Wall.Trunk: { } reference } hit ||
+            !_session.SelectedWallEntityIds.Contains(hit.Wall.EntityId))
+        {
+            return false;
+        }
+
+        var startOffsets = new Dictionary<string, (double X, double Y)>();
+        foreach (var key in TreeTrunkEditing.VersionKeys(SelectedTrunkWalls(map)))
+        {
+            if (TreeTrunkEditing.TrunksOfVersion(map, key).FirstOrDefault()?.Trunk is { } sample)
+            {
+                startOffsets[key] = (sample.OffsetX, sample.OffsetY);
+            }
+        }
+
+        EndTrunkGesture();
+        _trunkOffsetDrag = new TrunkOffsetDrag(transform.PreviewToScene(previewPoint), reference, startOffsets);
+        _trunkGesture = _session.BeginGesture("Move tree trunks");
+        return true;
+    }
+
+    public void DragTrunkOffsetTo(MapPoint previewPoint)
+    {
+        if (_trunkOffsetDrag is not { } drag ||
+            Map is not { } map ||
+            SceneTransform.ForMapPreview(map) is not { } transform ||
+            drag.Reference.Unit <= 0)
+        {
+            return;
+        }
+
+        var scene = transform.PreviewToScene(previewPoint);
+        var moved = new MapPoint(scene.X - drag.StartScene.X, scene.Y - drag.StartScene.Y);
+        var inImage = MapPointTransforms.RotateAround(moved, new MapPoint(0, 0), -drag.Reference.Angle);
+        var dx = inImage.X / drag.Reference.Unit;
+        var dy = inImage.Y / drag.Reference.Unit;
+
+        _session.Execute("Move tree trunks", () =>
+        {
+            foreach (var (key, start) in drag.StartOffsets)
+            {
+                TreeTrunkEditing.AdjustVersions(
+                    _session,
+                    map,
+                    [key],
+                    trunk => (trunk.Scale, Math.Round(start.X + dx, 3), Math.Round(start.Y + dy, 3)));
+            }
+        });
+    }
+
+    public void EndTrunkOffsetDrag()
+    {
+        _trunkOffsetDrag = null;
+        EndTrunkGesture();
+    }
+
+    private List<Wall> SelectedTrunkWalls(MapDocument map) =>
+        map.Walls
+            .Where(wall => TreeTrunks.IsTrunk(wall) && _session.SelectedWallEntityIds.Contains(wall.EntityId))
+            .ToList();
+
+    private DispatcherTimer CreateTrunkScaleIdleTimer()
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            EndTrunkGesture();
+        };
+        return timer;
+    }
+
+    private void EndTrunkGesture()
+    {
+        _trunkScaleIdleTimer?.Stop();
+        var gesture = _trunkGesture;
+        _trunkGesture = null;
+        gesture?.Dispose();
+    }
+
+    private sealed record TrunkOffsetDrag(
+        MapPoint StartScene,
+        TreeTrunk Reference,
+        IReadOnlyDictionary<string, (double X, double Y)> StartOffsets);
 }

@@ -29,6 +29,15 @@ public static class WallGeometryEditing
         }
 
         MapPointTransforms.Translate(wall.Points, dx, dy);
+        MapPointTransforms.Translate(wall.OffsetBasePoints, dx, dy);
+        if (wall.Trunk is { } trunk)
+        {
+            // Keep the trunk's stored tree centre with the wall, so rebuilding the X keeps the move.
+            wall.Trunk = trunk with
+            {
+                StampCenter = new MapPoint(trunk.StampCenter.X + dx, trunk.StampCenter.Y + dy),
+            };
+        }
         wall.PathOrigin = new MapPoint(wall.PathOrigin.X + dx, wall.PathOrigin.Y + dy);
         wall.Origin = new MapPoint(wall.Origin.X + dx, wall.Origin.Y + dy);
         wall.RotationPivot = new MapPoint(wall.RotationPivot.X + dx, wall.RotationPivot.Y + dy);

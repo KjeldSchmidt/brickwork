@@ -41,6 +41,31 @@
                    TextWrapping="Wrap"
                    IsVisible="{Binding ShowEmptyMessage}" />
 
+        <StackPanel Spacing="8">
+        <StackPanel Spacing="4" IsVisible="{Binding HasLayers}">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="6"
+                  ToolTip.Tip="Sets how far walls sit from their original Inkarnate path. The value replaces any earlier offset (10 then 5 gives 5) and 0 restores the original path. Press Enter to apply.">
+                <TextBlock Grid.Column="0"
+                           Text="Offset"
+                           VerticalAlignment="Center" />
+                <NumericUpDown Grid.Column="1"
+                               Value="{Binding OffsetDistance, Mode=TwoWay}"
+                               Increment="5"
+                               FormatString="0.##"
+                               MinWidth="90"
+                               HorizontalAlignment="Stretch"
+                               x:Name="OffsetBox" />
+                <Button Grid.Column="2"
+                        Content="{Binding ApplyWallOffsetLabel}"
+                        Command="{Binding ApplyWallOffsetCommand}"
+                        Click="OnApplyOffsetClick" />
+            </Grid>
+            <CheckBox Content="Into the rock (positive moves walls away from the floor)"
+                      IsChecked="{Binding AutoOffsetDirection}"
+                      ToolTip.Tip="On: outer walls grow outward and walls inside them (holes, pillars) shrink inward, so one value pushes every closed wall into the rock. Off: positive always grows closed walls. Open walls always move to the right of their drawing direction for positive values." />
+        </StackPanel>
+
         <TreeView x:Name="WallsTree"
                   ItemsSource="{Binding Layers}"
                   SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}"
@@ -174,6 +199,7 @@
                 </DataTemplate>
             </TreeView.DataTemplates>
         </TreeView>
+        </StackPanel>
         </Grid>
     </ScrollViewer>
 </UserControl>
