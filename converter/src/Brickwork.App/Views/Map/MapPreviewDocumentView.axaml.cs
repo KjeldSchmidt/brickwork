@@ -193,7 +193,7 @@ public partial class MapPreviewDocumentView : UserControl
                 return;
             }
 
-            // Double-click empty space starts a new wall/region.
+            // Double-click empty space starts a new wall/region or places a light.
             if (e.ClickCount >= 2)
             {
                 if (viewModel.IsWallEditingToolActive &&
@@ -212,6 +212,14 @@ public partial class MapPreviewDocumentView : UserControl
                     _leftStartedDrawingThisPress = true;
                     _drawingLeftClickActive = true;
                     e.Pointer.Capture(MapViewport);
+                    e.Handled = true;
+                    return;
+                }
+
+                if (viewModel.IsLightEditingToolActive &&
+                    viewModel.TryPlaceLight(previewPress))
+                {
+                    _leftPressPosition = null;
                     e.Handled = true;
                     return;
                 }
@@ -248,7 +256,8 @@ public partial class MapPreviewDocumentView : UserControl
 
             _marqueeArmed =
                 (viewModel.IsWallEditingToolActive && !viewModel.HasWallAt(previewPress))
-                || (viewModel.IsRegionEditingToolActive && !viewModel.HasRegionAt(previewPress));
+                || (viewModel.IsRegionEditingToolActive && !viewModel.HasRegionAt(previewPress))
+                || (viewModel.IsLightEditingToolActive && !viewModel.HasLightAt(previewPress));
             if (_marqueeArmed)
             {
                 e.Pointer.Capture(MapViewport);
@@ -416,7 +425,9 @@ public partial class MapPreviewDocumentView : UserControl
         }
 
         viewModel.UpdateHoverAt(ToPreviewPoint(e.GetPosition(MapViewport)));
-        MapViewport.Cursor = viewModel.HoveredWallEntityId is not null || viewModel.HoveredRegionEntityId is not null
+        MapViewport.Cursor = viewModel.HoveredWallEntityId is not null
+            || viewModel.HoveredRegionEntityId is not null
+            || viewModel.HoveredLightEntityId is not null
             ? new Cursor(StandardCursorType.Hand)
             : Cursor.Default;
     }

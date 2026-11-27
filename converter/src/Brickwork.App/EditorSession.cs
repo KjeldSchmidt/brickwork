@@ -14,6 +14,7 @@ public sealed partial class EditorSession : ObservableObject
     private bool _restoringHistory;
     private readonly HashSet<int> _selectedWallEntityIds = [];
     private readonly HashSet<int> _selectedRegionEntityIds = [];
+    private readonly HashSet<int> _selectedLightEntityIds = [];
     private MapEntityClipboard _clipboard = MapEntityClipboard.Empty;
     private int _pasteCount;
 
@@ -117,6 +118,8 @@ public sealed partial class EditorSession : ObservableObject
 
     public IReadOnlySet<int> SelectedRegionEntityIds => _selectedRegionEntityIds;
 
+    public IReadOnlySet<int> SelectedLightEntityIds => _selectedLightEntityIds;
+
     public bool CanPaste => !_clipboard.IsEmpty;
 
     /// <summary>Scene-space nudge applied on each paste (stacks for repeated pastes).</summary>
@@ -203,6 +206,7 @@ public sealed partial class EditorSession : ObservableObject
         RefreshHistoryState();
         ClearWallSelection();
         ClearRegionSelection();
+        ClearLightSelection();
         NotifyContentChanged();
     }
 
@@ -223,6 +227,7 @@ public sealed partial class EditorSession : ObservableObject
         RefreshHistoryState();
         ClearWallSelection();
         ClearRegionSelection();
+        ClearLightSelection();
         NotifyContentChanged();
     }
 
@@ -250,6 +255,7 @@ public sealed partial class EditorSession : ObservableObject
         WallPortal? portal = null)
     {
         ClearRegionSelection();
+        ClearLightSelection();
 
         var next = wallIds.ToHashSet();
         int? primary = primaryId;
@@ -293,6 +299,7 @@ public sealed partial class EditorSession : ObservableObject
     public void SetRegionSelection(IEnumerable<int> regionIds, int? primaryId = null)
     {
         ClearWallSelection();
+        ClearLightSelection();
 
         var next = regionIds.ToHashSet();
         int? primary = primaryId;
@@ -332,6 +339,7 @@ public sealed partial class EditorSession : ObservableObject
     public void ToggleWallInSelection(int wallId)
     {
         ClearRegionSelection();
+        ClearLightSelection();
 
         if (_selectedWallEntityIds.Contains(wallId))
         {
@@ -355,6 +363,7 @@ public sealed partial class EditorSession : ObservableObject
     public void ToggleRegionInSelection(int regionId)
     {
         ClearWallSelection();
+        ClearLightSelection();
 
         if (_selectedRegionEntityIds.Contains(regionId))
         {
@@ -376,6 +385,7 @@ public sealed partial class EditorSession : ObservableObject
     public void AddWallsToSelection(IEnumerable<int> wallIds)
     {
         ClearRegionSelection();
+        ClearLightSelection();
 
         var added = false;
         foreach (var id in wallIds)
@@ -395,6 +405,7 @@ public sealed partial class EditorSession : ObservableObject
     public void AddRegionsToSelection(IEnumerable<int> regionIds)
     {
         ClearWallSelection();
+        ClearLightSelection();
 
         var added = false;
         foreach (var id in regionIds)
@@ -469,6 +480,115 @@ public sealed partial class EditorSession : ObservableObject
         TreeFocusGeneration++;
     }
 
+    public void SetLightSelection(IEnumerable<int> lightIds, int? primaryId = null)
+    {
+        ClearWallSelection();
+        ClearRegionSelection();
+
+        var next = lightIds.ToHashSet();
+        int? primary = primaryId;
+        if (next.Count == 0)
+        {
+            primary = null;
+        }
+        else
+        {
+            primary ??= next.OrderBy(id => id).First();
+            if (primary is int id && !next.Contains(id))
+            {
+                primary = next.OrderBy(candidate => candidate).First();
+            }
+        }
+
+        var selectionChanged = !_selectedLightEntityIds.SetEquals(next);
+        var focusChanged = FocusedLightEntityId != primary;
+        if (!selectionChanged && !focusChanged)
+        {
+            return;
+        }
+
+        if (selectionChanged)
+        {
+            _selectedLightEntityIds.Clear();
+            foreach (var id in next)
+            {
+                _selectedLightEntityIds.Add(id);
+            }
+        }
+
+        FocusedLightEntityId = primary;
+        HighlightRevision++;
+    }
+
+    public void ToggleLightInSelection(int lightId)
+    {
+        ClearWallSelection();
+        ClearRegionSelection();
+
+        if (_selectedLightEntityIds.Contains(lightId))
+        {
+            _selectedLightEntityIds.Remove(lightId);
+            if (FocusedLightEntityId == lightId)
+            {
+                FocusedLightEntityId = _selectedLightEntityIds.OrderBy(id => id).Cast<int?>().FirstOrDefault();
+            }
+        }
+        else
+        {
+            _selectedLightEntityIds.Add(lightId);
+            FocusedLightEntityId = lightId;
+        }
+
+        HighlightRevision++;
+    }
+
+    public void AddLightsToSelection(IEnumerable<int> lightIds)
+    {
+        ClearWallSelection();
+        ClearRegionSelection();
+
+        var added = false;
+        foreach (var id in lightIds)
+        {
+            added |= _selectedLightEntityIds.Add(id);
+        }
+
+        if (!added)
+        {
+            return;
+        }
+
+        FocusedLightEntityId ??= _selectedLightEntityIds.OrderBy(id => id).First();
+        HighlightRevision++;
+    }
+
+    public void SetFocusedLight(LightSource light) =>
+        SetLightSelection([light.EntityId], light.EntityId);
+
+    public void RequestLightTreeFocus(LightSource light)
+    {
+        SetFocusedLight(light);
+        TreeFocusGeneration++;
+    }
+
+    public void SetHoveredLight(LightSource? light)
+    {
+        var entityId = light?.EntityId;
+        if (HoveredLightEntityId == entityId &&
+            HoveredWallEntityId is null &&
+            HoveredPortal is null &&
+            HoveredRegionEntityId is null)
+        {
+            return;
+        }
+
+        HoveredWallEntityId = null;
+        HoveredPortal = null;
+        HoveredRegionEntityId = null;
+        HoveredLightEntityId = entityId;
+        HighlightRevision++;
+    }
+
     public void SetHoveredWall(Wall? wall, WallPortal? portal = null)
     {
         var entityId = wall?.EntityId;
@@ -478,6 +598,7 @@ public sealed partial class EditorSession : ObservableObject
         }
 
         HoveredRegionEntityId = null;
+        HoveredLightEntityId = null;
         HoveredWallEntityId = entityId;
         HoveredPortal = portal;
         HighlightRevision++;
@@ -493,6 +614,7 @@ public sealed partial class EditorSession : ObservableObject
 
         HoveredWallEntityId = null;
         HoveredPortal = null;
+        HoveredLightEntityId = null;
         HoveredRegionEntityId = entityId;
         HighlightRevision++;
     }
@@ -520,11 +642,23 @@ public sealed partial class EditorSession : ObservableObject
         HighlightRevision++;
     }
 
+    public void ClearHoveredLight()
+    {
+        if (HoveredLightEntityId is null)
+        {
+            return;
+        }
+
+        HoveredLightEntityId = null;
+        HighlightRevision++;
+    }
+
     public void ClearHover()
     {
         if (HoveredWallEntityId is null &&
             HoveredPortal is null &&
-            HoveredRegionEntityId is null)
+            HoveredRegionEntityId is null &&
+            HoveredLightEntityId is null)
         {
             return;
         }
@@ -532,6 +666,7 @@ public sealed partial class EditorSession : ObservableObject
         HoveredWallEntityId = null;
         HoveredPortal = null;
         HoveredRegionEntityId = null;
+        HoveredLightEntityId = null;
         HighlightRevision++;
     }
 
@@ -566,6 +701,21 @@ public sealed partial class EditorSession : ObservableObject
         _selectedRegionEntityIds.Clear();
         FocusedRegionEntityId = null;
         HoveredRegionEntityId = null;
+        HighlightRevision++;
+    }
+
+    public void ClearLightSelection()
+    {
+        if (_selectedLightEntityIds.Count == 0 &&
+            FocusedLightEntityId is null &&
+            HoveredLightEntityId is null)
+        {
+            return;
+        }
+
+        _selectedLightEntityIds.Clear();
+        FocusedLightEntityId = null;
+        HoveredLightEntityId = null;
         HighlightRevision++;
     }
 
@@ -609,8 +759,37 @@ public sealed partial class EditorSession : ObservableObject
         return true;
     }
 
+    public bool DeleteSelectedLights()
+    {
+        if (Map is null || _selectedLightEntityIds.Count == 0)
+        {
+            return false;
+        }
+
+        var ids = _selectedLightEntityIds.ToHashSet();
+        Execute("Delete lights", () =>
+        {
+            foreach (var light in Map.Lights.Where(candidate => ids.Contains(candidate.EntityId)).ToList())
+            {
+                Map.Lights.Remove(light);
+                foreach (var group in Map.Groups)
+                {
+                    group.MemberIds.Remove(light.EntityId);
+                }
+            }
+        });
+
+        ClearLightSelection();
+        return true;
+    }
+
     public bool DeleteSelection()
     {
+        if (_selectedLightEntityIds.Count > 0)
+        {
+            return DeleteSelectedLights();
+        }
+
         if (_selectedRegionEntityIds.Count > 0)
         {
             return DeleteSelectedRegions();
@@ -691,6 +870,7 @@ public sealed partial class EditorSession : ObservableObject
         RefreshHistoryState();
         ClearWallSelection();
         ClearRegionSelection();
+        ClearLightSelection();
         // Keep clipboard across map loads so paste still works after reopening a file.
         _pasteCount = 0;
     }

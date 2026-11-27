@@ -60,13 +60,30 @@ public partial class ToolPaletteViewModel : Tool
                     new("Right-Drag", "Pan Map"),
                 ]),
             new MapToolItemViewModel(
+                MapToolKind.LightEditing,
+                "Light Editing",
+                "L",
+                PackIconFontAwesome6Kind.LightbulbSolid,
+                buttonHints:
+                [
+                    new("Click Light", "Select Light"),
+                    new("Shift-Click", "Add or Remove Light"),
+                    new("Drag Empty", "Marquee Select"),
+                    new("Drag Origin", "Move Light (or Selection)"),
+                    new("Drag Dim Ring", "Change Dim Radius"),
+                    new("Drag Side Handle", "Change Bright or Dim Radius"),
+                    new("Double-Click Empty", "Place Light"),
+                    new("Delete", "Delete Selection"),
+                    new("Right-Drag", "Pan Map"),
+                ]),
+            new MapToolItemViewModel(
                 MapToolKind.Eraser,
                 "Eraser",
                 "E",
                 PackIconFontAwesome6Kind.EraserSolid,
                 buttonHints:
                 [
-                    new("Click Wall or Region", "Delete"),
+                    new("Click Wall, Region, or Light", "Delete"),
                     new("Right-Drag", "Pan Map"),
                 ]),
         ];

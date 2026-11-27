@@ -40,7 +40,7 @@ public static class ImportSettingsApplier
                 () => result = MapReimportMerger.Merge(map, fresh, wallsAndRegions, lights));
             session.ClearWallSelection();
             session.ClearRegionSelection();
-            session.FocusedLightEntityId = null;
+            session.ClearLightSelection();
 
             return $"Applied: {result.Updated} updated, {result.Added} added, {result.Removed} removed. Undo with Ctrl+Z.";
         }

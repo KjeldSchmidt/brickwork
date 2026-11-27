@@ -166,6 +166,10 @@ public partial class MainWindow : Window
                 viewModel.Session.ActiveMapTool = MapToolKind.RegionEditing;
                 e.Handled = true;
                 break;
+            case Key.L:
+                viewModel.Session.ActiveMapTool = MapToolKind.LightEditing;
+                e.Handled = true;
+                break;
             case Key.E:
                 viewModel.Session.ActiveMapTool = MapToolKind.Eraser;
                 e.Handled = true;

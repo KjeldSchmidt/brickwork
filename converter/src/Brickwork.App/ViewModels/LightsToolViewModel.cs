@@ -40,13 +40,11 @@ public partial class LightsToolViewModel : Tool
                 OnPropertyChanged(nameof(ShowLightRadii));
             }
 
-            if (args.PropertyName is nameof(EditorSession.FocusedLightEntityId) &&
-                _session.FocusedLightEntityId is null &&
-                SelectedTreeItem is LightItemViewModel)
+            if (args.PropertyName is nameof(EditorSession.HighlightRevision)
+                or nameof(EditorSession.TreeFocusGeneration)
+                or nameof(EditorSession.FocusedLightEntityId))
             {
-                _syncingSelection = true;
-                SelectedTreeItem = null;
-                _syncingSelection = false;
+                SyncSelectionFromSession();
             }
         };
         Rebuild();
@@ -76,8 +74,10 @@ public partial class LightsToolViewModel : Tool
         set => _session.ShowLightRadii = value;
     }
 
+    public bool CanDeleteSelection => _session.SelectedLightEntityIds.Count > 0;
+
     public void SetHoveredItem(object? item) =>
-        _session.HoveredLightEntityId = item is LightItemViewModel light ? light.Light.EntityId : null;
+        _session.SetHoveredLight(item is LightItemViewModel light ? light.Light : null);
 
     partial void OnSelectedTreeItemChanged(object? value)
     {
@@ -86,7 +86,31 @@ public partial class LightsToolViewModel : Tool
             return;
         }
 
-        _session.FocusedLightEntityId = value is LightItemViewModel light ? light.Light.EntityId : null;
+        _session.ActiveMapTool = MapToolKind.LightEditing;
+
+        if (value is LightItemViewModel light)
+        {
+            _session.SetLightSelection([light.Light.EntityId], light.Light.EntityId);
+            return;
+        }
+
+        if (value is LightKindViewModel kind)
+        {
+            var ids = kind.Lights.Select(light => light.EntityId).ToList();
+            _session.SetLightSelection(ids, ids.FirstOrDefault());
+            return;
+        }
+
+        _session.ClearLightSelection();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDeleteSelection))]
+    private void DeleteSelection()
+    {
+        if (_session.DeleteSelectedLights())
+        {
+            Sync();
+        }
     }
 
     private void Rebuild()
@@ -94,8 +118,7 @@ public partial class LightsToolViewModel : Tool
         _syncingSelection = true;
         SelectedTreeItem = null;
         _syncingSelection = false;
-        _session.FocusedLightEntityId = null;
-        _session.HoveredLightEntityId = null;
+        _session.ClearLightSelection();
 
         var expanded = Kinds.Where(kind => kind.IsExpanded).Select(kind => kind.Name).ToHashSet();
         var kinds = new ObservableCollection<LightKindViewModel>();
@@ -117,6 +140,7 @@ public partial class LightsToolViewModel : Tool
         OnPropertyChanged(nameof(ShowEmptyMessage));
         OnPropertyChanged(nameof(EmptyMessage));
         OnPropertyChanged(nameof(Summary));
+        DeleteSelectionCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>Refreshes values in place, or rebuilds when lights were added or removed (e.g. by undo).</summary>
@@ -139,6 +163,34 @@ public partial class LightsToolViewModel : Tool
         }
 
         OnPropertyChanged(nameof(Summary));
+        DeleteSelectionCommand.NotifyCanExecuteChanged();
+        SyncSelectionFromSession();
+    }
+
+    private void SyncSelectionFromSession()
+    {
+        DeleteSelectionCommand.NotifyCanExecuteChanged();
+
+        var focusedId = _session.FocusedLightEntityId;
+        object? next = null;
+        if (focusedId is int id)
+        {
+            next = Kinds.SelectMany(kind => kind.Children)
+                .FirstOrDefault(item => item.Light.EntityId == id);
+            if (next is LightItemViewModel item)
+            {
+                item.Kind.IsExpanded = true;
+            }
+        }
+
+        if (ReferenceEquals(SelectedTreeItem, next))
+        {
+            return;
+        }
+
+        _syncingSelection = true;
+        SelectedTreeItem = next;
+        _syncingSelection = false;
     }
 
     internal void NotifySummaryChanged() => OnPropertyChanged(nameof(Summary));
@@ -163,7 +215,7 @@ public partial class LightKindViewModel : ObservableObject
         Name = name;
         Lights = lights;
         Children = new ObservableCollection<LightItemViewModel>(
-            lights.Select((light, index) => new LightItemViewModel(tool, session, light, index + 1)));
+            lights.Select((light, index) => new LightItemViewModel(tool, this, session, light, index + 1)));
     }
 
     public string Name { get; }
@@ -192,7 +244,14 @@ public partial class LightKindViewModel : ObservableObject
         {
             if (value is decimal radius)
             {
-                Apply("Change bright radius", light => light.BrightRadius = (double)radius);
+                Apply("Change bright radius", light =>
+                {
+                    light.BrightRadius = (double)radius;
+                    if (light.DimRadius < light.BrightRadius)
+                    {
+                        light.DimRadius = light.BrightRadius;
+                    }
+                });
             }
         }
     }
@@ -204,7 +263,8 @@ public partial class LightKindViewModel : ObservableObject
         {
             if (value is decimal radius)
             {
-                Apply("Change dim radius", light => light.DimRadius = (double)radius);
+                Apply("Change dim radius", light =>
+                    light.DimRadius = Math.Max((double)radius, light.BrightRadius));
             }
         }
     }
@@ -316,13 +376,21 @@ public partial class LightItemViewModel : ObservableObject
     private readonly LightsToolViewModel _tool;
     private readonly EditorSession _session;
 
-    public LightItemViewModel(LightsToolViewModel tool, EditorSession session, LightSource light, int number)
+    public LightItemViewModel(
+        LightsToolViewModel tool,
+        LightKindViewModel kind,
+        EditorSession session,
+        LightSource light,
+        int number)
     {
         _tool = tool;
+        Kind = kind;
         _session = session;
         Light = light;
         Number = number;
     }
+
+    public LightKindViewModel Kind { get; }
 
     public LightSource Light { get; }
 

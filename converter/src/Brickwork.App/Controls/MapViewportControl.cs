@@ -48,6 +48,11 @@ public class MapViewportControl : Control
     public static readonly StyledProperty<int?> HoveredRegionEntityIdProperty =
         AvaloniaProperty.Register<MapViewportControl, int?>(nameof(HoveredRegionEntityId));
 
+    public static readonly StyledProperty<IReadOnlySet<int>> SelectedLightEntityIdsProperty =
+        AvaloniaProperty.Register<MapViewportControl, IReadOnlySet<int>>(
+            nameof(SelectedLightEntityIds),
+            defaultValue: new HashSet<int>());
+
     public static readonly StyledProperty<int?> FocusedLightEntityIdProperty =
         AvaloniaProperty.Register<MapViewportControl, int?>(nameof(FocusedLightEntityId));
 
@@ -56,6 +61,9 @@ public class MapViewportControl : Control
 
     public static readonly StyledProperty<bool> ShowLightRadiiProperty =
         AvaloniaProperty.Register<MapViewportControl, bool>(nameof(ShowLightRadii), defaultValue: true);
+
+    public static readonly StyledProperty<bool> ShowLightHandlesProperty =
+        AvaloniaProperty.Register<MapViewportControl, bool>(nameof(ShowLightHandles));
 
     public static readonly StyledProperty<bool> ShowWallHandlesProperty =
         AvaloniaProperty.Register<MapViewportControl, bool>(nameof(ShowWallHandles));
@@ -79,9 +87,11 @@ public class MapViewportControl : Control
             SelectedRegionEntityIdsProperty,
             FocusedRegionEntityIdProperty,
             HoveredRegionEntityIdProperty,
+            SelectedLightEntityIdsProperty,
             FocusedLightEntityIdProperty,
             HoveredLightEntityIdProperty,
             ShowLightRadiiProperty,
+            ShowLightHandlesProperty,
             ShowWallHandlesProperty,
             ShowRegionHandlesProperty);
 
@@ -154,6 +164,12 @@ public class MapViewportControl : Control
         set => SetValue(HoveredRegionEntityIdProperty, value);
     }
 
+    public IReadOnlySet<int> SelectedLightEntityIds
+    {
+        get => GetValue(SelectedLightEntityIdsProperty);
+        set => SetValue(SelectedLightEntityIdsProperty, value);
+    }
+
     public int? FocusedLightEntityId
     {
         get => GetValue(FocusedLightEntityIdProperty);
@@ -170,6 +186,12 @@ public class MapViewportControl : Control
     {
         get => GetValue(ShowLightRadiiProperty);
         set => SetValue(ShowLightRadiiProperty, value);
+    }
+
+    public bool ShowLightHandles
+    {
+        get => GetValue(ShowLightHandlesProperty);
+        set => SetValue(ShowLightHandlesProperty, value);
     }
 
     public bool ShowWallHandles
@@ -210,9 +232,11 @@ public class MapViewportControl : Control
             HoveredRegionEntityId,
             ShowWallHandles,
             ShowRegionHandles,
+            SelectedLightEntityIds,
             FocusedLightEntityId,
             HoveredLightEntityId,
-            ShowLightRadii);
+            ShowLightRadii,
+            ShowLightHandles);
         context.Custom(new MapDrawOperation(bounds, Map, _renderer, highlight));
     }
 

@@ -142,14 +142,19 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             return;
         }
 
+        var showHandles = highlight?.ShowLightHandles ?? false;
         var showRadii = highlight?.ShowLightRadii ?? true;
+        var selectedIds = highlight?.LightSelection;
         var pixelsPerSquare = (float)(map.Grid.CellSize * transform.ScaleX);
+        var cellSize = map.Grid.CellSize;
         using var fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
         using var stroke = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke };
 
         foreach (var light in map.Lights)
         {
-            var emphasized = light.EntityId == highlight?.FocusedLightEntityId ||
+            var selected = selectedIds?.Contains(light.EntityId) == true;
+            var emphasized = selected ||
+                             light.EntityId == highlight?.FocusedLightEntityId ||
                              light.EntityId == highlight?.HoveredLightEntityId;
             var center = transform.SceneToPreview(light.Position);
             var x = (float)center.X;
@@ -157,21 +162,29 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             var color = LightColors.TryParse(light.Color, out var red, out var green, out var blue)
                 ? new SKColor(red, green, blue)
                 : SKColors.Orange;
-
-            if (light.IsActive && pixelsPerSquare > 0 && (showRadii || emphasized))
+            if (!light.IsActive)
             {
-                fill.Color = color.WithAlpha(emphasized ? (byte)0x38 : (byte)0x18);
-                canvas.DrawCircle(x, y, (float)light.DimRadius * pixelsPerSquare, fill);
-                fill.Color = color.WithAlpha(emphasized ? (byte)0x50 : (byte)0x28);
-                canvas.DrawCircle(x, y, (float)light.BrightRadius * pixelsPerSquare, fill);
+                color = new SKColor(0x80, 0x80, 0x80);
+            }
 
-                if (emphasized)
-                {
-                    stroke.Color = color;
-                    stroke.StrokeWidth = 1.5f;
-                    canvas.DrawCircle(x, y, (float)light.DimRadius * pixelsPerSquare, stroke);
-                    canvas.DrawCircle(x, y, (float)light.BrightRadius * pixelsPerSquare, stroke);
-                }
+            var drawRadii = light.IsActive &&
+                            pixelsPerSquare > 0 &&
+                            (showHandles || showRadii || emphasized);
+            if (drawRadii)
+            {
+                // Dim first, bright on top so equal radii still show the brighter ring.
+                stroke.Color = color.WithAlpha(emphasized ? (byte)0xA0 : (byte)0x70);
+                stroke.StrokeWidth = emphasized ? 1.75f : 1.25f;
+                canvas.DrawCircle(x, y, (float)light.DimRadius * pixelsPerSquare, stroke);
+
+                stroke.Color = color.WithAlpha(emphasized ? (byte)0xFF : (byte)0xC0);
+                stroke.StrokeWidth = emphasized ? 2.25f : 1.75f;
+                canvas.DrawCircle(x, y, (float)light.BrightRadius * pixelsPerSquare, stroke);
+            }
+
+            if (showHandles && (selected || emphasized))
+            {
+                DrawLightRadiusHandles(canvas, transform, light, cellSize, color);
             }
 
             fill.Color = light.IsActive ? color : new SKColor(0x80, 0x80, 0x80);
@@ -179,6 +192,41 @@ public sealed class MapSceneRenderer : IMapSceneRenderer
             stroke.Color = emphasized ? SKColors.White : new SKColor(0x20, 0x20, 0x20);
             stroke.StrokeWidth = emphasized ? 2.5f : NodeBorderWidth;
             canvas.DrawCircle(x, y, NodeRadius + 1f, stroke);
+        }
+    }
+
+    private static void DrawLightRadiusHandles(
+        SKCanvas canvas,
+        SceneTransform transform,
+        LightSource light,
+        double cellSize,
+        SKColor color)
+    {
+        if (cellSize <= 1e-9)
+        {
+            return;
+        }
+
+        if (LightRadiusHandleGeometry.TryGetHandle(
+                light, cellSize, LightRadiusHandleKind.Bright, out var brightHandle))
+        {
+            DrawOrientedTick(
+                canvas,
+                LightRadiusHandleGeometry.GetHandleTickPose(brightHandle, transform),
+                WallLineType.Solid,
+                light.IsActive,
+                color);
+        }
+
+        if (LightRadiusHandleGeometry.TryGetHandle(
+                light, cellSize, LightRadiusHandleKind.Dim, out var dimHandle))
+        {
+            DrawOrientedTick(
+                canvas,
+                LightRadiusHandleGeometry.GetHandleTickPose(dimHandle, transform),
+                WallLineType.Solid,
+                light.IsActive,
+                color.WithAlpha(0xA0));
         }
     }
 

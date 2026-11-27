@@ -10,9 +10,11 @@ public partial class MapPreviewDocumentViewModel : Document
     private readonly EditorSession _session;
     private WallVertexPickTarget? _vertexDragTarget;
     private RegionVertexPickTarget? _regionVertexDragTarget;
+    private LightHandlePickTarget? _lightHandleDragTarget;
     private IDisposable? _vertexDragGesture;
     private IReadOnlyList<Wall>? _movingWalls;
     private IReadOnlyList<Region>? _movingRegions;
+    private IReadOnlyList<LightSource>? _movingLights;
     private MapPoint? _entityMoveLastScenePoint;
     private IDisposable? _entityMoveGesture;
     private Wall? _drawingWall;
@@ -67,6 +69,9 @@ public partial class MapPreviewDocumentViewModel : Document
     private IReadOnlySet<int> _selectedRegionEntityIds = new HashSet<int>();
 
     [ObservableProperty]
+    private IReadOnlySet<int> _selectedLightEntityIds = new HashSet<int>();
+
+    [ObservableProperty]
     private int? _focusedLightEntityId;
 
     [ObservableProperty]
@@ -87,6 +92,7 @@ public partial class MapPreviewDocumentViewModel : Document
                 _drawingGesture = null;
                 _vertexDragTarget = null;
                 _regionVertexDragTarget = null;
+                _lightHandleDragTarget = null;
                 _vertexDragGesture = null;
                 EndEntityMove();
                 EndEraserStroke();
@@ -121,6 +127,7 @@ public partial class MapPreviewDocumentViewModel : Document
             {
                 OnPropertyChanged(nameof(IsWallEditingToolActive));
                 OnPropertyChanged(nameof(IsRegionEditingToolActive));
+                OnPropertyChanged(nameof(IsLightEditingToolActive));
                 OnPropertyChanged(nameof(IsEraserToolActive));
                 // Handles visibility is tool-gated; force a redraw.
                 HighlightRevision = _session.HighlightRevision;
@@ -163,6 +170,7 @@ public partial class MapPreviewDocumentViewModel : Document
         FocusedRegionEntityId = _session.FocusedRegionEntityId;
         HoveredRegionEntityId = _session.HoveredRegionEntityId;
         SelectedRegionEntityIds = _session.SelectedRegionEntityIds.ToHashSet();
+        SelectedLightEntityIds = _session.SelectedLightEntityIds.ToHashSet();
         FocusedLightEntityId = _session.FocusedLightEntityId;
         HoveredLightEntityId = _session.HoveredLightEntityId;
         ShowLightRadii = _session.ShowLightRadii;
@@ -181,6 +189,9 @@ public partial class MapPreviewDocumentViewModel : Document
             case MapToolKind.RegionEditing:
                 UpdateRegionHoverAt(previewPoint);
                 return;
+            case MapToolKind.LightEditing:
+                UpdateLightHoverAt(previewPoint);
+                return;
             case MapToolKind.Eraser:
                 UpdateEraserHoverAt(previewPoint);
                 return;
@@ -188,6 +199,31 @@ public partial class MapPreviewDocumentViewModel : Document
                 UpdateWallHoverAt(previewPoint);
                 return;
         }
+    }
+
+    private void UpdateLightHoverAt(MapPoint previewPoint)
+    {
+        if (Map is null)
+        {
+            _session.ClearHover();
+            return;
+        }
+
+        var handleHit = LightHandleHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (handleHit is not null)
+        {
+            _session.SetHoveredLight(handleHit.Light);
+            return;
+        }
+
+        var lightHit = LightHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        if (lightHit is not null)
+        {
+            _session.SetHoveredLight(lightHit.Light);
+            return;
+        }
+
+        _session.ClearHover();
     }
 
     private void UpdateWallHoverAt(MapPoint previewPoint)
@@ -264,6 +300,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
         var wallHit = WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
         var regionHit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+        var lightHit = LightHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8, includeRings: false);
         if (wallHit is not null)
         {
             _session.SetHoveredWall(wallHit.Wall, wallHit.Portal);
@@ -276,6 +313,12 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
+        if (lightHit is not null)
+        {
+            _session.SetHoveredLight(lightHit.Light);
+            return;
+        }
+
         _session.ClearHover();
     }
 
@@ -284,6 +327,8 @@ public partial class MapPreviewDocumentViewModel : Document
     public bool IsWallEditingToolActive => _session.ActiveMapTool == MapToolKind.WallEditing;
 
     public bool IsRegionEditingToolActive => _session.ActiveMapTool == MapToolKind.RegionEditing;
+
+    public bool IsLightEditingToolActive => _session.ActiveMapTool == MapToolKind.LightEditing;
 
     public bool IsEraserToolActive => _session.ActiveMapTool == MapToolKind.Eraser;
 
@@ -297,10 +342,13 @@ public partial class MapPreviewDocumentViewModel : Document
 
     public void ClearRegionSelection() => _session.ClearRegionSelection();
 
+    public void ClearLightSelection() => _session.ClearLightSelection();
+
     public void ClearSelection()
     {
         _session.ClearWallSelection();
         _session.ClearRegionSelection();
+        _session.ClearLightSelection();
     }
 
     public bool DeleteSelectedWalls() => _session.DeleteSelectedWalls();
@@ -329,11 +377,56 @@ public partial class MapPreviewDocumentViewModel : Document
             || RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null;
     }
 
+    public bool HasLightAt(MapPoint previewPoint)
+    {
+        if (Map is null)
+        {
+            return false;
+        }
+
+        return LightHandleHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null
+            || LightHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null;
+    }
+
     public bool TryBeginVertexDrag(MapPoint previewPoint)
     {
         if (Map is null || IsDrawing)
         {
             return false;
+        }
+
+        if (_session.ActiveMapTool == MapToolKind.LightEditing)
+        {
+            var lightHit = LightHandleHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
+            if (lightHit is null || lightHit.Kind == LightHandleKind.Origin)
+            {
+                return false;
+            }
+
+            _lightHandleDragTarget = lightHit;
+            _vertexDragTarget = null;
+            _regionVertexDragTarget = null;
+            var selectedIds = _session.SelectedLightEntityIds.ToHashSet();
+            var editSelection = selectedIds.Contains(lightHit.Light.EntityId) && selectedIds.Count > 0;
+            var gestureName = lightHit.Kind switch
+            {
+                LightHandleKind.BrightHandle or LightHandleKind.BrightRing =>
+                    editSelection && selectedIds.Count > 1 ? "Change bright radii" : "Change bright radius",
+                _ => editSelection && selectedIds.Count > 1 ? "Change dim radii" : "Change dim radius",
+            };
+            _vertexDragGesture = _session.BeginGesture(gestureName);
+
+            if (editSelection)
+            {
+                _session.SetLightSelection(selectedIds, lightHit.Light.EntityId);
+                _session.TreeFocusGeneration++;
+            }
+            else
+            {
+                _session.RequestLightTreeFocus(lightHit.Light);
+            }
+
+            return true;
         }
 
         if (_session.ActiveMapTool == MapToolKind.RegionEditing)
@@ -346,6 +439,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
             _regionVertexDragTarget = regionHit;
             _vertexDragTarget = null;
+            _lightHandleDragTarget = null;
             _vertexDragGesture = _session.BeginGesture("Move region geometry");
             _session.RequestRegionTreeFocus(regionHit.Region);
             return true;
@@ -364,6 +458,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
         _vertexDragTarget = hit;
         _regionVertexDragTarget = null;
+        _lightHandleDragTarget = null;
         _vertexDragGesture = _session.BeginGesture("Move wall geometry");
         _session.RequestWallTreeFocus(hit.Wall, hit.Portal);
         return true;
@@ -383,6 +478,38 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         var scenePoint = transform.PreviewToScene(previewPoint);
+
+        if (_lightHandleDragTarget is { } lightTarget)
+        {
+            var cellSize = Map.Grid.CellSize;
+            if (cellSize <= 1e-9)
+            {
+                return;
+            }
+
+            var kind = lightTarget.Kind switch
+            {
+                LightHandleKind.BrightHandle or LightHandleKind.BrightRing => LightRadiusHandleKind.Bright,
+                _ => LightRadiusHandleKind.Dim,
+            };
+
+            // Distance from the grabbed light; apply the same absolute radius to the selection.
+            var dx = scenePoint.X - lightTarget.Light.Position.X;
+            var dy = scenePoint.Y - lightTarget.Light.Position.Y;
+            var squares = Math.Sqrt(dx * dx + dy * dy) / cellSize;
+
+            var selectedIds = _session.SelectedLightEntityIds;
+            var targets = selectedIds.Contains(lightTarget.Light.EntityId) && selectedIds.Count > 0
+                ? Map.Lights.Where(light => selectedIds.Contains(light.EntityId))
+                : [lightTarget.Light];
+            foreach (var light in targets)
+            {
+                LightRadiusHandleGeometry.SetRadiusSquares(light, squares, kind);
+            }
+
+            _session.NotifyContentChanged();
+            return;
+        }
 
         if (_regionVertexDragTarget is { } regionTarget)
         {
@@ -428,6 +555,7 @@ public partial class MapPreviewDocumentViewModel : Document
     {
         _vertexDragTarget = null;
         _regionVertexDragTarget = null;
+        _lightHandleDragTarget = null;
         var gesture = _vertexDragGesture;
         _vertexDragGesture = null;
         gesture?.Dispose();
@@ -444,6 +572,10 @@ public partial class MapPreviewDocumentViewModel : Document
         {
             MapToolKind.WallEditing => WallHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null,
             MapToolKind.RegionEditing => RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is not null,
+            MapToolKind.LightEditing =>
+                LightHandleHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
+                    is { Kind: LightHandleKind.Origin }
+                || LightHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8, includeRings: false) is not null,
             _ => false,
         };
     }
@@ -461,6 +593,41 @@ public partial class MapPreviewDocumentViewModel : Document
             return false;
         }
 
+        if (_session.ActiveMapTool == MapToolKind.LightEditing)
+        {
+            var lightHit = LightHandleHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
+                is { Kind: LightHandleKind.Origin } originHit
+                ? originHit.Light
+                : LightHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8, includeRings: false)?.Light;
+            if (lightHit is null)
+            {
+                return false;
+            }
+
+            var selectedIds = _session.SelectedLightEntityIds.ToHashSet();
+            var moveSelection = selectedIds.Contains(lightHit.EntityId) && selectedIds.Count > 0;
+            _movingLights = moveSelection
+                ? Map.Lights.Where(light => selectedIds.Contains(light.EntityId)).ToList()
+                : [lightHit];
+            _movingWalls = null;
+            _movingRegions = null;
+            _entityMoveLastScenePoint = transform.PreviewToScene(previewPoint);
+            _entityMoveGesture = _session.BeginGesture(
+                _movingLights.Count > 1 ? "Move lights" : "Move light");
+
+            if (moveSelection)
+            {
+                _session.SetLightSelection(selectedIds, lightHit.EntityId);
+                _session.TreeFocusGeneration++;
+            }
+            else
+            {
+                _session.RequestLightTreeFocus(lightHit);
+            }
+
+            return true;
+        }
+
         if (_session.ActiveMapTool == MapToolKind.RegionEditing)
         {
             var regionHit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8);
@@ -475,6 +642,7 @@ public partial class MapPreviewDocumentViewModel : Document
                 ? Map.Regions.Where(region => selectedIds.Contains(region.EntityId)).ToList()
                 : [regionHit.Region];
             _movingWalls = null;
+            _movingLights = null;
             _entityMoveLastScenePoint = transform.PreviewToScene(previewPoint);
             _entityMoveGesture = _session.BeginGesture(
                 _movingRegions.Count > 1 ? "Move regions" : "Move region");
@@ -509,6 +677,7 @@ public partial class MapPreviewDocumentViewModel : Document
             ? Map.Walls.Where(wall => wallIds.Contains(wall.EntityId)).ToList()
             : [wallHit.Wall];
         _movingRegions = null;
+        _movingLights = null;
         _entityMoveLastScenePoint = transform.PreviewToScene(previewPoint);
         _entityMoveGesture = _session.BeginGesture(
             _movingWalls.Count > 1 ? "Move walls" : "Move wall");
@@ -562,6 +731,13 @@ public partial class MapPreviewDocumentViewModel : Document
                 RegionGeometryEditing.Translate(region, dx, dy);
             }
         }
+        else if (_movingLights is { Count: > 0 })
+        {
+            foreach (var light in _movingLights)
+            {
+                light.Position = new MapPoint(light.Position.X + dx, light.Position.Y + dy);
+            }
+        }
         else
         {
             return;
@@ -575,10 +751,51 @@ public partial class MapPreviewDocumentViewModel : Document
     {
         _movingWalls = null;
         _movingRegions = null;
+        _movingLights = null;
         _entityMoveLastScenePoint = null;
         var gesture = _entityMoveGesture;
         _entityMoveGesture = null;
         gesture?.Dispose();
+    }
+
+    public bool TryPlaceLight(MapPoint previewPoint)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.LightEditing || IsDrawing)
+        {
+            return false;
+        }
+
+        if (HasLightAt(previewPoint))
+        {
+            return false;
+        }
+
+        var transform = SceneTransform.ForMapPreview(Map);
+        if (transform is null)
+        {
+            return false;
+        }
+
+        var scenePoint = transform.PreviewToScene(previewPoint);
+        var light = new LightSource
+        {
+            EntityId = RegionConversion.AllocateEntityId(Map),
+            Name = "Light",
+            Position = scenePoint,
+            BrightRadius = _session.LightBrightRadius,
+            DimRadius = Math.Max(_session.LightDimRadius, _session.LightBrightRadius),
+            Color = LightSource.DefaultColor,
+            IsActive = true,
+        };
+
+        _session.Execute("Add light", () =>
+        {
+            light.LayerId = MapLayerEditing.EnsureDefaultLayer(Map).Id;
+            Map.Lights.Add(light);
+        });
+
+        _session.RequestLightTreeFocus(light);
+        return true;
     }
 
     public bool TryBeginPortalCreateDrag(MapPoint previewPoint)
@@ -1298,6 +1515,12 @@ public partial class MapPreviewDocumentViewModel : Document
             return EraseRegion(region);
         }
 
+        var light = LightHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8, includeRings: false)?.Light;
+        if (light is not null)
+        {
+            return EraseLight(light);
+        }
+
         return false;
     }
 
@@ -1342,6 +1565,26 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         _session.ClearRegionSelection();
+        return true;
+    }
+
+    private bool EraseLight(LightSource light)
+    {
+        if (Map is null)
+        {
+            return false;
+        }
+
+        _session.Execute("Delete light", () =>
+        {
+            Map.Lights.Remove(light);
+            foreach (var group in Map.Groups)
+            {
+                group.MemberIds.Remove(light.EntityId);
+            }
+        });
+
+        _session.ClearLightSelection();
         return true;
     }
 
@@ -1400,6 +1643,22 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
+        if (_session.ActiveMapTool == MapToolKind.LightEditing)
+        {
+            var lightHit = LightHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
+                ?? (LightHandleHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is { } handle
+                    ? new LightPickTarget(handle.Light)
+                    : null);
+            if (lightHit is null)
+            {
+                return;
+            }
+
+            _session.ToggleLightInSelection(lightHit.Light.EntityId);
+            _session.TreeFocusGeneration++;
+            return;
+        }
+
         if (_session.ActiveMapTool == MapToolKind.RegionEditing)
         {
             var regionHit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
@@ -1446,6 +1705,32 @@ public partial class MapPreviewDocumentViewModel : Document
         var top = Math.Min(previewMin.Y, previewMax.Y);
         var right = Math.Max(previewMin.X, previewMax.X);
         var bottom = Math.Max(previewMin.Y, previewMax.Y);
+
+        if (_session.ActiveMapTool == MapToolKind.LightEditing)
+        {
+            var lightIds = LightMarqueePicker.PickLightIds(Map, left, top, right, bottom);
+            if (lightIds.Count == 0)
+            {
+                if (!addToSelection)
+                {
+                    ClearLightSelection();
+                }
+
+                return;
+            }
+
+            if (addToSelection)
+            {
+                _session.AddLightsToSelection(lightIds);
+            }
+            else
+            {
+                _session.SetLightSelection(lightIds);
+            }
+
+            _session.TreeFocusGeneration++;
+            return;
+        }
 
         if (_session.ActiveMapTool == MapToolKind.RegionEditing)
         {
@@ -1499,6 +1784,25 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         _session.TreeFocusGeneration++;
+    }
+
+    public void SelectLightAt(MapPoint previewPoint)
+    {
+        if (Map is null || _session.ActiveMapTool != MapToolKind.LightEditing || IsDrawing)
+        {
+            return;
+        }
+
+        var hit = LightHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
+            ?? (LightHandleHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is { } handle
+                ? new LightPickTarget(handle.Light)
+                : null);
+        if (hit is null)
+        {
+            return;
+        }
+
+        _session.RequestLightTreeFocus(hit.Light);
     }
 
     public void EditRegionAt(MapPoint previewPoint, bool cycleType)
@@ -1591,6 +1895,23 @@ public partial class MapPreviewDocumentViewModel : Document
                 else
                 {
                     EditRegionAt(previewPoint, cycleType: true);
+                }
+
+                break;
+            case MapToolKind.LightEditing:
+                if (shiftSelect)
+                {
+                    HandleShiftSelectClick(previewPoint);
+                    break;
+                }
+
+                if (!HasLightAt(previewPoint))
+                {
+                    ClearLightSelection();
+                }
+                else
+                {
+                    SelectLightAt(previewPoint);
                 }
 
                 break;

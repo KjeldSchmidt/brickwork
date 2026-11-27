@@ -125,6 +125,7 @@ public sealed class AppDockFactory : Factory
                 {
                     MapToolKind.WallEditing => wallsTool,
                     MapToolKind.RegionEditing => regionsTool,
+                    MapToolKind.LightEditing => lightsTool,
                     _ => _wallsDock.ActiveDockable,
                 };
             }
