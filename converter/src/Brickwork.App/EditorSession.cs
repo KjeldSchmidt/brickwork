@@ -60,6 +60,16 @@ public sealed partial class EditorSession : ObservableObject
     [ObservableProperty]
     private int? _hoveredLightEntityId;
 
+    /// <summary>Kind name used when placing new lights from the light tool.</summary>
+    [ObservableProperty]
+    private string? _activeLightKindName;
+
+    /// <summary>
+    /// Optional resolver for empty light-group placement defaults (radii/color/animation).
+    /// Set by the lights tool so map placement can honor drafts when no template light exists.
+    /// </summary>
+    public Func<string, LightKindPlacementDefaults?>? ResolveLightKindPlacementDefaults { get; set; }
+
     [ObservableProperty]
     private double _wallSimplificationTolerance = WallSimplificationSettings.DefaultToleranceSceneUnits;
 
@@ -975,3 +985,12 @@ public sealed partial class EditorSession : ObservableObject
         }
     }
 }
+
+/// <summary>Defaults used when placing a light into an empty kind (no template member yet).</summary>
+public readonly record struct LightKindPlacementDefaults(
+    double BrightRadius,
+    double DimRadius,
+    string Color,
+    LightAnimation Animation,
+    int AnimationSpeed,
+    int AnimationIntensity);

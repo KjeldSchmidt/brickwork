@@ -772,14 +772,77 @@ public partial class MapPreviewDocumentViewModel : Document
         }
 
         var scenePoint = transform.PreviewToScene(previewPoint);
+        var kindName = _session.ActiveLightKindName?.Trim();
+        var template = !string.IsNullOrWhiteSpace(kindName)
+            ? Map.Lights.FirstOrDefault(candidate =>
+                string.Equals(candidate.KindName, kindName, StringComparison.OrdinalIgnoreCase))
+            : null;
+
+        double brightRadius;
+        double dimRadius;
+        string color;
+        LightAnimation animation;
+        int animationSpeed;
+        int animationIntensity;
+        string lightName;
+        string? sourceName;
+
+        if (!string.IsNullOrWhiteSpace(kindName))
+        {
+            lightName = kindName;
+            sourceName = kindName;
+            if (template is not null)
+            {
+                brightRadius = template.BrightRadius;
+                dimRadius = Math.Max(template.DimRadius, template.BrightRadius);
+                color = LightColors.Normalize(template.Color);
+                animation = template.Animation;
+                animationSpeed = template.AnimationSpeed;
+                animationIntensity = template.AnimationIntensity;
+            }
+            else if (_session.ResolveLightKindPlacementDefaults?.Invoke(kindName) is { } defaults)
+            {
+                brightRadius = defaults.BrightRadius;
+                dimRadius = Math.Max(defaults.DimRadius, defaults.BrightRadius);
+                color = LightColors.Normalize(defaults.Color);
+                animation = defaults.Animation;
+                animationSpeed = defaults.AnimationSpeed;
+                animationIntensity = defaults.AnimationIntensity;
+            }
+            else
+            {
+                brightRadius = _session.LightBrightRadius;
+                dimRadius = Math.Max(_session.LightDimRadius, _session.LightBrightRadius);
+                color = LightSource.DefaultColor;
+                animation = LightAnimation.None;
+                animationSpeed = LightAnimations.DefaultSpeed;
+                animationIntensity = LightAnimations.DefaultIntensity;
+            }
+        }
+        else
+        {
+            lightName = "Light";
+            sourceName = null;
+            brightRadius = _session.LightBrightRadius;
+            dimRadius = Math.Max(_session.LightDimRadius, _session.LightBrightRadius);
+            color = LightSource.DefaultColor;
+            animation = LightAnimation.None;
+            animationSpeed = LightAnimations.DefaultSpeed;
+            animationIntensity = LightAnimations.DefaultIntensity;
+        }
+
         var light = new LightSource
         {
             EntityId = RegionConversion.AllocateEntityId(Map),
-            Name = "Light",
+            Name = lightName,
+            SourceName = sourceName,
             Position = scenePoint,
-            BrightRadius = _session.LightBrightRadius,
-            DimRadius = Math.Max(_session.LightDimRadius, _session.LightBrightRadius),
-            Color = LightSource.DefaultColor,
+            BrightRadius = brightRadius,
+            DimRadius = dimRadius,
+            Color = color,
+            Animation = animation,
+            AnimationSpeed = animationSpeed,
+            AnimationIntensity = animationIntensity,
             IsActive = true,
         };
 
@@ -788,6 +851,11 @@ public partial class MapPreviewDocumentViewModel : Document
             light.LayerId = MapLayerEditing.EnsureDefaultLayer(Map).Id;
             Map.Lights.Add(light);
         });
+
+        if (!string.IsNullOrWhiteSpace(light.KindName))
+        {
+            _session.ActiveLightKindName = light.KindName;
+        }
 
         _session.RequestLightTreeFocus(light);
         return true;

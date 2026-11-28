@@ -7,7 +7,8 @@
              x:Class="Brickwork.App.Views.Panels.LightsToolView"
              x:DataType="vm:LightsToolViewModel"
              Classes="tool-panel"
-             Focusable="True">
+             Focusable="True"
+             KeyDown="OnKeyDown">
     <UserControl.Resources>
         <conv:LightAnimationDisplayConverter x:Key="LightAnimationDisplayConverter" />
     </UserControl.Resources>
@@ -23,7 +24,6 @@
             <Setter Property="Padding" Value="0" />
             <Setter Property="MinHeight" Value="0" />
         </Style>
-        <!-- Built-in chevron sits mid-height on tall kind rows; we provide our own at the bottom. -->
         <Style Selector="TreeViewItem /template/ ToggleButton">
             <Setter Property="IsVisible" Value="False" />
             <Setter Property="Width" Value="0" />
@@ -62,25 +62,21 @@
             <Setter Property="Background" Value="#353945" />
             <Setter Property="BorderBrush" Value="#5A6478" />
         </Style>
-        <Style Selector="Button.light-kind-expand">
+        <Style Selector="Border.light-kind-expand">
             <Setter Property="Width" Value="22" />
             <Setter Property="Height" Value="22" />
-            <Setter Property="MinWidth" Value="22" />
-            <Setter Property="MinHeight" Value="22" />
-            <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="CornerRadius" Value="3" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="#B8C0CC" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
         </Style>
-        <Style Selector="Button.light-kind-expand:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#353945" />
-            <Setter Property="Foreground" Value="#E8EEF5" />
+        <Style Selector="Border.light-tree-highlight">
+            <Setter Property="Background" Value="#334488CC" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="Border.light-kind-drop-target">
+            <Setter Property="Background" Value="#333B82F6" />
+            <Setter Property="CornerRadius" Value="4" />
         </Style>
     </UserControl.Styles>
     <ScrollViewer Classes="tool-panel-scroll">
@@ -90,7 +86,7 @@
                        TextWrapping="Wrap"
                        IsVisible="{Binding ShowEmptyMessage}" />
 
-            <StackPanel Spacing="8" IsVisible="{Binding HasLights}">
+            <StackPanel Spacing="8" IsVisible="{Binding ShowPanelContent}">
                 <TextBlock Text="{Binding Summary}"
                            Opacity="0.75"
                            TextWrapping="Wrap" />
@@ -99,156 +95,245 @@
                           ItemsSource="{Binding Kinds}"
                           SelectedItem="{Binding SelectedTreeItem, Mode=TwoWay}"
                           PointerPressed="OnTreePointerPressed"
+                          PointerMoved="OnTreePointerMoved"
+                          PointerReleased="OnTreePointerReleased"
+                          PointerCaptureLost="OnTreePointerCaptureLost"
                           PointerExited="OnTreePointerExited">
                     <TreeView.Styles>
                         <Style Selector="TreeViewItem" x:DataType="vm:LightKindViewModel">
-                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            <Setter Property="IsExpanded" Value="{Binding IsInstancesExpanded, Mode=TwoWay}" />
                         </Style>
                     </TreeView.Styles>
                     <TreeView.DataTemplates>
                         <TreeDataTemplate DataType="vm:LightKindViewModel"
                                           ItemsSource="{Binding Children}">
-                            <StackPanel Spacing="4" Margin="0,4">
-                                <TextBlock Text="{Binding Header}"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center" />
-                                <StackPanel Spacing="4">
-                                    <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="6">
-                                        <TextBlock Text="Bright" VerticalAlignment="Center" FontSize="12" />
-                                        <Slider Grid.Column="1"
-                                                Classes="light-radius"
-                                                Minimum="0"
-                                                Maximum="40"
-                                                TickFrequency="0.1"
-                                                IsSnapToTickEnabled="True"
-                                                Value="{Binding BrightRadiusSlider}" />
-                                        <NumericUpDown Grid.Column="2"
-                                                       Classes="light-radius"
-                                                       Value="{Binding BrightRadius}"
-                                                       Minimum="0"
-                                                       Maximum="40"
-                                                       Increment="0.1"
-                                                       FormatString="0.#"
-                                                       ShowButtonSpinner="False"
-                                                       Watermark="mixed" />
-                                    </Grid>
-                                    <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="6">
-                                        <TextBlock Text="Dim" VerticalAlignment="Center" FontSize="12" />
-                                        <Slider Grid.Column="1"
-                                                Classes="light-radius"
-                                                Minimum="0"
-                                                Maximum="40"
-                                                TickFrequency="0.1"
-                                                IsSnapToTickEnabled="True"
-                                                Value="{Binding DimRadiusSlider}" />
-                                        <NumericUpDown Grid.Column="2"
-                                                       Classes="light-radius"
-                                                       Value="{Binding DimRadius}"
-                                                       Minimum="0"
-                                                       Maximum="40"
-                                                       Increment="0.1"
-                                                       FormatString="0.#"
-                                                       ShowButtonSpinner="False"
-                                                       Watermark="mixed" />
-                                    </Grid>
-                                    <Grid ColumnDefinitions="52,Auto" ColumnSpacing="6">
-                                        <TextBlock Text="Color" VerticalAlignment="Center" FontSize="12" />
-                                        <Button Grid.Column="1"
-                                                Classes="light-color-swatch"
-                                                ToolTip.Tip="Pick light color">
-                                            <Border Width="16"
-                                                    Height="16"
-                                                    CornerRadius="3"
-                                                    BorderBrush="#808080"
-                                                    BorderThickness="1"
-                                                    Background="{Binding ColorBrush}" />
-                                            <Button.Flyout>
-                                                <Flyout Placement="BottomEdgeAlignedLeft">
-                                                    <ColorView Color="{Binding PickerColor, Mode=TwoWay}"
-                                                               IsAlphaEnabled="False"
-                                                               IsAlphaVisible="False"
-                                                               IsColorSpectrumVisible="True"
-                                                               IsColorPaletteVisible="True"
-                                                               IsColorComponentsVisible="True" />
-                                                </Flyout>
-                                            </Button.Flyout>
-                                        </Button>
-                                    </Grid>
-                                    <Grid ColumnDefinitions="52,*" ColumnSpacing="6">
-                                        <TextBlock Text="Anim" VerticalAlignment="Center" FontSize="12" />
-                                        <ComboBox Grid.Column="1"
-                                                  Classes="light-animation"
-                                                  HorizontalAlignment="Left"
-                                                  MinWidth="110"
-                                                  ItemsSource="{Binding AnimationOptions}"
-                                                  SelectedItem="{Binding Animation}"
-                                                  PlaceholderText="mixed">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate DataType="models:LightAnimation">
-                                                    <TextBlock Text="{Binding Converter={StaticResource LightAnimationDisplayConverter}}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-                                    </Grid>
-                                    <Grid ColumnDefinitions="52,Auto,Auto,Auto,Auto"
-                                          ColumnSpacing="6"
-                                          IsVisible="{Binding HasAnimation}">
-                                        <TextBlock Text="Speed" VerticalAlignment="Center" FontSize="12" />
-                                        <NumericUpDown Grid.Column="1"
-                                                       Classes="light-radius"
-                                                       Value="{Binding AnimationSpeed}"
-                                                       Minimum="1"
-                                                       Maximum="10"
-                                                       Increment="1"
-                                                       FormatString="0"
-                                                       ShowButtonSpinner="False"
-                                                       Watermark="mixed" />
-                                        <TextBlock Grid.Column="2"
-                                                   Text="Intensity"
+                            <Border Padding="2,1"
+                                    HorizontalAlignment="Stretch"
+                                    Background="Transparent"
+                                    CornerRadius="4"
+                                    Classes.light-tree-highlight="{Binding IsSelected}"
+                                    Classes.light-kind-drop-target="{Binding IsDropTarget}"
+                                    DragDrop.AllowDrop="True"
+                                    DragDrop.DragOver="OnKindDragOver"
+                                    DragDrop.DragLeave="OnKindDragLeave"
+                                    DragDrop.Drop="OnKindDrop">
+                                <StackPanel Spacing="4" Margin="0,4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <CheckBox IsChecked="{Binding IsActive}"
+                                                  IsThreeState="True"
+                                                  VerticalAlignment="Center"
+                                                  ToolTip.Tip="Include these lights when exporting" />
+                                        <TextBlock Text="{Binding Header}"
+                                                   FontWeight="SemiBold"
                                                    VerticalAlignment="Center"
-                                                   FontSize="12"
-                                                   Margin="8,0,0,0" />
-                                        <NumericUpDown Grid.Column="3"
-                                                       Classes="light-radius"
-                                                       Value="{Binding AnimationIntensity}"
-                                                       Minimum="1"
-                                                       Maximum="10"
-                                                       Increment="1"
-                                                       FormatString="0"
-                                                       ShowButtonSpinner="False"
-                                                       Watermark="mixed" />
-                                    </Grid>
+                                                   IsVisible="{Binding !IsRenaming}" />
+                                        <TextBox Classes="light-tree-rename"
+                                                 Text="{Binding RenameText, Mode=TwoWay}"
+                                                 MinWidth="120"
+                                                 IsVisible="{Binding IsRenaming}"
+                                                 KeyDown="OnRenameBoxKeyDown"
+                                                 LostFocus="OnRenameBoxLostFocus" />
+                                    </StackPanel>
+
+                                    <Border Background="Transparent"
+                                            Padding="0,2"
+                                            Cursor="Hand"
+                                            ToolTip.Tip="Show or hide light settings"
+                                            PointerPressed="OnSettingsHeaderPointerPressed">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Border Classes="light-kind-expand"
+                                                    Width="22"
+                                                    Height="22">
+                                                <iconPacks:PackIconFontAwesome6 Width="10"
+                                                                                Height="10"
+                                                                                HorizontalAlignment="Center"
+                                                                                VerticalAlignment="Center"
+                                                                                Kind="{Binding SettingsExpandIconKind}"
+                                                                                Foreground="#B8C0CC" />
+                                            </Border>
+                                            <TextBlock Text="Light Settings"
+                                                       FontSize="12"
+                                                       Opacity="0.85"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                    <StackPanel Spacing="4"
+                                                Margin="8,0,0,0"
+                                                IsVisible="{Binding IsSettingsExpanded}">
+                                        <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="6">
+                                            <TextBlock Text="Bright" VerticalAlignment="Center" FontSize="12" />
+                                            <Slider Grid.Column="1"
+                                                    Classes="light-radius"
+                                                    Minimum="0"
+                                                    Maximum="40"
+                                                    TickFrequency="0.1"
+                                                    IsSnapToTickEnabled="True"
+                                                    Value="{Binding BrightRadiusSlider}" />
+                                            <NumericUpDown Grid.Column="2"
+                                                           Classes="light-radius"
+                                                           Value="{Binding BrightRadius}"
+                                                           Minimum="0"
+                                                           Maximum="40"
+                                                           Increment="0.1"
+                                                           FormatString="0.#"
+                                                           ShowButtonSpinner="False"
+                                                           Watermark="mixed" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="6">
+                                            <TextBlock Text="Dim" VerticalAlignment="Center" FontSize="12" />
+                                            <Slider Grid.Column="1"
+                                                    Classes="light-radius"
+                                                    Minimum="0"
+                                                    Maximum="40"
+                                                    TickFrequency="0.1"
+                                                    IsSnapToTickEnabled="True"
+                                                    Value="{Binding DimRadiusSlider}" />
+                                            <NumericUpDown Grid.Column="2"
+                                                           Classes="light-radius"
+                                                           Value="{Binding DimRadius}"
+                                                           Minimum="0"
+                                                           Maximum="40"
+                                                           Increment="0.1"
+                                                           FormatString="0.#"
+                                                           ShowButtonSpinner="False"
+                                                           Watermark="mixed" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="52,Auto" ColumnSpacing="6">
+                                            <TextBlock Text="Color" VerticalAlignment="Center" FontSize="12" />
+                                            <Button Grid.Column="1"
+                                                    Classes="light-color-swatch"
+                                                    ToolTip.Tip="Pick light color">
+                                                <Border Width="16"
+                                                        Height="16"
+                                                        CornerRadius="3"
+                                                        BorderBrush="#808080"
+                                                        BorderThickness="1"
+                                                        Background="{Binding ColorBrush}" />
+                                                <Button.Flyout>
+                                                    <Flyout Placement="BottomEdgeAlignedLeft">
+                                                        <ColorView Color="{Binding PickerColor, Mode=TwoWay}"
+                                                                   IsAlphaEnabled="False"
+                                                                   IsAlphaVisible="False"
+                                                                   IsColorSpectrumVisible="True"
+                                                                   IsColorPaletteVisible="True"
+                                                                   IsColorComponentsVisible="True" />
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="52,*" ColumnSpacing="6">
+                                            <TextBlock Text="Anim" VerticalAlignment="Center" FontSize="12" />
+                                            <ComboBox Grid.Column="1"
+                                                      Classes="light-animation"
+                                                      HorizontalAlignment="Left"
+                                                      MinWidth="110"
+                                                      ItemsSource="{Binding AnimationOptions}"
+                                                      SelectedItem="{Binding Animation}"
+                                                      PlaceholderText="mixed">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate DataType="models:LightAnimation">
+                                                        <TextBlock Text="{Binding Converter={StaticResource LightAnimationDisplayConverter}}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="52,Auto,Auto,Auto,Auto"
+                                              ColumnSpacing="6"
+                                              IsVisible="{Binding HasAnimation}">
+                                            <TextBlock Text="Speed" VerticalAlignment="Center" FontSize="12" />
+                                            <NumericUpDown Grid.Column="1"
+                                                           Classes="light-radius"
+                                                           Value="{Binding AnimationSpeed}"
+                                                           Minimum="1"
+                                                           Maximum="10"
+                                                           Increment="1"
+                                                           FormatString="0"
+                                                           ShowButtonSpinner="False"
+                                                           Watermark="mixed" />
+                                            <TextBlock Grid.Column="2"
+                                                       Text="Intensity"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="12"
+                                                       Margin="8,0,0,0" />
+                                            <NumericUpDown Grid.Column="3"
+                                                           Classes="light-radius"
+                                                           Value="{Binding AnimationIntensity}"
+                                                           Minimum="1"
+                                                           Maximum="10"
+                                                           Increment="1"
+                                                           FormatString="0"
+                                                           ShowButtonSpinner="False"
+                                                           Watermark="mixed" />
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <Border Background="Transparent"
+                                            Padding="0,2"
+                                            Cursor="Hand"
+                                            ToolTip.Tip="Show or hide individual lights"
+                                            DragDrop.AllowDrop="True"
+                                            DragDrop.DragOver="OnKindDragOver"
+                                            DragDrop.DragLeave="OnKindDragLeave"
+                                            DragDrop.Drop="OnKindDrop"
+                                            PointerPressed="OnInstancesHeaderPointerPressed">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Border Classes="light-kind-expand"
+                                                    Width="22"
+                                                    Height="22">
+                                                <iconPacks:PackIconFontAwesome6 Width="10"
+                                                                                Height="10"
+                                                                                HorizontalAlignment="Center"
+                                                                                VerticalAlignment="Center"
+                                                                                Kind="{Binding InstancesExpandIconKind}"
+                                                                                Foreground="#B8C0CC" />
+                                            </Border>
+                                            <TextBlock Text="Light Instances"
+                                                       FontSize="12"
+                                                       Opacity="0.85"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,2,0,0">
-                                    <Button Classes="light-kind-expand"
-                                            Command="{Binding ToggleExpandedCommand}"
-                                            ToolTip.Tip="Show or hide individual lights">
-                                        <iconPacks:PackIconFontAwesome6 Width="10"
-                                                                        Height="10"
-                                                                        Kind="{Binding ExpandIconKind}"
-                                                                        Foreground="{Binding $parent[Button].Foreground}" />
-                                    </Button>
-                                    <CheckBox IsChecked="{Binding IsActive}"
-                                              IsThreeState="True"
-                                              VerticalAlignment="Center"
-                                              ToolTip.Tip="Include these lights when exporting" />
-                                </StackPanel>
-                            </StackPanel>
+                            </Border>
                         </TreeDataTemplate>
 
                         <DataTemplate DataType="vm:LightItemViewModel">
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="6"
-                                        Background="Transparent"
-                                        PointerEntered="OnLightPointerEntered">
-                                <CheckBox IsChecked="{Binding IsActive}"
-                                          VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding DisplayName}"
-                                           VerticalAlignment="Center" />
-                            </StackPanel>
+                            <Border Padding="2,1"
+                                    HorizontalAlignment="Stretch"
+                                    Background="Transparent"
+                                    CornerRadius="4"
+                                    Classes.light-tree-highlight="{Binding IsSelected}"
+                                    DragDrop.AllowDrop="True"
+                                    DragDrop.DragOver="OnLightDragOver"
+                                    DragDrop.DragLeave="OnLightDragLeave"
+                                    DragDrop.Drop="OnLightDrop"
+                                    PointerEntered="OnLightPointerEntered"
+                                    PointerPressed="OnLightPointerPressed">
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="6"
+                                            Background="Transparent">
+                                    <CheckBox IsChecked="{Binding IsActive}"
+                                              VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               VerticalAlignment="Center"
+                                               IsVisible="{Binding !IsRenaming}" />
+                                    <TextBox Classes="light-tree-rename"
+                                             Text="{Binding RenameText, Mode=TwoWay}"
+                                             MinWidth="100"
+                                             IsVisible="{Binding IsRenaming}"
+                                             KeyDown="OnRenameBoxKeyDown"
+                                             LostFocus="OnRenameBoxLostFocus" />
+                                </StackPanel>
+                            </Border>
                         </DataTemplate>
                     </TreeView.DataTemplates>
                 </TreeView>
+
+                <Button Content="New light group"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Command="{Binding CreateLightGroupCommand}"
+                        Click="OnNewLightGroupClick" />
             </StackPanel>
         </Grid>
     </ScrollViewer>
