@@ -77,9 +77,6 @@ public partial class MapPreviewDocumentViewModel : Document
     [ObservableProperty]
     private int? _hoveredLightEntityId;
 
-    [ObservableProperty]
-    private bool _showLightRadii = true;
-
     public MapPreviewDocumentViewModel(EditorSession session)
     {
         _session = session;
@@ -117,8 +114,7 @@ public partial class MapPreviewDocumentViewModel : Document
                 or nameof(EditorSession.FocusedRegionEntityId)
                 or nameof(EditorSession.HoveredRegionEntityId)
                 or nameof(EditorSession.FocusedLightEntityId)
-                or nameof(EditorSession.HoveredLightEntityId)
-                or nameof(EditorSession.ShowLightRadii))
+                or nameof(EditorSession.HoveredLightEntityId))
             {
                 UpdateHighlightFromSession();
             }
@@ -173,7 +169,6 @@ public partial class MapPreviewDocumentViewModel : Document
         SelectedLightEntityIds = _session.SelectedLightEntityIds.ToHashSet();
         FocusedLightEntityId = _session.FocusedLightEntityId;
         HoveredLightEntityId = _session.HoveredLightEntityId;
-        ShowLightRadii = _session.ShowLightRadii;
     }
 
     public void UpdateHoverAt(MapPoint previewPoint)
@@ -410,7 +405,7 @@ public partial class MapPreviewDocumentViewModel : Document
             var editSelection = selectedIds.Contains(lightHit.Light.EntityId) && selectedIds.Count > 0;
             var gestureName = lightHit.Kind switch
             {
-                LightHandleKind.BrightHandle or LightHandleKind.BrightRing =>
+                LightHandleKind.BrightRing =>
                     editSelection && selectedIds.Count > 1 ? "Change bright radii" : "Change bright radius",
                 _ => editSelection && selectedIds.Count > 1 ? "Change dim radii" : "Change dim radius",
             };
@@ -489,7 +484,7 @@ public partial class MapPreviewDocumentViewModel : Document
 
             var kind = lightTarget.Kind switch
             {
-                LightHandleKind.BrightHandle or LightHandleKind.BrightRing => LightRadiusHandleKind.Bright,
+                LightHandleKind.BrightRing => LightRadiusHandleKind.Bright,
                 _ => LightRadiusHandleKind.Dim,
             };
 
@@ -1643,22 +1638,6 @@ public partial class MapPreviewDocumentViewModel : Document
             return;
         }
 
-        if (_session.ActiveMapTool == MapToolKind.LightEditing)
-        {
-            var lightHit = LightHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
-                ?? (LightHandleHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8) is { } handle
-                    ? new LightPickTarget(handle.Light)
-                    : null);
-            if (lightHit is null)
-            {
-                return;
-            }
-
-            _session.ToggleLightInSelection(lightHit.Light.EntityId);
-            _session.TreeFocusGeneration++;
-            return;
-        }
-
         if (_session.ActiveMapTool == MapToolKind.RegionEditing)
         {
             var regionHit = RegionHitTester.Pick(Map, previewPoint, tolerancePreviewPixels: 8)
@@ -1899,12 +1878,6 @@ public partial class MapPreviewDocumentViewModel : Document
 
                 break;
             case MapToolKind.LightEditing:
-                if (shiftSelect)
-                {
-                    HandleShiftSelectClick(previewPoint);
-                    break;
-                }
-
                 if (!HasLightAt(previewPoint))
                 {
                     ClearLightSelection();

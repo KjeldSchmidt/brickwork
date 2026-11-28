@@ -8,36 +8,9 @@ public enum LightRadiusHandleKind
     Dim,
 }
 
-/// <summary>
-/// Side handles for editing a light's bright/dim radii when those rings coincide or are hard to grab.
-/// Bright sits on +X; dim on −X, at <c>radius * cellSize</c> scene units from the origin.
-/// </summary>
+/// <summary>Updates a light's bright/dim radii from ring-drag gestures.</summary>
 public static class LightRadiusHandleGeometry
 {
-    public static MapPoint BrightHandleScene(LightSource light, double cellSize) =>
-        HandleScene(light.Position, light.BrightRadius, cellSize, positiveX: true);
-
-    public static MapPoint DimHandleScene(LightSource light, double cellSize) =>
-        HandleScene(light.Position, light.DimRadius, cellSize, positiveX: false);
-
-    public static bool TryGetHandle(
-        LightSource light,
-        double cellSize,
-        LightRadiusHandleKind kind,
-        out MapPoint scenePoint)
-    {
-        scenePoint = kind == LightRadiusHandleKind.Bright
-            ? BrightHandleScene(light, cellSize)
-            : DimHandleScene(light, cellSize);
-        return cellSize > 1e-9;
-    }
-
-    /// <summary>Preview pose for an end tick whose long axis is vertical (across the horizontal radius bar).</summary>
-    public static (MapPoint Center, double AngleRadians) GetHandleTickPose(
-        MapPoint handleScene,
-        SceneTransform transform) =>
-        (transform.SceneToPreview(handleScene), Math.PI / 2d);
-
     /// <summary>
     /// Sets bright or dim radius from a scene point's distance to the light origin (in grid squares).
     /// Keeps <see cref="LightSource.DimRadius"/> ≥ <see cref="LightSource.BrightRadius"/>.
@@ -82,10 +55,4 @@ public static class LightRadiusHandleGeometry
     /// <summary>Sets dim radius from a scene point (used when dragging the dim ring).</summary>
     public static void SetDimRadiusFromScene(LightSource light, double cellSize, MapPoint scenePoint) =>
         SetRadiusFromScene(light, cellSize, scenePoint, LightRadiusHandleKind.Dim);
-
-    private static MapPoint HandleScene(MapPoint origin, double radiusSquares, double cellSize, bool positiveX)
-    {
-        var offset = radiusSquares * cellSize;
-        return new MapPoint(origin.X + (positiveX ? offset : -offset), origin.Y);
-    }
 }

@@ -69,10 +69,18 @@ public partial class SettingsWindowViewModel : ObservableObject
                 or nameof(EditorSession.DetectLightAnimations)
                 or nameof(EditorSession.LightKeywords)
                 or nameof(EditorSession.LightExcludeKeywords)
+                or nameof(EditorSession.LightTorchWords)
+                or nameof(EditorSession.LightFlickerWords)
+                or nameof(EditorSession.LightPulseWords)
                 or nameof(EditorSession.LightBrightRadius)
                 or nameof(EditorSession.LightDimRadius))
             {
                 OnPropertyChanged(args.PropertyName);
+                if (args.PropertyName is nameof(EditorSession.DetectLightsFromStamps)
+                    or nameof(EditorSession.DetectLightAnimations))
+                {
+                    OnPropertyChanged(nameof(CanEditLightAnimationKeywords));
+                }
             }
         };
     }
@@ -110,7 +118,11 @@ public partial class SettingsWindowViewModel : ObservableObject
     public bool DetectLightsFromStamps
     {
         get => _session.DetectLightsFromStamps;
-        set => _session.DetectLightsFromStamps = value;
+        set
+        {
+            _session.DetectLightsFromStamps = value;
+            OnPropertyChanged(nameof(CanEditLightAnimationKeywords));
+        }
     }
 
     public string LightKeywords
@@ -128,7 +140,31 @@ public partial class SettingsWindowViewModel : ObservableObject
     public bool DetectLightAnimations
     {
         get => _session.DetectLightAnimations;
-        set => _session.DetectLightAnimations = value;
+        set
+        {
+            _session.DetectLightAnimations = value;
+            OnPropertyChanged(nameof(CanEditLightAnimationKeywords));
+        }
+    }
+
+    public bool CanEditLightAnimationKeywords => DetectLightsFromStamps && DetectLightAnimations;
+
+    public string LightTorchWords
+    {
+        get => _session.LightTorchWords;
+        set => _session.LightTorchWords = value ?? string.Empty;
+    }
+
+    public string LightFlickerWords
+    {
+        get => _session.LightFlickerWords;
+        set => _session.LightFlickerWords = value ?? string.Empty;
+    }
+
+    public string LightPulseWords
+    {
+        get => _session.LightPulseWords;
+        set => _session.LightPulseWords = value ?? string.Empty;
     }
 
     public string OpenMapDescription => ImportSettingsApplier.CanApply(_session)
@@ -159,11 +195,24 @@ public partial class SettingsWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ResetLightKeywords()
-    {
+    private void ResetLightKeywords() =>
         LightKeywords = Core.Models.LightKeywords.DefaultInclude;
+
+    [RelayCommand]
+    private void ResetLightExcludeKeywords() =>
         LightExcludeKeywords = Core.Models.LightKeywords.DefaultExclude;
-    }
+
+    [RelayCommand]
+    private void ResetLightTorchWords() =>
+        LightTorchWords = Core.Models.LightAnimations.DefaultTorchWords;
+
+    [RelayCommand]
+    private void ResetLightFlickerWords() =>
+        LightFlickerWords = Core.Models.LightAnimations.DefaultFlickerWords;
+
+    [RelayCommand]
+    private void ResetLightPulseWords() =>
+        LightPulseWords = Core.Models.LightAnimations.DefaultPulseWords;
 
     public bool ShowDebugPanel
     {

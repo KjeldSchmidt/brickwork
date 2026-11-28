@@ -35,6 +35,15 @@ public sealed class AppSettings
     /// <summary>Pick a flicker/pulse animation for detected lights from their names.</summary>
     public bool DetectLightAnimations { get; set; } = true;
 
+    /// <summary>Comma-separated words that map a light name to the Torch animation.</summary>
+    public string LightTorchWords { get; set; } = LightAnimations.DefaultTorchWords;
+
+    /// <summary>Comma-separated words that map a light name to the Flicker animation.</summary>
+    public string LightFlickerWords { get; set; } = LightAnimations.DefaultFlickerWords;
+
+    /// <summary>Comma-separated words that map a light name to the Pulse animation.</summary>
+    public string LightPulseWords { get; set; } = LightAnimations.DefaultPulseWords;
+
     /// <summary>Default bright radius, in grid squares, for detected lights.</summary>
     public double LightBrightRadius { get; set; } = LightSource.DefaultBrightRadius;
 

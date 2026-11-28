@@ -7,21 +7,16 @@ public enum LightHandleKind
     Origin,
     DimRing,
     BrightRing,
-    BrightHandle,
-    DimHandle,
 }
 
 public sealed record LightHandlePickTarget(LightSource Light, LightHandleKind Kind);
 
 /// <summary>
 /// Picks interactive light handles when the light editing tool is active.
-/// Priority when radii are close: origin → side handles → bright ring → dim ring.
+/// Priority when radii are close: origin → bright ring → dim ring.
 /// </summary>
 public static class LightHandleHitTester
 {
-    private const double TickHalfLength = 4d;
-    private const double TickHalfThickness = 2d;
-    private const double TickPickPadding = 2d;
     private const double NearEqualSquares = 0.25d;
 
     public static LightHandlePickTarget? Pick(
@@ -51,30 +46,6 @@ public static class LightHandleHitTester
 
             var center = transform.SceneToPreview(light.Position);
             TryPickPoint(center, previewPoint, LightHandleKind.Origin, light, toleranceSquared, ref bestScore, ref best);
-
-            if (cellSize > 1e-9 &&
-                LightRadiusHandleGeometry.TryGetHandle(light, cellSize, LightRadiusHandleKind.Bright, out var brightHandle))
-            {
-                TryPickTick(
-                    LightRadiusHandleGeometry.GetHandleTickPose(brightHandle, transform),
-                    previewPoint,
-                    LightHandleKind.BrightHandle,
-                    light,
-                    ref bestScore,
-                    ref best);
-            }
-
-            if (cellSize > 1e-9 &&
-                LightRadiusHandleGeometry.TryGetHandle(light, cellSize, LightRadiusHandleKind.Dim, out var dimHandle))
-            {
-                TryPickTick(
-                    LightRadiusHandleGeometry.GetHandleTickPose(dimHandle, transform),
-                    previewPoint,
-                    LightHandleKind.DimHandle,
-                    light,
-                    ref bestScore,
-                    ref best);
-            }
 
             if (!light.IsActive || pixelsPerSquare <= 0)
             {
@@ -113,11 +84,9 @@ public static class LightHandleHitTester
         kind switch
         {
             LightHandleKind.Origin => 0,
-            LightHandleKind.BrightHandle => 1,
-            LightHandleKind.DimHandle => 1,
-            LightHandleKind.BrightRing => 2,
-            LightHandleKind.DimRing => 3,
-            _ => 4,
+            LightHandleKind.BrightRing => 1,
+            LightHandleKind.DimRing => 2,
+            _ => 3,
         };
 
     private static void TryPickPoint(
@@ -165,29 +134,6 @@ public static class LightHandleHitTester
         }
 
         Consider(kind, light, ringDistance * ringDistance, ref bestScore, ref best);
-    }
-
-    private static void TryPickTick(
-        (MapPoint Center, double AngleRadians) pose,
-        MapPoint previewPoint,
-        LightHandleKind kind,
-        LightSource light,
-        ref (int Priority, double DistanceSquared) bestScore,
-        ref LightHandlePickTarget? best)
-    {
-        var cos = Math.Cos(pose.AngleRadians);
-        var sin = Math.Sin(pose.AngleRadians);
-        var localX = (previewPoint.X - pose.Center.X) * cos + (previewPoint.Y - pose.Center.Y) * sin;
-        var localY = -(previewPoint.X - pose.Center.X) * sin + (previewPoint.Y - pose.Center.Y) * cos;
-        var halfLength = TickHalfLength + TickPickPadding;
-        var halfThickness = TickHalfThickness + TickPickPadding;
-        if (Math.Abs(localX) > halfLength || Math.Abs(localY) > halfThickness)
-        {
-            return;
-        }
-
-        var distanceSquared = localX * localX + localY * localY;
-        Consider(kind, light, distanceSquared, ref bestScore, ref best);
     }
 
     private static void Consider(

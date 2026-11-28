@@ -7,23 +7,6 @@ namespace Brickwork.Core.Tests;
 public class LightHandleTests
 {
     [Fact]
-    public void HandlePositions_ScaleWithCellSize_OnHorizontalAxis()
-    {
-        var light = new LightSource
-        {
-            Position = new MapPoint(100, 200),
-            BrightRadius = 2,
-            DimRadius = 5,
-        };
-
-        var bright = LightRadiusHandleGeometry.BrightHandleScene(light, cellSize: 10);
-        var dim = LightRadiusHandleGeometry.DimHandleScene(light, cellSize: 10);
-
-        Assert.Equal(new MapPoint(120, 200), bright);
-        Assert.Equal(new MapPoint(50, 200), dim);
-    }
-
-    [Fact]
     public void SetBrightRadius_RaisesDimWhenNeeded()
     {
         var light = new LightSource
@@ -121,7 +104,6 @@ public class LightHandleTests
         Assert.NotNull(transform);
         var center = transform!.SceneToPreview(map.Lights[0].Position);
         var brightRadiusPreview = map.Lights[0].BrightRadius * map.Grid.CellSize * transform.ScaleX;
-        // Pick the top of the ring so the +X bright side-handle is not competing.
         var onBrightRing = new MapPoint(center.X, center.Y - brightRadiusPreview);
 
         var hit = LightHandleHitTester.Pick(map, onBrightRing, tolerancePreviewPixels: 8);

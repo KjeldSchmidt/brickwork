@@ -34,6 +34,7 @@
     <Application.Styles>
         <semi:SemiTheme Locale="en-US" />
         <dock:DockFluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
         <StyleInclude Source="avares://IconPacks.Avalonia.FontAwesome6/FontAwesome6.axaml" />
 
         <Style Selector="ScrollViewer.tool-panel-scroll">

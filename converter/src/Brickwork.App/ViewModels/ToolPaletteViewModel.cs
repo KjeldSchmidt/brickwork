@@ -67,7 +67,6 @@ public partial class ToolPaletteViewModel : Tool
                 buttonHints:
                 [
                     new("Click Light", "Select Light"),
-                    new("Shift-Click", "Add or Remove Light"),
                     new("Drag Empty", "Marquee Select"),
                     new("Drag Origin", "Move Light (or Selection)"),
                     new("Drag Dim Ring", "Change Dim Radius"),

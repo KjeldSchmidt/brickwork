@@ -20,31 +20,43 @@ public static class LightAnimations
 
     public const int DefaultIntensity = 3;
 
-    private static readonly string[] TorchWords =
-        ["torch", "fire", "campfire", "bonfire", "fireplace", "hearth", "brazier", "pyre", "flame", "flames"];
+    public const string DefaultTorchWords =
+        "torch, fire, campfire, bonfire, fireplace, hearth, brazier, pyre, flame, flames";
 
-    private static readonly string[] FlickerWords =
-        ["candle", "candelabra", "chandelier", "sconce", "lantern", "lamp", "oil"];
+    public const string DefaultFlickerWords =
+        "candle, candelabra, chandelier, sconce, lantern, lamp, oil";
 
-    private static readonly string[] PulseWords =
-        ["glowing", "glow", "crystal", "crystals", "magic", "rune", "runes", "arcane", "lava", "magma"];
+    public const string DefaultPulseWords =
+        "glowing, glow, crystal, crystals, magic, rune, runes, arcane, lava, magma";
 
     public static IReadOnlyList<LightAnimation> All { get; } = Enum.GetValues<LightAnimation>();
 
+    /// <summary>Guesses an animation from a light's name using the built-in word lists.</summary>
+    public static LightAnimation Detect(string? name) =>
+        Detect(
+            name,
+            LightKeywords.Parse(DefaultTorchWords),
+            LightKeywords.Parse(DefaultFlickerWords),
+            LightKeywords.Parse(DefaultPulseWords));
+
     /// <summary>Guesses an animation from a light's name; open flames win over enclosed ones.</summary>
-    public static LightAnimation Detect(string? name)
+    public static LightAnimation Detect(
+        string? name,
+        IReadOnlyList<string> torchWords,
+        IReadOnlyList<string> flickerWords,
+        IReadOnlyList<string> pulseWords)
     {
-        if (LightKeywords.ContainsAnyWord(name, TorchWords))
+        if (LightKeywords.ContainsAnyWord(name, torchWords))
         {
             return LightAnimation.Torch;
         }
 
-        if (LightKeywords.ContainsAnyWord(name, FlickerWords))
+        if (LightKeywords.ContainsAnyWord(name, flickerWords))
         {
             return LightAnimation.Flicker;
         }
 
-        return LightKeywords.ContainsAnyWord(name, PulseWords) ? LightAnimation.Pulse : LightAnimation.None;
+        return LightKeywords.ContainsAnyWord(name, pulseWords) ? LightAnimation.Pulse : LightAnimation.None;
     }
 
     /// <summary>Foundry <c>config.animation.type</c>, or null for no animation.</summary>

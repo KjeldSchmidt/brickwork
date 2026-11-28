@@ -61,9 +61,6 @@ public sealed partial class EditorSession : ObservableObject
     private int? _hoveredLightEntityId;
 
     [ObservableProperty]
-    private bool _showLightRadii = true;
-
-    [ObservableProperty]
     private double _wallSimplificationTolerance = WallSimplificationSettings.DefaultToleranceSceneUnits;
 
     [ObservableProperty]
@@ -92,6 +89,15 @@ public sealed partial class EditorSession : ObservableObject
 
     [ObservableProperty]
     private bool _detectLightAnimations = true;
+
+    [ObservableProperty]
+    private string _lightTorchWords = Core.Models.LightAnimations.DefaultTorchWords;
+
+    [ObservableProperty]
+    private string _lightFlickerWords = Core.Models.LightAnimations.DefaultFlickerWords;
+
+    [ObservableProperty]
+    private string _lightPulseWords = Core.Models.LightAnimations.DefaultPulseWords;
 
     [ObservableProperty]
     private double _lightBrightRadius = LightSource.DefaultBrightRadius;
@@ -140,6 +146,9 @@ public sealed partial class EditorSession : ObservableObject
             LightKeywords = LightKeywords,
             LightExcludeKeywords = LightExcludeKeywords,
             DetectLightAnimations = DetectLightAnimations,
+            LightTorchWords = LightTorchWords,
+            LightFlickerWords = LightFlickerWords,
+            LightPulseWords = LightPulseWords,
             LightBrightRadius = LightBrightRadius,
             LightDimRadius = LightDimRadius,
         };

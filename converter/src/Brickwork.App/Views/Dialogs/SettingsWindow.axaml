@@ -1,13 +1,14 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:iconPacks="https://github.com/MahApps/IconPacks.Avalonia"
         xmlns:vm="using:Brickwork.App.ViewModels"
         x:Class="Brickwork.App.Views.Dialogs.SettingsWindow"
         x:DataType="vm:SettingsWindowViewModel"
         Title="Settings"
         Width="840"
-        Height="420"
+        Height="520"
         MinWidth="720"
-        MinHeight="320"
+        MinHeight="360"
         WindowStartupLocation="CenterOwner"
         CanResize="True">
     <Window.Styles>
@@ -46,6 +47,22 @@
         <Style Selector="Button.settings-nav.active:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#4A5364" />
             <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+        <Style Selector="Button.settings-reset">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Foreground" Value="#8A93A3" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="ToolTip.Tip" Value="Reset to defaults" />
+        </Style>
+        <Style Selector="Button.settings-reset:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#353945" />
+            <Setter Property="Foreground" Value="#E8EEF5" />
         </Style>
     </Window.Styles>
 
@@ -111,17 +128,83 @@
                     <CheckBox Content="Animate lights by name (torch, candle, glowing, …)"
                               IsChecked="{Binding DetectLightAnimations}"
                               IsEnabled="{Binding DetectLightsFromStamps}" />
-                    <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8"
+                    <Grid ColumnDefinitions="110,*,Auto"
+                          RowDefinitions="Auto,Auto"
+                          ColumnSpacing="8"
+                          RowSpacing="8"
                           IsEnabled="{Binding DetectLightsFromStamps}">
                         <TextBlock Text="Light words" VerticalAlignment="Center" />
                         <TextBox Grid.Column="1"
                                  Text="{Binding LightKeywords}"
                                  TextWrapping="Wrap" />
+                        <Button Grid.Column="2"
+                                Classes="settings-reset"
+                                Command="{Binding ResetLightKeywordsCommand}">
+                            <iconPacks:PackIconFontAwesome6 Width="12"
+                                                            Height="12"
+                                                            Kind="ArrowRotateLeftSolid"
+                                                            Foreground="{Binding $parent[Button].Foreground}" />
+                        </Button>
                         <TextBlock Grid.Row="1" Text="Exclude words" VerticalAlignment="Center" />
                         <TextBox Grid.Row="1"
                                  Grid.Column="1"
                                  Text="{Binding LightExcludeKeywords}"
                                  TextWrapping="Wrap" />
+                        <Button Grid.Row="1"
+                                Grid.Column="2"
+                                Classes="settings-reset"
+                                Command="{Binding ResetLightExcludeKeywordsCommand}">
+                            <iconPacks:PackIconFontAwesome6 Width="12"
+                                                            Height="12"
+                                                            Kind="ArrowRotateLeftSolid"
+                                                            Foreground="{Binding $parent[Button].Foreground}" />
+                        </Button>
+                    </Grid>
+                    <Grid ColumnDefinitions="110,*,Auto"
+                          RowDefinitions="Auto,Auto,Auto"
+                          ColumnSpacing="8"
+                          RowSpacing="8"
+                          IsEnabled="{Binding CanEditLightAnimationKeywords}">
+                        <TextBlock Text="Torch words" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding LightTorchWords}"
+                                 TextWrapping="Wrap" />
+                        <Button Grid.Column="2"
+                                Classes="settings-reset"
+                                Command="{Binding ResetLightTorchWordsCommand}">
+                            <iconPacks:PackIconFontAwesome6 Width="12"
+                                                            Height="12"
+                                                            Kind="ArrowRotateLeftSolid"
+                                                            Foreground="{Binding $parent[Button].Foreground}" />
+                        </Button>
+                        <TextBlock Grid.Row="1" Text="Flicker words" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="1"
+                                 Grid.Column="1"
+                                 Text="{Binding LightFlickerWords}"
+                                 TextWrapping="Wrap" />
+                        <Button Grid.Row="1"
+                                Grid.Column="2"
+                                Classes="settings-reset"
+                                Command="{Binding ResetLightFlickerWordsCommand}">
+                            <iconPacks:PackIconFontAwesome6 Width="12"
+                                                            Height="12"
+                                                            Kind="ArrowRotateLeftSolid"
+                                                            Foreground="{Binding $parent[Button].Foreground}" />
+                        </Button>
+                        <TextBlock Grid.Row="2" Text="Pulse words" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="2"
+                                 Grid.Column="1"
+                                 Text="{Binding LightPulseWords}"
+                                 TextWrapping="Wrap" />
+                        <Button Grid.Row="2"
+                                Grid.Column="2"
+                                Classes="settings-reset"
+                                Command="{Binding ResetLightPulseWordsCommand}">
+                            <iconPacks:PackIconFontAwesome6 Width="12"
+                                                            Height="12"
+                                                            Kind="ArrowRotateLeftSolid"
+                                                            Foreground="{Binding $parent[Button].Foreground}" />
+                        </Button>
                     </Grid>
                     <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding DetectLightsFromStamps}">
                         <TextBlock Text="Default radius (squares): bright" VerticalAlignment="Center" />
@@ -130,7 +213,6 @@
                         <TextBlock Text="dim" VerticalAlignment="Center" />
                         <NumericUpDown Minimum="0" Maximum="200" Increment="1" FormatString="0.#"
                                        Value="{Binding LightDimRadius}" Width="110" />
-                        <Button Content="Reset words" Command="{Binding ResetLightKeywordsCommand}" />
                     </StackPanel>
 
                     <Border BorderBrush="#4A5364"

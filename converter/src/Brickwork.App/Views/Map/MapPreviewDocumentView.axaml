@@ -40,7 +40,6 @@
                                              SelectedLightEntityIds="{Binding SelectedLightEntityIds}"
                                              FocusedLightEntityId="{Binding FocusedLightEntityId}"
                                              HoveredLightEntityId="{Binding HoveredLightEntityId}"
-                                             ShowLightRadii="{Binding ShowLightRadii}"
                                              ShowLightHandles="{Binding IsLightEditingToolActive}"
                                              ShowWallHandles="{Binding IsWallEditingToolActive}"
                                              ShowRegionHandles="{Binding IsRegionEditingToolActive}"

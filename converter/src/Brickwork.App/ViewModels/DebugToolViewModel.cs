@@ -36,7 +36,7 @@ public partial class DebugToolViewModel : Tool
     private string _sourceJsonStatus = string.Empty;
 
     [ObservableProperty]
-    private string _selectedWallSummary = "Click a wall in the map or walls tree to inspect it.";
+    private string _selectedEntitySummary = "Click a wall, region, or light to inspect it.";
 
     public DebugToolViewModel(EditorSession session)
     {
@@ -50,6 +50,8 @@ public partial class DebugToolViewModel : Tool
 
             if (args.PropertyName is nameof(EditorSession.FocusedWallEntityId)
                 or nameof(EditorSession.FocusedPortal)
+                or nameof(EditorSession.FocusedRegionEntityId)
+                or nameof(EditorSession.FocusedLightEntityId)
                 or nameof(EditorSession.ContentRevision))
             {
                 if (args.PropertyName is nameof(EditorSession.ContentRevision) && _session.IsGestureActive)
@@ -57,11 +59,11 @@ public partial class DebugToolViewModel : Tool
                     return;
                 }
 
-                RefreshSelectedWall();
+                RefreshSelectedEntity();
             }
         };
         RefreshFromSession();
-        RefreshSelectedWall();
+        RefreshSelectedEntity();
     }
 
     [RelayCommand(CanExecute = nameof(CanReportCompatibilityIssue))]
@@ -138,30 +140,48 @@ public partial class DebugToolViewModel : Tool
 
     private bool CanUseSourceJson() => HasSourceJson;
 
-    private void RefreshSelectedWall()
+    private void RefreshSelectedEntity()
     {
-        if (_session.Map is null || _session.FocusedWallEntityId is not int wallId)
+        if (_session.Map is null)
         {
-            SelectedWallSummary = _session.Map is null
-                ? "Open a source map to inspect walls."
-                : "Click a wall in the map or walls tree to inspect it.";
+            SelectedEntitySummary = "Open a source map to inspect walls, regions, and lights.";
             return;
         }
 
-        var wall = _session.Map.Walls.FirstOrDefault(candidate => candidate.EntityId == wallId);
-        if (wall is null)
+        if (_session.FocusedWallEntityId is int wallId)
         {
-            SelectedWallSummary = $"Wall {wallId} is no longer in the document.";
+            var wall = _session.Map.Walls.FirstOrDefault(candidate => candidate.EntityId == wallId);
+            SelectedEntitySummary = wall is null
+                ? $"Wall {wallId} is no longer in the document."
+                : WallDebugFormatter.Format(wall, _session.FocusedPortal);
             return;
         }
 
-        SelectedWallSummary = WallDebugFormatter.Format(wall, _session.FocusedPortal);
+        if (_session.FocusedRegionEntityId is int regionId)
+        {
+            var region = _session.Map.Regions.FirstOrDefault(candidate => candidate.EntityId == regionId);
+            SelectedEntitySummary = region is null
+                ? $"Region {regionId} is no longer in the document."
+                : RegionDebugFormatter.Format(region);
+            return;
+        }
+
+        if (_session.FocusedLightEntityId is int lightId)
+        {
+            var light = _session.Map.Lights.FirstOrDefault(candidate => candidate.EntityId == lightId);
+            SelectedEntitySummary = light is null
+                ? $"Light {lightId} is no longer in the document."
+                : LightDebugFormatter.Format(light);
+            return;
+        }
+
+        SelectedEntitySummary = "Click a wall, region, or light to inspect it.";
     }
 
     private void RefreshFromSession()
     {
         UpdateCompatibilityDisplay(_session.Map?.Compatibility);
-        RefreshSelectedWall();
+        RefreshSelectedEntity();
 
         var path = _session.SourceFilePath;
         HasSourceJson = !string.IsNullOrWhiteSpace(path) && File.Exists(path);

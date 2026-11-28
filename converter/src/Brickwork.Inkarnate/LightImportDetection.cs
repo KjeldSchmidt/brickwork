@@ -47,7 +47,7 @@ internal static class LightImportDetection
                 BrightRadius = options.LightBrightRadius,
                 DimRadius = options.LightDimRadius,
                 Animation = options.DetectLightAnimations
-                    ? DetectAnimation(name, sourceName)
+                    ? DetectAnimation(name, sourceName, options)
                     : LightAnimation.None,
             });
             added++;
@@ -66,9 +66,14 @@ internal static class LightImportDetection
         !LightKeywords.IsLight(stamp.Name, exclude, []) &&
         !LightKeywords.IsLight(stamp.DefaultName, exclude, []);
 
-    private static LightAnimation DetectAnimation(string? name, string? sourceName)
+    private static LightAnimation DetectAnimation(string? name, string? sourceName, InkarnateImportOptions options)
     {
-        var fromName = LightAnimations.Detect(name);
-        return fromName != LightAnimation.None ? fromName : LightAnimations.Detect(sourceName);
+        var torch = LightKeywords.Parse(options.LightTorchWords);
+        var flicker = LightKeywords.Parse(options.LightFlickerWords);
+        var pulse = LightKeywords.Parse(options.LightPulseWords);
+        var fromName = LightAnimations.Detect(name, torch, flicker, pulse);
+        return fromName != LightAnimation.None
+            ? fromName
+            : LightAnimations.Detect(sourceName, torch, flicker, pulse);
     }
 }

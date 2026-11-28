@@ -1,9 +1,9 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Mvvm.Controls;
+using IconPacks.Avalonia.FontAwesome6;
 using Brickwork.Core.Models;
 
 namespace Brickwork.App.ViewModels;
@@ -20,6 +20,9 @@ public partial class LightsToolViewModel : Tool
     [ObservableProperty]
     private object? _selectedTreeItem;
 
+    [ObservableProperty]
+    private int _treeRevision;
+
     public LightsToolViewModel(EditorSession session)
     {
         _session = session;
@@ -35,13 +38,8 @@ public partial class LightsToolViewModel : Tool
                 Sync();
             }
 
-            if (args.PropertyName is nameof(EditorSession.ShowLightRadii))
-            {
-                OnPropertyChanged(nameof(ShowLightRadii));
-            }
-
-            if (args.PropertyName is nameof(EditorSession.HighlightRevision)
-                or nameof(EditorSession.TreeFocusGeneration)
+            // Hover bumps HighlightRevision; do not re-sync/expand on hover (that reopens collapsed kinds).
+            if (args.PropertyName is nameof(EditorSession.TreeFocusGeneration)
                 or nameof(EditorSession.FocusedLightEntityId))
             {
                 SyncSelectionFromSession();
@@ -68,16 +66,62 @@ public partial class LightsToolViewModel : Tool
         }
     }
 
-    public bool ShowLightRadii
-    {
-        get => _session.ShowLightRadii;
-        set => _session.ShowLightRadii = value;
-    }
-
-    public bool CanDeleteSelection => _session.SelectedLightEntityIds.Count > 0;
-
     public void SetHoveredItem(object? item) =>
         _session.SetHoveredLight(item is LightItemViewModel light ? light.Light : null);
+
+    public bool IsTreeNodeSelected(object? item) =>
+        item is LightItemViewModel light &&
+        _session.SelectedLightEntityIds.Contains(light.Light.EntityId);
+
+    public void FocusTreeItem(object? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        _syncingSelection = true;
+        SelectedTreeItem = item;
+        _syncingSelection = false;
+    }
+
+    public void SelectLight(LightItemViewModel light, bool addToSelection)
+    {
+        _session.ActiveMapTool = MapToolKind.LightEditing;
+        if (addToSelection)
+        {
+            _session.ToggleLightInSelection(light.Light.EntityId);
+        }
+        else
+        {
+            _session.SetLightSelection([light.Light.EntityId], light.Light.EntityId);
+        }
+
+        FocusTreeItem(light);
+        TreeRevision++;
+    }
+
+    public void SelectKind(LightKindViewModel kind, bool addToSelection)
+    {
+        _session.ActiveMapTool = MapToolKind.LightEditing;
+        var ids = kind.Lights.Select(light => light.EntityId).ToList();
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        if (addToSelection)
+        {
+            _session.AddLightsToSelection(ids);
+        }
+        else
+        {
+            _session.SetLightSelection(ids, ids[0]);
+        }
+
+        FocusTreeItem(kind.Children.FirstOrDefault());
+        TreeRevision++;
+    }
 
     partial void OnSelectedTreeItemChanged(object? value)
     {
@@ -86,31 +130,26 @@ public partial class LightsToolViewModel : Tool
             return;
         }
 
+        // TreeView SelectedItem binding can fire without modifiers; prefer explicit Select* from code-behind.
         _session.ActiveMapTool = MapToolKind.LightEditing;
 
         if (value is LightItemViewModel light)
         {
             _session.SetLightSelection([light.Light.EntityId], light.Light.EntityId);
+            TreeRevision++;
             return;
         }
 
         if (value is LightKindViewModel kind)
         {
-            var ids = kind.Lights.Select(light => light.EntityId).ToList();
+            var ids = kind.Lights.Select(l => l.EntityId).ToList();
             _session.SetLightSelection(ids, ids.FirstOrDefault());
+            TreeRevision++;
             return;
         }
 
         _session.ClearLightSelection();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanDeleteSelection))]
-    private void DeleteSelection()
-    {
-        if (_session.DeleteSelectedLights())
-        {
-            Sync();
-        }
+        TreeRevision++;
     }
 
     private void Rebuild()
@@ -136,11 +175,11 @@ public partial class LightsToolViewModel : Tool
         }
 
         Kinds = kinds;
+        TreeRevision++;
         OnPropertyChanged(nameof(HasLights));
         OnPropertyChanged(nameof(ShowEmptyMessage));
         OnPropertyChanged(nameof(EmptyMessage));
         OnPropertyChanged(nameof(Summary));
-        DeleteSelectionCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>Refreshes values in place, or rebuilds when lights were added or removed (e.g. by undo).</summary>
@@ -163,14 +202,11 @@ public partial class LightsToolViewModel : Tool
         }
 
         OnPropertyChanged(nameof(Summary));
-        DeleteSelectionCommand.NotifyCanExecuteChanged();
         SyncSelectionFromSession();
     }
 
     private void SyncSelectionFromSession()
     {
-        DeleteSelectionCommand.NotifyCanExecuteChanged();
-
         var focusedId = _session.FocusedLightEntityId;
         object? next = null;
         if (focusedId is int id)
@@ -183,14 +219,30 @@ public partial class LightsToolViewModel : Tool
             }
         }
 
-        if (ReferenceEquals(SelectedTreeItem, next))
+        if (!ReferenceEquals(SelectedTreeItem, next))
+        {
+            _syncingSelection = true;
+            SelectedTreeItem = next;
+            _syncingSelection = false;
+        }
+
+        TreeRevision++;
+    }
+
+    /// <summary>Clears map/tree selection when a kind that owns selected lights is collapsed.</summary>
+    internal void ClearSelectionIfInKind(LightKindViewModel kind)
+    {
+        var selected = _session.SelectedLightEntityIds;
+        if (!kind.Lights.Any(light => selected.Contains(light.EntityId)))
         {
             return;
         }
 
         _syncingSelection = true;
-        SelectedTreeItem = next;
+        SelectedTreeItem = null;
         _syncingSelection = false;
+        _session.ClearLightSelection();
+        TreeRevision++;
     }
 
     internal void NotifySummaryChanged() => OnPropertyChanged(nameof(Summary));
@@ -226,6 +278,21 @@ public partial class LightKindViewModel : ObservableObject
 
     public string Header => $"{Name} ({Lights.Count})";
 
+    public PackIconFontAwesome6Kind ExpandIconKind =>
+        IsExpanded ? PackIconFontAwesome6Kind.AngleDownSolid : PackIconFontAwesome6Kind.AngleRightSolid;
+
+    [RelayCommand]
+    private void ToggleExpanded() => IsExpanded = !IsExpanded;
+
+    partial void OnIsExpandedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ExpandIconKind));
+        if (!value)
+        {
+            _tool.ClearSelectionIfInKind(this);
+        }
+    }
+
     public bool? IsActive
     {
         get => Lights.All(light => light.IsActive) ? true : Lights.Any(light => light.IsActive) ? null : false;
@@ -256,6 +323,13 @@ public partial class LightKindViewModel : ObservableObject
         }
     }
 
+    /// <summary>Slider binding; uses the shared value or the default when mixed.</summary>
+    public double BrightRadiusSlider
+    {
+        get => (double)(BrightRadius ?? (decimal)LightSource.DefaultBrightRadius);
+        set => BrightRadius = (decimal)Math.Round(Math.Clamp(value, 0, 40), 1);
+    }
+
     public decimal? DimRadius
     {
         get => CommonValue(light => light.DimRadius);
@@ -267,6 +341,13 @@ public partial class LightKindViewModel : ObservableObject
                     light.DimRadius = Math.Max((double)radius, light.BrightRadius));
             }
         }
+    }
+
+    /// <summary>Slider binding; uses the shared value or the default when mixed.</summary>
+    public double DimRadiusSlider
+    {
+        get => (double)(DimRadius ?? (decimal)LightSource.DefaultDimRadius);
+        set => DimRadius = (decimal)Math.Round(Math.Clamp(value, 0, 40), 1);
     }
 
     public string Color
@@ -283,6 +364,27 @@ public partial class LightKindViewModel : ObservableObject
             }
         }
     }
+
+    public Color PickerColor
+    {
+        get
+        {
+            var hex = string.IsNullOrEmpty(Color) ? LightSource.DefaultColor : Color;
+            return LightColors.TryParse(hex, out var red, out var green, out var blue)
+                ? Avalonia.Media.Color.FromRgb(red, green, blue)
+                : Avalonia.Media.Color.FromRgb(0xff, 0xb1, 0x5c);
+        }
+        set
+        {
+            var hex = $"#{value.R:x2}{value.G:x2}{value.B:x2}";
+            if (!string.Equals(Color, LightColors.Normalize(hex), StringComparison.OrdinalIgnoreCase))
+            {
+                Color = hex;
+            }
+        }
+    }
+
+    public IBrush ColorBrush => new SolidColorBrush(PickerColor);
 
     public IReadOnlyList<LightAnimation> AnimationOptions => LightAnimations.All;
 
@@ -325,21 +427,15 @@ public partial class LightKindViewModel : ObservableObject
         }
     }
 
-    /// <summary>Picks the animation from the kind's name, as import does.</summary>
-    [RelayCommand]
-    private void DetectAnimation() => Animation = LightAnimations.Detect(Name);
-
-    public IBrush ColorBrush =>
-        LightColors.TryParse(Color, out var red, out var green, out var blue)
-            ? new SolidColorBrush(Avalonia.Media.Color.FromRgb(red, green, blue))
-            : Brushes.Transparent;
-
     public void RefreshFromModel()
     {
         OnPropertyChanged(nameof(IsActive));
         OnPropertyChanged(nameof(BrightRadius));
+        OnPropertyChanged(nameof(BrightRadiusSlider));
         OnPropertyChanged(nameof(DimRadius));
+        OnPropertyChanged(nameof(DimRadiusSlider));
         OnPropertyChanged(nameof(Color));
+        OnPropertyChanged(nameof(PickerColor));
         OnPropertyChanged(nameof(ColorBrush));
         OnPropertyChanged(nameof(Animation));
         OnPropertyChanged(nameof(HasAnimation));
@@ -400,10 +496,6 @@ public partial class LightItemViewModel : ObservableObject
         ? $"#{Number}"
         : $"#{Number} {Light.DisplayName}";
 
-    public string PositionText => string.Create(
-        CultureInfo.InvariantCulture,
-        $"({Light.Position.X:0}, {Light.Position.Y:0})");
-
     public bool IsActive
     {
         get => Light.IsActive;
@@ -423,6 +515,6 @@ public partial class LightItemViewModel : ObservableObject
     public void RefreshFromModel()
     {
         OnPropertyChanged(nameof(IsActive));
-        OnPropertyChanged(nameof(PositionText));
+        OnPropertyChanged(nameof(DisplayName));
     }
 }
